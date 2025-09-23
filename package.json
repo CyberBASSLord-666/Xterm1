@@ -1,0 +1,30 @@
+{
+  "name": "polliwall",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "ng serve",
+    "build": "ng build"
+  },
+  "dependencies": {
+    "@angular/common": "^20.2.0",
+    "@angular/compiler": "^20.2.0",
+    "@angular/core": "^20.2.0",
+    "@angular/forms": "^20.2.0",
+    "@angular/platform-browser": "^20.2.0",
+    "@angular/router": "^20.2.0",
+    "@angular/service-worker": "^20.2.0",
+    "idb": "^8.0.0",
+    "jszip": "^3.10.1",
+    "rxjs": "^8.0.0"
+  },
+  "devDependencies": {
+    "@angular/build": "^20.2.0",
+    "@angular/cli": "^20.2.0",
+    "@tailwindcss/postcss": "^4.0.0-alpha.16",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^4.0.0-alpha.16",
+    "typescript": "~5.8.2"
+  }
+}

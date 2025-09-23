@@ -1,0 +1,62 @@
+<div class="px-4 sm:px-0">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-primary-border pb-4">
+    <div>
+      <h2 class="text-3xl font-bold tracking-wider text-primary-text sm:text-4xl font-mono">Community Feed</h2>
+      <p class="text-secondary-text mt-1">A live stream of public creations from Pollinations.ai</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <div class="isolate inline-flex rounded-md shadow-sm">
+        <button (click)="toggleFeedMode('image')" 
+                type="button" 
+                class="relative inline-flex items-center rounded-l-md px-3 py-2 text-sm font-semibold ring-1 ring-inset ring-primary-border focus:z-10 transition-colors"
+                [class.bg-accent]="feedMode() === 'image'"
+                [class.text-white]="feedMode() === 'image'"
+                [class.text-primary-text]="feedMode() !== 'image'"
+                [class.hover:bg-secondary-bg]="feedMode() !== 'image'">Images</button>
+        <button (click)="toggleFeedMode('text')" 
+                type="button" 
+                class="relative -ml-px inline-flex items-center rounded-r-md px-3 py-2 text-sm font-semibold ring-1 ring-inset ring-primary-border focus:z-10 transition-colors"
+                [class.bg-accent]="feedMode() === 'text'"
+                [class.text-white]="feedMode() === 'text'"
+                [class.text-primary-text]="feedMode() !== 'text'"
+                [class.hover:bg-secondary-bg]="feedMode() !== 'text'">Texts</button>
+      </div>
+      <button (click)="togglePause()" class="px-4 py-2 rounded-md font-bold transition-colors bg-secondary-bg hover:bg-opacity-80 text-primary-text border border-primary-border">
+        {{ isPaused() ? 'Resume' : 'Pause' }}
+      </button>
+    </div>
+  </div>
+
+  <div class="mt-8">
+    @if (feedMode() === 'image') {
+      @if (feedItems().length > 0) {
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          @for (item of feedItems(); track item.imageURL + item.prompt) {
+            <div class="relative group border border-primary-border rounded-lg overflow-hidden animate-fade-in-up">
+              <img [src]="item.imageURL" [alt]="item.prompt" class="w-full h-auto object-cover aspect-[9/16] group-hover:opacity-80 transition-opacity" loading="lazy" />
+              <div class="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                <p class="line-clamp-3">{{ item.prompt }} <span class.italic>[{{item.model}}]</span></p>
+              </div>
+            </div>
+          }
+        </div>
+      } @else {
+        <p class="text-secondary-text text-center mt-16">Waiting for new images from the community... ⏳</p>
+      }
+    } @else {
+      @if (textFeedItems().length > 0) {
+        <div class="flex flex-col gap-4">
+          @for (t of textFeedItems(); track $index) {
+            <div class="border border-primary-border rounded-lg p-4 animate-fade-in-up">
+              <p class="text-sm text-primary-text"><span class="font-semibold">{{ t.messages?.[0]?.content || 'User:' }}</span></p>
+              <p class="mt-2 text-secondary-text text-sm">{{ t.response }}</p>
+              <p class="mt-2 text-xs text-secondary-text opacity-75">Model: {{ t.model }}</p>
+            </div>
+          }
+        </div>
+      } @else {
+        <p class="text-secondary-text text-center mt-16">Waiting for new text generations from the community... ⏳</p>
+      }
+    }
+  </div>
+</div>

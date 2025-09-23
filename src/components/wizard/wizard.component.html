@@ -1,0 +1,213 @@
+<div class="grid grid-cols-1 lg:grid-cols-5 gap-8 px-4 sm:px-0">
+  
+  <section class="lg:col-span-3 bg-secondary-bg/50 p-6 rounded-lg border border-primary-border animate-fade-in-up">
+    <h2 class="text-2xl font-bold text-white mb-1 font-mono tracking-wider">Creation Nexus</h2>
+    <p class="text-secondary-text mb-6">Forge your next wallpaper with precision and style.</p>
+    
+    <div class="space-y-6">
+      
+      <!-- Style Presets -->
+      <div>
+        <label class="block text-sm font-medium text-secondary-text mb-2 uppercase tracking-widest">1. Visual Archetype</label>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          @for (preset of presets; track preset.name; let i = $index) {
+            <button (click)="selectedPreset.set(preset)" 
+                    class="aspect-[3/4] rounded-lg text-sm text-left transition-all duration-200 border-2 relative group overflow-hidden focus:outline-none"
+                    [class]="selectedPreset().name === preset.name ? 'border-accent shadow-[0_0_15px_rgba(220,38,38,0.5)]' : 'border-gray-700/50 hover:border-gray-600'">
+              <img [src]="'https://picsum.photos/seed/' + preset.name.replace(' ', '') + '/300/400'" 
+                   [alt]="preset.name" 
+                   class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110">
+              <div class="absolute inset-0 bg-gradient-to-t from-black/90 to-transparent"></div>
+              <span class="absolute bottom-2 left-2 font-bold text-white text-xs">{{preset.name}}</span>
+            </button>
+          }
+        </div>
+      </div>
+      
+      <!-- Prompt & Refinement -->
+      <div>
+        <label class="block text-sm font-medium text-secondary-text mb-2 uppercase tracking-widest">2. Prompt Command</label>
+        <div class="bg-primary-bg/50 p-4 rounded-lg border border-secondary-border space-y-4">
+          
+           <!-- Drag & Drop Zone -->
+          <div (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)"
+               class="border-2 border-dashed rounded-md p-4 text-center text-secondary-text transition-colors"
+               [class.border-accent]="dragging()" [class.border-primary-border]="!dragging()">
+            @if (!sourceImageUrl()) {
+              <div>
+                <p class="text-sm">Drag & drop an image for inspiration,<br>or <span class="underline cursor-pointer text-accent" (click)="fileInput.click()">browse local files</span>.</p>
+                <p class="text-xs mt-2">(For image-to-image generation)</p>
+              </div>
+            } @else {
+              <div class="relative max-w-xs mx-auto">
+                <img [src]="sourceImageUrl()" alt="Image preview" class="max-h-32 rounded-md mx-auto">
+                <button (click)="clearSourceImage()" class="absolute -top-2 -right-2 bg-danger text-white rounded-full p-1 leading-none" title="Remove image">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+            }
+            <input #fileInput type="file" accept="image/*" class="hidden" (change)="onFileInputChange($event)">
+          </div>
+
+          <!-- Prompt Actions -->
+          <div class="flex justify-between items-center mb-2">
+            <label for="prompt" class="block text-sm font-medium text-primary-text">
+              {{ sourceImageUrl() ? 'Instructions for Image' : 'Your Prompt' }}
+            </label>
+            <div #historyButton class="flex items-center gap-4">
+                <button (click)="compose()" [disabled]="loading()" class="flex items-center justify-center text-xs bg-accent-secondary/80 hover:bg-accent-secondary disabled:bg-opacity-50 disabled:text-secondary-text disabled:cursor-not-allowed text-white font-bold py-1.5 px-3 rounded-md transition-colors">
+                  @if(process() === 'compose') {
+                    <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    <span>{{ status() }}</span>
+                  } @else {
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" viewBox="0 0 20 20" fill="currentColor"><path d="M9.405 1.05c.412-1.4.99-1.4 1.401 0l.944 3.218a1 1 0 00.95.69h3.385c1.453 0 1.66.83 1.66 1.178 0 .22-.09.436-.26.613l-2.735 2.002a1 1 0 00-.364 1.118l1.04 3.53a1 1 0 01-1.44 1.228L10 11.343l-2.85 2.1a1 1 0 01-1.44-1.228l1.04-3.53a1 1 0 00-.364-1.118L2.094 6.75c-.17-.177-.26-.393-.26-.613 0-.348.207-1.178 1.66-1.178h3.385a1 1 0 00.95-.69L9.405 1.05z" /></svg>
+                    <span>Compose with AI</span>
+                  }
+                </button>
+                <div class="relative">
+                  <button (click)="isHistoryOpen.set(!isHistoryOpen())" class="text-xs text-accent-secondary hover:underline">History</button>
+                  @if (isHistoryOpen()) {
+                    <div #historyDropdown class="absolute right-0 mt-2 w-64 bg-secondary-bg border border-primary-border rounded-md shadow-lg z-10 animate-fade-in">
+                      <div class="py-1 max-h-60 overflow-y-auto">
+                        @if (promptHistory().length > 0) {
+                          @for (p of promptHistory(); track p) {
+                            <button (click)="useHistoryPrompt(p)" class="block w-full text-left px-4 py-2 text-sm text-primary-text hover:bg-gray-800 truncate">{{ p }}</button>
+                          }
+                          <div class="border-t border-primary-border my-1"></div>
+                          <button (click)="clearHistory()" class="block w-full text-left px-4 py-2 text-sm text-danger hover:bg-gray-800">Clear History</button>
+                        } @else {
+                          <p class="px-4 py-2 text-sm text-secondary-text">No history yet.</p>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+            </div>
+          </div>
+          <textarea id="prompt" rows="4" class="w-full bg-primary-bg border-gray-700 text-primary-text rounded-md p-2 focus:ring-2 focus:ring-accent focus:border-accent transition" [placeholder]="sourceImageUrl() ? 'e.g., make it a watercolor painting' : 'Compose a prompt or use an example...'" [value]="prompt()" (input)="onPromptInput($event)"></textarea>
+          @if (lastTarget(); as target) {
+            <p class="text-xs text-secondary-text mt-1 font-mono">Target: {{target.width}}x{{target.height}} ({{target.aspect}}, {{target.mode}})</p>
+          }
+
+          <!-- Prompt Suggestions -->
+          <div>
+            <h4 class="text-xs font-semibold text-secondary-text mt-4 mb-2 uppercase tracking-wider">Example Prompts for "{{ selectedPreset().name }}"</h4>
+            <div class="flex flex-wrap gap-2">
+              @for (suggestion of selectedPreset().suggestions; track suggestion) {
+                <button (click)="useSuggestion(suggestion)" class="text-xs bg-secondary-bg/50 hover:bg-secondary-bg border border-secondary-border text-secondary-text px-2.5 py-1 rounded-md transition-colors duration-200 text-left leading-tight">
+                  {{ suggestion }}
+                </button>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <aside class="lg:col-span-2 space-y-6 self-start sticky top-24">
+      <!-- Image Preview -->
+    <div class="bg-secondary-bg/50 p-4 rounded-lg border border-primary-border animate-fade-in-up" [style.animation-delay]="'100ms'">
+        <h3 class="text-lg font-bold text-white mb-2 font-mono tracking-wider">Live Preview</h3>
+        <div class="w-full aspect-[9/16] bg-primary-bg rounded-lg border-2 border-dashed border-gray-700 flex items-center justify-center overflow-hidden">
+        @if (process() === 'generate') {
+          <div class="flex flex-col items-center justify-center text-secondary-text p-4 animate-fade-in">
+            <div class="w-12 h-12 rounded-full animate-pulse-glow"></div>
+            <span class="mt-4 text-sm font-medium">{{ status() }}...</span>
+          </div>
+        } @else if (generatedImageUrl(); as url) {
+          <img [src]="url" alt="Generated Wallpaper" class="object-contain w-full h-full animate-fade-in" width="360" height="640">
+        } @else {
+          <div class="text-secondary-text animate-fade-in text-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+            <p class="mt-2">Preview will appear here</p>
+          </div>
+        }
+        </div>
+    </div>
+     <!-- Generate Button -->
+     <div class="animate-fade-in-up" [style.animation-delay]="'200ms'">
+        @if (isLocalSourceImage()) {
+          <div class="p-3 text-xs text-yellow-200 bg-yellow-800/50 border border-yellow-700 rounded-md mb-2">
+            <strong>Warning:</strong> The Pollinations API cannot access local files. You can use this image for preview and prompt inspiration, but it cannot be used for the final generation. To use image-to-image, provide a public image URL.
+          </div>
+        }
+        <button (click)="generate()" [disabled]="loading() || (!prompt() && !sourceImageUrl()) || isLocalSourceImage()" class="w-full flex justify-center items-center bg-accent hover:bg-opacity-80 disabled:bg-opacity-50 disabled:text-gray-400 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-md transition-colors text-lg shadow-[0_0_15px_rgba(220,38,38,0.5)] hover:shadow-[0_0_25px_rgba(220,38,38,0.8)]">
+          @if(process() === 'generate') {
+            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            <span>{{ status() }}...</span>
+          } @else {
+            <span>Generate Exact-Fit Wallpaper</span>
+          }
+        </button>
+      </div>
+
+     <!-- Advanced Settings -->
+     <div class="bg-secondary-bg/50 p-4 rounded-lg border border-primary-border animate-fade-in-up" [style.animation-delay]="'300ms'">
+         <details class="group" #advancedDetails>
+            <summary class="text-md font-bold text-white list-none -m-2 p-2 cursor-pointer flex justify-between items-center font-mono tracking-wider">
+              Advanced Config
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 transition-transform duration-300 group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+            </summary>
+            <div class="mt-6 space-y-4 animate-slide-down">
+                <div class="relative flex items-start">
+                    <div class="flex h-6 items-center">
+                        <input id="enhance" type="checkbox" [checked]="enhancePrompt()" (change)="onEnhancePromptChange($event)" [disabled]="!!sourceImageUrl()" class="h-4 w-4 rounded border-gray-600 bg-gray-700 text-accent focus:ring-accent disabled:opacity-50">
+                    </div>
+                    <div class="ml-3 text-sm leading-6">
+                        <label for="enhance" class="font-medium text-primary-text" [class.text-secondary-text]="!!sourceImageUrl()">Enhance Prompt</label>
+                        <p class="text-secondary-text">Let an LLM enhance the prompt for more detail (Text-to-Image only).</p>
+                    </div>
+                </div>
+
+                <div class="relative flex items-start">
+                    <div class="flex h-6 items-center">
+                        <input id="private" type="checkbox" [checked]="settingsService.private()" (change)="onPrivateChange($event)" class="h-4 w-4 rounded border-gray-600 bg-gray-700 text-accent focus:ring-accent">
+                    </div>
+                    <div class="ml-3 text-sm leading-6">
+                        <label for="private" class="font-medium text-primary-text">Hide from public feed</label>
+                        <p class="text-secondary-text">Request that this image not be publicly indexed.</p>
+                    </div>
+                </div>
+
+                <div class="relative flex items-start">
+                    <div class="flex h-6 items-center">
+                        <input id="safe" type="checkbox" [checked]="settingsService.safe()" (change)="onSafeChange($event)" class="h-4 w-4 rounded border-gray-600 bg-gray-700 text-accent focus:ring-accent">
+                    </div>
+                    <div class="ml-3 text-sm leading-6">
+                        <label for="safe" class="font-medium text-primary-text">Strict content filter</label>
+                        <p class="text-secondary-text">Enable stricter content safety filtering.</p>
+                    </div>
+                </div>
+
+                 <div>
+                    <label for="model" class="block text-sm font-medium text-secondary-text mb-1">Image Model</label>
+                    <select id="model" [value]="selectedModel()" (change)="onModelChange($event)" [disabled]="!!sourceImageUrl()" class="w-full bg-primary-bg border-gray-700 text-primary-text rounded-md p-2 focus:ring-2 focus:ring-accent focus:border-accent transition disabled:opacity-50 disabled:cursor-not-allowed">
+                        @if(sourceImageUrl()) {
+                            <option value="kontext" selected>kontext (for Image-to-Image)</option>
+                        } @else {
+                            @for (model of availableModels(); track model) {
+                                <option [value]="model">{{model}}</option>
+                            }
+                            @if(availableModels().length === 0) {
+                                <option value="" disabled>Loading models...</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label for="seed" class="block text-sm font-medium text-secondary-text">Seed</label>
+                    <div class="flex mt-1">
+                        <input id="seed" type="number" [value]="seed() ?? ''" (input)="onSeedInput($event)" class="w-full bg-primary-bg border-gray-700 text-primary-text rounded-l-md p-2 focus:ring-2 focus:ring-accent focus:border-accent transition" placeholder="Random">
+                        <button (click)="generateRandomSeed()" class="px-2 bg-gray-700 hover:bg-gray-600 rounded-r-md" title="Generate Random Seed">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M10.744 2.06A.75.75 0 0010 1.5H9.5a.75.75 0 00-.75.75v3.442L6.672 3.61a.75.75 0 00-1.06 1.061l2.08 2.08a.75.75 0 001.06 0l2.08-2.08a.75.75 0 00-.06-1.14l-.002-.002zM10 18.5a.75.75 0 00.744-.69A5.5 5.5 0 0115 12.5a.75.75 0 00-1.5 0 4 4 0 00-3.5-3.965V6.25a.75.75 0 00-1.5 0v2.285A4 4 0 005 12.5a.75.75 0 00-1.5 0 5.5 5.5 0 014.256 5.31A.75.75 0 0010 18.5z" /></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </details>
+    </div>
+  </aside>
+</div>
