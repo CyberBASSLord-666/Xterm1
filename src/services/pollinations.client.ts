@@ -119,9 +119,15 @@ async function fetchWithRetries(
  * A robust queue for rate-limiting API requests.
  * It ensures that requests are processed one at a time, with a minimum interval
  * between the completion of one request and the start of the next.
+ * Supports request cancellation via AbortSignal.
  */
 class RequestQueue {
-    private queue: Array<{ requestFn: RequestFn<any>, resolve: (value: any) => void, reject: (reason?: any) => void }> = [];
+    private queue: Array<{ 
+        requestFn: RequestFn<any>, 
+        resolve: (value: any) => void, 
+        reject: (reason?: any) => void,
+        abortController?: AbortController 
+    }> = [];
     private isProcessing = false;
 
     constructor(private interval: number) {}
@@ -129,15 +135,34 @@ class RequestQueue {
     /**
      * Adds a request function to the queue.
      * @param requestFn The async function to execute.
+     * @param abortController Optional AbortController for request cancellation.
      * @returns A promise that resolves or rejects with the result of the requestFn.
      */
-    add<T>(requestFn: RequestFn<T>): Promise<T> {
+    add<T>(requestFn: RequestFn<T>, abortController?: AbortController): Promise<T> {
         return new Promise<T>((resolve, reject) => {
-            this.queue.push({ requestFn, resolve, reject });
+            this.queue.push({ requestFn, resolve, reject, abortController });
             if (!this.isProcessing) {
                 this.processQueue();
             }
         });
+    }
+
+    /**
+     * Cancel all pending requests in the queue.
+     */
+    cancelAll(): void {
+        for (const item of this.queue) {
+            item.abortController?.abort();
+            item.reject(new Error('Request cancelled'));
+        }
+        this.queue = [];
+    }
+
+    /**
+     * Get the number of pending requests in the queue.
+     */
+    get pending(): number {
+        return this.queue.length;
     }
 
     private async processQueue() {
@@ -147,7 +172,14 @@ class RequestQueue {
         }
 
         this.isProcessing = true;
-        const { requestFn, resolve, reject } = this.queue.shift()!;
+        const { requestFn, resolve, reject, abortController } = this.queue.shift()!;
+
+        // Check if request was already cancelled
+        if (abortController?.signal.aborted) {
+            reject(new Error('Request cancelled'));
+            setTimeout(() => this.processQueue(), this.interval);
+            return;
+        }
 
         try {
             const result = await requestFn();
