@@ -5,6 +5,7 @@
     {
       "name": "app",
       "installMode": "prefetch",
+      "updateMode": "prefetch",
       "resources": {
         "files": [
           "/index.html",
@@ -28,14 +29,38 @@
   ],
   "dataGroups": [
     {
-      "name": "api",
+      "name": "api-images",
       "urls": [
-        "https://image.pollinations.ai/**",
-        "https://text.pollinations.ai/**"
+        "https://image.pollinations.ai/**"
       ],
       "cacheConfig": {
         "strategy": "performance",
-        "maxSize": 10,
+        "maxSize": 50,
+        "maxAge": "7d",
+        "timeout": "30s"
+      }
+    },
+    {
+      "name": "api-text",
+      "urls": [
+        "https://text.pollinations.ai/**"
+      ],
+      "cacheConfig": {
+        "strategy": "freshness",
+        "maxSize": 20,
+        "maxAge": "1h",
+        "timeout": "15s"
+      }
+    },
+    {
+      "name": "api-models",
+      "urls": [
+        "https://image.pollinations.ai/models",
+        "https://text.pollinations.ai/models"
+      ],
+      "cacheConfig": {
+        "strategy": "performance",
+        "maxSize": 5,
         "maxAge": "1d",
         "timeout": "10s"
       }
