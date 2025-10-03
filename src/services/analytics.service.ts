@@ -34,9 +34,44 @@ export class AnalyticsService {
 
     if (trackingId) {
       this.logger.info('Analytics initialized', { trackingId }, 'Analytics');
-      // In production, initialize Google Analytics or other provider here
-      // Example: gtag('config', trackingId);
+      
+      // Initialize Google Analytics 4 (gtag.js)
+      this.loadGoogleAnalytics(trackingId);
     }
+  }
+
+  /**
+   * Load and initialize Google Analytics 4.
+   * @param measurementId GA4 Measurement ID (e.g., 'G-XXXXXXXXXX')
+   */
+  private loadGoogleAnalytics(measurementId: string): void {
+    // Check if gtag is already loaded
+    if ((window as any).gtag) {
+      (window as any).gtag('config', measurementId, {
+        send_page_view: false, // We'll handle page views manually
+      });
+      return;
+    }
+
+    // Create and load gtag script
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${measurementId}`;
+    document.head.appendChild(script);
+
+    // Initialize gtag
+    (window as any).dataLayer = (window as any).dataLayer || [];
+    (window as any).gtag = function() {
+      (window as any).dataLayer.push(arguments);
+    };
+    (window as any).gtag('js', new Date());
+    (window as any).gtag('config', measurementId, {
+      send_page_view: false,
+      anonymize_ip: true, // GDPR compliance
+      cookie_flags: 'SameSite=None;Secure',
+    });
+
+    this.logger.info('Google Analytics loaded', { measurementId }, 'Analytics');
   }
 
   /**
@@ -52,9 +87,12 @@ export class AnalyticsService {
       label: path,
     });
 
-    if (this.enabled) {
-      // In production, send to analytics provider
-      // Example: gtag('event', 'page_view', { page_path: path, page_title: title });
+    if (this.enabled && (window as any).gtag) {
+      (window as any).gtag('event', 'page_view', {
+        page_path: path,
+        page_title: title || document.title,
+        page_location: window.location.href,
+      });
     }
   }
 
@@ -76,13 +114,13 @@ export class AnalyticsService {
 
     this.logger.debug('Analytics event tracked', fullEvent, 'Analytics');
 
-    if (this.enabled) {
-      // In production, send to analytics provider
-      // Example: gtag('event', event.action, {
-      //   event_category: event.category,
-      //   event_label: event.label,
-      //   value: event.value
-      // });
+    if (this.enabled && (window as any).gtag) {
+      (window as any).gtag('event', event.action, {
+        event_category: event.category,
+        event_label: event.label,
+        value: event.value,
+        non_interaction: false,
+      });
     }
   }
 

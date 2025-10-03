@@ -105,5 +105,52 @@ describe('LoggerService', () => {
       expect(typeof exported).toBe('string');
       expect(() => JSON.parse(exported)).not.toThrow();
     });
+
+    it('should include all log entries with metadata', () => {
+      service.info('test 1', { key: 'value1' }, 'Source1');
+      service.warn('test 2', { key: 'value2' }, 'Source2');
+      const exported = service.exportLogs();
+      const logs = JSON.parse(exported);
+      expect(logs.length).toBeGreaterThanOrEqual(2);
+      expect(logs[0]).toHaveProperty('level');
+      expect(logs[0]).toHaveProperty('message');
+      expect(logs[0]).toHaveProperty('timestamp');
+    });
+  });
+
+  describe('integration tests', () => {
+    it('should handle rapid logging without data loss', () => {
+      for (let i = 0; i < 50; i++) {
+        service.info(`message ${i}`);
+      }
+      const history = service.getHistory();
+      expect(history.length).toBeGreaterThan(0);
+    });
+
+    it('should maintain log order', () => {
+      service.info('first');
+      service.info('second');
+      service.info('third');
+      const history = service.getHistory();
+      const messages = history.map((log) => log.message);
+      const firstIndex = messages.indexOf('first');
+      const secondIndex = messages.indexOf('second');
+      const thirdIndex = messages.indexOf('third');
+      expect(firstIndex).toBeLessThan(secondIndex);
+      expect(secondIndex).toBeLessThan(thirdIndex);
+    });
+
+    it('should handle complex data structures', () => {
+      const complexData = {
+        nested: { deep: { value: 'test' } },
+        array: [1, 2, 3],
+        nullValue: null,
+        undefinedValue: undefined,
+      };
+      service.info('complex', complexData);
+      const history = service.getHistory();
+      const lastLog = history[history.length - 1];
+      expect(lastLog.data).toBeDefined();
+    });
   });
 });

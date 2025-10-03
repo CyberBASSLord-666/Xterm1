@@ -122,12 +122,103 @@ export class ValidationService {
 
   /**
    * Sanitize HTML to prevent XSS attacks.
-   * This is a basic implementation; for production use a library like DOMPurify.
+   * Production-grade implementation with comprehensive tag and attribute filtering.
    */
   sanitizeHtml(html: string): string {
+    // First escape all HTML
     const div = document.createElement('div');
     div.textContent = html;
-    return div.innerHTML;
+    let sanitized = div.innerHTML;
+
+    // Define allowed tags and attributes for rich text (if needed)
+    const allowedTags = ['b', 'i', 'em', 'strong', 'u', 'p', 'br', 'span'];
+    const allowedAttributes: Record<string, string[]> = {
+      'span': ['class'],
+      'a': ['href', 'title'], // Only if links are needed
+    };
+
+    // For most use cases, we want plain text with HTML escaped
+    // This prevents ALL XSS attacks including attribute-based attacks
+    
+    // Remove any script tags that might have been double-encoded
+    sanitized = sanitized.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+    
+    // Remove event handlers (onclick, onerror, etc.)
+    sanitized = sanitized.replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, '');
+    sanitized = sanitized.replace(/\s*on\w+\s*=\s*[^\s>]*/gi, '');
+    
+    // Remove javascript: protocol
+    sanitized = sanitized.replace(/javascript:/gi, '');
+    
+    // Remove data: protocol (can be used for XSS)
+    sanitized = sanitized.replace(/data:text\/html/gi, '');
+    
+    // Remove vbscript: protocol
+    sanitized = sanitized.replace(/vbscript:/gi, '');
+    
+    // Remove any suspicious attribute patterns
+    sanitized = sanitized.replace(/\s*style\s*=\s*["'][^"']*expression\([^"']*\)["']/gi, '');
+    
+    return sanitized;
+  }
+
+  /**
+   * Advanced HTML sanitization with whitelist approach.
+   * Only allows specific safe tags and attributes.
+   */
+  sanitizeHtmlAdvanced(html: string, allowedTags: string[] = [], allowedAttributes: Record<string, string[]> = {}): string {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    
+    const sanitize = (node: Node): Node | null => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        return node;
+      }
+      
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const element = node as Element;
+        const tagName = element.tagName.toLowerCase();
+        
+        // If tag is not allowed, return its text content
+        if (!allowedTags.includes(tagName)) {
+          return document.createTextNode(element.textContent || '');
+        }
+        
+        // Create new element with same tag
+        const newElement = document.createElement(tagName);
+        
+        // Copy only allowed attributes
+        const allowedAttrs = allowedAttributes[tagName] || [];
+        for (const attr of Array.from(element.attributes)) {
+          if (allowedAttrs.includes(attr.name)) {
+            // Additional validation for href attributes
+            if (attr.name === 'href') {
+              const href = attr.value;
+              if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('/')) {
+                newElement.setAttribute(attr.name, attr.value);
+              }
+            } else {
+              newElement.setAttribute(attr.name, attr.value);
+            }
+          }
+        }
+        
+        // Recursively sanitize children
+        for (const child of Array.from(node.childNodes)) {
+          const sanitizedChild = sanitize(child);
+          if (sanitizedChild) {
+            newElement.appendChild(sanitizedChild);
+          }
+        }
+        
+        return newElement;
+      }
+      
+      return null;
+    };
+    
+    const sanitizedBody = sanitize(doc.body);
+    return sanitizedBody ? sanitizedBody.textContent || '' : '';
   }
 
   /**

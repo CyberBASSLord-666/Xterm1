@@ -172,22 +172,125 @@ export class AccessibilityService {
   }
 
   /**
-   * Check color contrast (basic check).
+   * Check color contrast with actual WCAG contrast ratio calculation.
    */
   private checkColorContrast(): void {
-    // This is a simplified check - proper contrast checking requires color analysis
-    const elements = document.querySelectorAll('[style*="color"]');
-    elements.forEach((element) => {
-      // In a full implementation, we would calculate actual contrast ratios
-      // For now, just flag elements with inline color styles for manual review
-      this.issues.push({
-        type: 'notice',
-        rule: 'color-contrast',
-        message: 'Element has custom colors - verify contrast ratio',
-        element: element as HTMLElement,
-        fix: 'Ensure 4.5:1 contrast ratio for normal text, 3:1 for large text',
-      });
+    // Check text elements for contrast
+    const textElements = document.querySelectorAll('p, span, div, a, button, h1, h2, h3, h4, h5, h6, label, li');
+    
+    textElements.forEach((element) => {
+      const htmlElement = element as HTMLElement;
+      
+      // Skip if element has no text or is not visible
+      if (!htmlElement.textContent?.trim() || htmlElement.offsetParent === null) {
+        return;
+      }
+      
+      const computedStyle = window.getComputedStyle(htmlElement);
+      const foreground = computedStyle.color;
+      const background = this.getBackgroundColor(htmlElement);
+      
+      if (!foreground || !background) {
+        return;
+      }
+      
+      const contrastRatio = this.calculateContrastRatio(foreground, background);
+      
+      // WCAG AA requires 4.5:1 for normal text, 3:1 for large text
+      // Large text is 18pt (24px) or 14pt (18.66px) bold
+      const fontSize = parseFloat(computedStyle.fontSize);
+      const fontWeight = computedStyle.fontWeight;
+      const isLargeText = fontSize >= 24 || (fontSize >= 18.66 && (fontWeight === 'bold' || parseInt(fontWeight) >= 700));
+      
+      const requiredRatio = isLargeText ? 3 : 4.5;
+      
+      if (contrastRatio < requiredRatio) {
+        this.issues.push({
+          type: 'error',
+          rule: 'color-contrast',
+          message: `Insufficient color contrast: ${contrastRatio.toFixed(2)}:1 (required: ${requiredRatio}:1)`,
+          element: htmlElement,
+          fix: `Increase contrast to at least ${requiredRatio}:1. Current: ${contrastRatio.toFixed(2)}:1`,
+        });
+      }
     });
+  }
+
+  /**
+   * Get the effective background color of an element (considering parent backgrounds).
+   */
+  private getBackgroundColor(element: HTMLElement): string | null {
+    let current: HTMLElement | null = element;
+    
+    while (current) {
+      const bg = window.getComputedStyle(current).backgroundColor;
+      
+      // If background is not transparent, use it
+      if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
+        return bg;
+      }
+      
+      current = current.parentElement;
+    }
+    
+    // Default to white if no background found
+    return 'rgb(255, 255, 255)';
+  }
+
+  /**
+   * Calculate WCAG contrast ratio between two colors.
+   * @returns Contrast ratio (1-21)
+   */
+  private calculateContrastRatio(foreground: string, background: string): number {
+    const fgLuminance = this.getRelativeLuminance(foreground);
+    const bgLuminance = this.getRelativeLuminance(background);
+    
+    const lighter = Math.max(fgLuminance, bgLuminance);
+    const darker = Math.min(fgLuminance, bgLuminance);
+    
+    return (lighter + 0.05) / (darker + 0.05);
+  }
+
+  /**
+   * Calculate relative luminance according to WCAG formula.
+   */
+  private getRelativeLuminance(color: string): number {
+    const rgb = this.parseColor(color);
+    if (!rgb) return 0;
+    
+    // Convert to relative luminance
+    const [r, g, b] = rgb.map((val) => {
+      const sRGB = val / 255;
+      return sRGB <= 0.03928 ? sRGB / 12.92 : Math.pow((sRGB + 0.055) / 1.055, 2.4);
+    });
+    
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  }
+
+  /**
+   * Parse CSS color string to RGB values.
+   */
+  private parseColor(color: string): [number, number, number] | null {
+    // Handle rgb() and rgba() format
+    const rgbMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+    if (rgbMatch) {
+      return [parseInt(rgbMatch[1]), parseInt(rgbMatch[2]), parseInt(rgbMatch[3])];
+    }
+    
+    // Handle hex format
+    const hexMatch = color.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
+    if (hexMatch) {
+      return [parseInt(hexMatch[1], 16), parseInt(hexMatch[2], 16), parseInt(hexMatch[3], 16)];
+    }
+    
+    // Handle named colors by creating a temporary element
+    const temp = document.createElement('div');
+    temp.style.color = color;
+    document.body.appendChild(temp);
+    const computed = window.getComputedStyle(temp).color;
+    document.body.removeChild(temp);
+    
+    return this.parseColor(computed);
   }
 
   /**

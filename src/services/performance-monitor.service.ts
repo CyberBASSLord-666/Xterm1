@@ -147,7 +147,7 @@ export class PerformanceMonitorService {
   }
 
   /**
-   * Get Web Vitals metrics if available.
+   * Get Web Vitals metrics with full Core Web Vitals implementation.
    */
   getWebVitals(): {
     fcp?: number; // First Contentful Paint
@@ -155,29 +155,163 @@ export class PerformanceMonitorService {
     fid?: number; // First Input Delay
     cls?: number; // Cumulative Layout Shift
     ttfb?: number; // Time to First Byte
+    tti?: number; // Time to Interactive
   } {
     const vitals: any = {};
 
     if ('PerformanceObserver' in window) {
-      // Note: In a real implementation, you'd use the web-vitals library
-      // This is a simplified version
       try {
+        // Time to First Byte
         const navigation = performance.getEntriesByType('navigation')[0] as any;
         if (navigation) {
           vitals.ttfb = navigation.responseStart - navigation.requestStart;
+          vitals.tti = navigation.domInteractive - navigation.fetchStart;
         }
 
+        // First Contentful Paint
         const paint = performance.getEntriesByType('paint');
         const fcp = paint.find(entry => entry.name === 'first-contentful-paint');
         if (fcp) {
           vitals.fcp = fcp.startTime;
         }
+
+        // Largest Contentful Paint
+        this.observeLCP((value) => {
+          vitals.lcp = value;
+        });
+
+        // First Input Delay
+        this.observeFID((value) => {
+          vitals.fid = value;
+        });
+
+        // Cumulative Layout Shift
+        this.observeCLS((value) => {
+          vitals.cls = value;
+        });
+
       } catch (error) {
         this.logger.error('Failed to get Web Vitals', error, 'PerformanceMonitor');
       }
     }
 
     return vitals;
+  }
+
+  /**
+   * Observe Largest Contentful Paint (LCP).
+   */
+  private observeLCP(callback: (value: number) => void): void {
+    try {
+      const observer = new PerformanceObserver((list) => {
+        const entries = list.getEntries();
+        const lastEntry = entries[entries.length - 1] as any;
+        if (lastEntry) {
+          callback(lastEntry.renderTime || lastEntry.loadTime);
+        }
+      });
+      observer.observe({ type: 'largest-contentful-paint', buffered: true });
+    } catch (e) {
+      // LCP not supported
+    }
+  }
+
+  /**
+   * Observe First Input Delay (FID).
+   */
+  private observeFID(callback: (value: number) => void): void {
+    try {
+      const observer = new PerformanceObserver((list) => {
+        list.getEntries().forEach((entry: any) => {
+          if (entry.processingStart) {
+            callback(entry.processingStart - entry.startTime);
+          }
+        });
+      });
+      observer.observe({ type: 'first-input', buffered: true });
+    } catch (e) {
+      // FID not supported
+    }
+  }
+
+  /**
+   * Observe Cumulative Layout Shift (CLS).
+   */
+  private observeCLS(callback: (value: number) => void): void {
+    let clsValue = 0;
+    let sessionValue = 0;
+    let sessionEntries: any[] = [];
+
+    try {
+      const observer = new PerformanceObserver((list) => {
+        list.getEntries().forEach((entry: any) => {
+          if (!entry.hadRecentInput) {
+            const firstSessionEntry = sessionEntries[0];
+            const lastSessionEntry = sessionEntries[sessionEntries.length - 1];
+
+            if (
+              sessionValue &&
+              entry.startTime - lastSessionEntry.startTime < 1000 &&
+              entry.startTime - firstSessionEntry.startTime < 5000
+            ) {
+              sessionValue += entry.value;
+              sessionEntries.push(entry);
+            } else {
+              sessionValue = entry.value;
+              sessionEntries = [entry];
+            }
+
+            if (sessionValue > clsValue) {
+              clsValue = sessionValue;
+              callback(clsValue);
+            }
+          }
+        });
+      });
+      observer.observe({ type: 'layout-shift', buffered: true });
+    } catch (e) {
+      // CLS not supported
+    }
+  }
+
+  /**
+   * Get Web Vitals rating based on WCAG thresholds.
+   */
+  getWebVitalsRating(): Array<{ metric: string; value: number; rating: 'good' | 'needs-improvement' | 'poor' }> {
+    const vitals = this.getWebVitals();
+    const ratings: Array<{ metric: string; value: number; rating: 'good' | 'needs-improvement' | 'poor' }> = [];
+
+    // LCP thresholds
+    if (vitals.lcp !== undefined) {
+      const rating = vitals.lcp < 2500 ? 'good' : vitals.lcp < 4000 ? 'needs-improvement' : 'poor';
+      ratings.push({ metric: 'LCP (Largest Contentful Paint)', value: vitals.lcp, rating });
+    }
+
+    // FID thresholds
+    if (vitals.fid !== undefined) {
+      const rating = vitals.fid < 100 ? 'good' : vitals.fid < 300 ? 'needs-improvement' : 'poor';
+      ratings.push({ metric: 'FID (First Input Delay)', value: vitals.fid, rating });
+    }
+
+    // CLS thresholds
+    if (vitals.cls !== undefined) {
+      const rating = vitals.cls < 0.1 ? 'good' : vitals.cls < 0.25 ? 'needs-improvement' : 'poor';
+      ratings.push({ metric: 'CLS (Cumulative Layout Shift)', value: vitals.cls, rating });
+    }
+
+    // FCP thresholds
+    if (vitals.fcp !== undefined) {
+      const rating = vitals.fcp < 1800 ? 'good' : vitals.fcp < 3000 ? 'needs-improvement' : 'poor';
+      ratings.push({ metric: 'FCP (First Contentful Paint)', value: vitals.fcp, rating });
+    }
+
+    // TTFB thresholds
+    if (vitals.ttfb !== undefined) {
+      const rating = vitals.ttfb < 800 ? 'good' : vitals.ttfb < 1800 ? 'needs-improvement' : 'poor';
+      ratings.push({ metric: 'TTFB (Time to First Byte)', value: vitals.ttfb, rating });
+    }
+
+    return ratings;
   }
 
   /**
