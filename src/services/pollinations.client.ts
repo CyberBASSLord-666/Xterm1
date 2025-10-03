@@ -22,9 +22,31 @@ const TEXT_FEED_URL = 'https://text.pollinations.ai/feed';
 const IMAGE_INTERVAL = 5000; // 1 request per 5 seconds
 const TEXT_INTERVAL = 3000; // 1 request per 3 seconds
 
-// Gemini API Client
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-const geminiModel = 'gemini-2.5-flash';
+// Gemini API Client - initialized lazily with API key
+let ai: GoogleGenAI | null = null;
+const geminiModel = 'gemini-2.0-flash-exp';
+
+/**
+ * Initialize the Gemini AI client with an API key.
+ * This must be called before using any Gemini-powered features.
+ */
+export function initializeGeminiClient(apiKey: string): void {
+    if (!apiKey || apiKey.trim().length === 0) {
+        console.warn('Gemini API key is empty. AI features will not be available.');
+        return;
+    }
+    ai = new GoogleGenAI({ apiKey });
+}
+
+/**
+ * Check if the Gemini client is initialized.
+ */
+function ensureGeminiClient(): GoogleGenAI {
+    if (!ai) {
+        throw new Error('Gemini API client is not initialized. Please configure your API key in settings.');
+    }
+    return ai;
+}
 
 type RequestFn<T> = () => Promise<T>;
 
@@ -291,7 +313,8 @@ ${basePromptInstruction}
 
 Generate a prompt that strictly adheres to these rules and embodies the user's preferences.`;
 
-    const response = await ai.models.generateContent({
+    const client = ensureGeminiClient();
+    const response = await client.models.generateContent({
       model: geminiModel,
       contents: 'Create a prompt based on my system instructions.',
       config: {
@@ -299,6 +322,9 @@ Generate a prompt that strictly adheres to these rules and embodies the user's p
       }
     });
 
+    if (!response.text) {
+        throw new Error('No text response from Gemini API');
+    }
     return response.text.trim();
 }
 
@@ -315,12 +341,16 @@ Base prompt: "${basePrompt}"
 
 Generate the new, subtly varied prompt:`;
 
-    const response = await ai.models.generateContent({
+    const client = ensureGeminiClient();
+    const response = await client.models.generateContent({
         model: geminiModel,
         contents: "Generate a new prompt based on the base prompt and instructions.",
         config: { systemInstruction: systemPrompt }
     });
     
+    if (!response.text) {
+        throw new Error('No text response from Gemini API');
+    }
     return response.text.trim();
 }
 
@@ -338,11 +368,15 @@ Style directive to integrate: "${styleDirective}"
 
 Generate the new, restyled prompt:`;
     
-    const response = await ai.models.generateContent({
+    const client = ensureGeminiClient();
+    const response = await client.models.generateContent({
         model: geminiModel,
         contents: "Generate a new prompt based on the base prompt, style directive, and instructions.",
         config: { systemInstruction: systemPrompt }
     });
     
+    if (!response.text) {
+        throw new Error('No text response from Gemini API');
+    }
     return response.text.trim();
 }

@@ -16,7 +16,7 @@
       "ES2022",
       "dom"
     ],
-    "disableTypeScriptVersionCheck": true,
+    "types": ["node"],
     "sourceMap": true,
     "declaration": false,
     "downlevelIteration": true,
