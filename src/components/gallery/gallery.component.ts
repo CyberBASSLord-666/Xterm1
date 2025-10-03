@@ -135,6 +135,7 @@ export class GalleryComponent implements OnInit, OnDestroy {
       event.stopPropagation();
       const isFav = await this.galleryService.toggleFavorite(id);
       this.allItems.update(items => items.map(i => i.id === id ? {...i, isFavorite: isFav} : i));
+      this.toastService.show(isFav ? 'Added to favorites.' : 'Removed from favorites.');
   }
 
   toggleSelectionMode() {
@@ -176,7 +177,7 @@ export class GalleryComponent implements OnInit, OnDestroy {
   async moveSelected(event: Event) {
       const target = event.target as HTMLSelectElement;
       const collectionId = target.value;
-      if (!collectionId) return;
+      if (collectionId === '') return;
 
       const ids = Array.from(this.selectedIds());
       const newCollectionId = collectionId === 'none' ? null : collectionId;
@@ -188,8 +189,13 @@ export class GalleryComponent implements OnInit, OnDestroy {
           }
           return item;
       }));
+      
+      const collection = this.collections().find(c => c.id === newCollectionId);
+      const message = newCollectionId === null 
+        ? `${ids.length} item(s) removed from collection.`
+        : `${ids.length} item(s) moved to "${collection?.name}".`;
+        
+      this.toastService.show(message);
       this.toggleSelectionMode();
-      this.toastService.show(`${ids.length} item(s) moved.`);
-      target.value = ''; // Reset select
   }
 }

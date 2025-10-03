@@ -19,6 +19,7 @@ export class EditorComponent implements OnInit {
   item = signal<GalleryItem | null>(null);
   restyle = signal('Golden hour warmth, gentle grain, cinematic contrast');
   working = signal(false);
+  audioWorking = signal(false);
   
   lineage = signal<{parent: GalleryItem | null, children: GalleryItem[]}>({parent: null, children: []});
 
@@ -146,6 +147,7 @@ export class EditorComponent implements OnInit {
       if (!item) return;
       const isFav = await this.gs.toggleFavorite(item.id);
       this.item.update(i => i ? {...i, isFavorite: isFav} : null);
+      this.toast.show(isFav ? 'Added to favorites.' : 'Removed from favorites.');
   }
   
   downloadImage() {
@@ -181,21 +183,32 @@ export class EditorComponent implements OnInit {
       }
   }
   
-  async previewAudio() {
+  previewAudio() {
     const item = this.item();
     if (!item) return;
-    this.working.set(true);
-    this.toast.show('Generating audio preview...');
+
+    if (!('speechSynthesis' in window)) {
+      this.toast.show('Audio not supported on this browser.');
+      return;
+    }
+
+    if (this.audioWorking()) {
+      window.speechSynthesis.cancel();
+      this.audioWorking.set(false);
+      return;
+    }
+
+    this.audioWorking.set(true);
     try {
-        const blob = await textToSpeech(item.prompt);
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        audio.play();
-        audio.onended = () => URL.revokeObjectURL(url);
+      const utterance = textToSpeech(item.prompt);
+      utterance.onend = () => this.audioWorking.set(false);
+      utterance.onerror = (e) => {
+        this.audioWorking.set(false);
+        this.toast.show(`Audio error: ${e.error}`);
+      };
     } catch (e: any) {
-        this.toast.show(`Audio preview failed: ${e.message}`);
-    } finally {
-        this.working.set(false);
+      this.audioWorking.set(false);
+      this.toast.show(`Audio failed: ${e.message}`);
     }
   }
 }

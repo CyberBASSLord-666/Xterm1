@@ -1,3 +1,5 @@
+import { GoogleGenAI } from "@google/genai";
+
 export type DeviceInfo = { width: number; height: number; dpr: number; };
 export type ExactFitTarget = { width: number; height: number; aspect: string; mode: 'exact' | 'constrained'; };
 export type SupportedResolutions = Record<string, Array<{ w: number; h: number }>>;
@@ -19,6 +21,10 @@ const IMAGE_FEED_URL = 'https://image.pollinations.ai/feed';
 const TEXT_FEED_URL = 'https://text.pollinations.ai/feed';
 const IMAGE_INTERVAL = 5000; // 1 request per 5 seconds
 const TEXT_INTERVAL = 3000; // 1 request per 3 seconds
+
+// Gemini API Client
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const geminiModel = 'gemini-2.5-flash';
 
 type RequestFn<T> = () => Promise<T>;
 
@@ -204,11 +210,37 @@ export async function createDeviceWallpaper(
     return { blob, ...target };
 }
 
+const USABLE_IMAGE_MODELS = [
+    'flux',
+    'sdxl',
+    'playground-v2.5',
+    'dall-e-3',
+    'dall-e-2',
+    'stable-diffusion-2.1',
+    'turbo',
+    'dreamshaper',
+    'realvisxl'
+];
+
 export function listImageModels(): Promise<string[]> {
     const url = `https://image.pollinations.ai/models`;
     return textQueue.add(async () => {
         const response = await fetchWithRetries(url, { timeout: 15000, retries: 3 });
-        return response.json();
+        const allModels = await response.json() as string[];
+        
+        const usableModels = allModels.filter(m => USABLE_IMAGE_MODELS.includes(m));
+
+        if (usableModels.length === 0 && allModels.length > 0) {
+            console.warn("Image model whitelist may be outdated. Falling back to default 'flux'.");
+            return allModels.includes('flux') ? ['flux'] : [];
+        }
+        
+        // Ensure flux is first if available, as it's a good default.
+        if (usableModels.includes('flux')) {
+            return ['flux', ...usableModels.filter(m => m !== 'flux')];
+        }
+
+        return usableModels;
     });
 }
 
@@ -220,29 +252,34 @@ export function listTextModels(): Promise<string[]> {
     });
 }
 
-export function textToSpeech(prompt: string, voice = 'nova'): Promise<Blob> {
-    const url = `${TEXT_API_BASE}/${encodeURIComponent(prompt)}?model=openai-audio&voice=${encodeURIComponent(voice)}`;
-    return textQueue.add(async () => {
-        const response = await fetchWithRetries(url, { timeout: 20000, retries: 2 });
-        if (!response.ok) {
-            throw new Error(`Text-to-Speech failed: ${await response.text()}`);
-        }
-        return response.blob();
-    });
+export function textToSpeech(prompt: string): SpeechSynthesisUtterance {
+    if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(prompt);
+        window.speechSynthesis.speak(utterance);
+        return utterance;
+    } else {
+        throw new Error('Text-to-Speech is not supported by your browser.');
+    }
 }
 
-export function composePromptForDevice(
+export async function composePromptForDevice(
     device: DeviceInfo,
-    prefs: { styles: string[] },
+    prefs: { styles: string[]; basePrompt?: string; },
     options: TextOptions = {}
 ): Promise<string> {
+    const basePromptInstruction = prefs.basePrompt 
+        ? `
+Start with this user-provided idea, but enhance it for maximum impact: "${prefs.basePrompt}"`
+        : `
+The user has not provided a base prompt. Generate a creative and compelling concept based on the style preferences.`;
+
     const systemPrompt = `You are an expert photorealistic prompt engineer for a cutting-edge image generation AI. Your sole task is to create a single, concise, descriptive prompt for a mobile device wallpaper. The resulting image MUST be indistinguishable from a high-resolution, professional photograph.
 
 **Crucial Instructions:**
 1.  **Absolute Photorealism:** Prioritize hyperrealistic rendering, incredibly intricate textures (like skin pores, fabric weaves, wood grain), and physically accurate, lifelike lighting.
 2.  **No Artistic Styles:** Strictly AVOID any illustrative, painterly, cartoonish, or stylized language. Do not use words like 'masterpiece', 'beautiful', or 'artwork'. Focus purely on descriptive, photographic terms.
 3.  **No Text:** The final image must NOT contain any text, letters, or words.
-4.  **Conciseness:** The prompt must be a single, detailed sentence.
+4.  **Conciseness:** The prompt must be a single, detailed sentence, and nothing else. Do not add any preamble like "Here is the prompt:".
 
 Device characteristics for context:
 - Resolution: ${device.width}x${device.height}
@@ -250,36 +287,62 @@ Device characteristics for context:
 User preferences to incorporate:
 - Styles: ${prefs.styles.join(', ')}
 
+${basePromptInstruction}
+
 Generate a prompt that strictly adheres to these rules and embodies the user's preferences.`;
 
-    return generateTextGet('Create a prompt based on my system instructions', { ...options, system: systemPrompt });
+    const response = await ai.models.generateContent({
+      model: geminiModel,
+      contents: 'Create a prompt based on my system instructions.',
+      config: {
+        systemInstruction: systemPrompt
+      }
+    });
+
+    return response.text.trim();
 }
 
-export function composeVariantPrompt(basePrompt: string, options: TextOptions = {}): Promise<string> {
+export async function composeVariantPrompt(basePrompt: string, options: TextOptions = {}): Promise<string> {
     const systemPrompt = `You are a prompt refinement expert. Your task is to generate a subtle variation of the following hyperrealistic image prompt.
 
 **Rules for Variation:**
 1.  **Preserve Core Elements:** The main subject, setting, and overall composition MUST remain the same.
 2.  **Modify Secondary Details:** Change only minor aspects like the camera angle (e.g., slightly lower, from the side), time of day (e.g., golden hour instead of midday), or atmospheric conditions (e.g., adding a light mist).
 3.  **Maintain Hyperrealism:** The new prompt MUST maintain or even enhance the photorealistic quality, intricate detail, and lifelike lighting of the original. Do not simplify the prompt.
+4.  **Output only the prompt text**, without any extra words or quotes.
 
 Base prompt: "${basePrompt}"
 
 Generate the new, subtly varied prompt:`;
-    return generateTextGet('Create a variant prompt based on my system instructions', { ...options, system: systemPrompt });
+
+    const response = await ai.models.generateContent({
+        model: geminiModel,
+        contents: "Generate a new prompt based on the base prompt and instructions.",
+        config: { systemInstruction: systemPrompt }
+    });
+    
+    return response.text.trim();
 }
 
-export function composeRestylePrompt(basePrompt: string, styleDirective: string, options: TextOptions = {}): Promise<string> {
+export async function composeRestylePrompt(basePrompt: string, styleDirective: string, options: TextOptions = {}): Promise<string> {
     const systemPrompt = `You are a visual style adaptation expert. Your task is to rewrite an image prompt to incorporate a new style directive, while strictly preserving its core subject and photorealistic essence.
 
 **Rules for Restyling:**
 1.  **Preserve Subject & Composition:** The primary subject and its arrangement in the scene must not change.
 2.  **Integrate Style Naturally:** Weave the style directive into the prompt's descriptive language. For example, if the style is 'Golden hour warmth', modify the lighting description. If the style is 'gentle grain', add 'subtle film grain' to the prompt.
 3.  **Enhance, Don't Replace, Realism:** The new style must NOT compromise the photorealistic quality or intricate detail. The final prompt should still describe an image that looks like a real photograph, but one that was shot with the specified style in mind.
+4.  **Output only the prompt text**, without any extra words or quotes.
 
 Base prompt: "${basePrompt}"
 Style directive to integrate: "${styleDirective}"
 
 Generate the new, restyled prompt:`;
-    return generateTextGet('Create a restyled prompt based on my system instructions', { ...options, system: systemPrompt });
+    
+    const response = await ai.models.generateContent({
+        model: geminiModel,
+        contents: "Generate a new prompt based on the base prompt, style directive, and instructions.",
+        config: { systemInstruction: systemPrompt }
+    });
+    
+    return response.text.trim();
 }

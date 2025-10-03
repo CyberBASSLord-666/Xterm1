@@ -9,39 +9,48 @@
       <div>
         <label for="referrer" class="block text-sm font-medium text-primary-text">Referrer</label>
         <p class="text-xs text-secondary-text mb-1">Used in Pollinations GET calls for attribution.</p>
-        <input id="referrer" type="url" [value]="settingsService.referrer()" (input)="onReferrerInput($event)" class="w-full bg-primary-bg border-gray-700 text-primary-text rounded-md p-2 focus:ring-2 focus:ring-accent focus:border-accent transition">
+        <input id="referrer" type="url" [value]="settingsService.referrer()" (input)="onReferrerInput($event)" (blur)="onReferrerBlur()" class="w-full bg-primary-bg border-gray-700 text-primary-text rounded-md p-2 focus:ring-2 focus:ring-accent focus:border-accent transition">
       </div>
 
       <div class="space-y-4">
-        <label for="nologo" class="flex items-center justify-between cursor-pointer group">
+        <!-- Nologo Toggle -->
+        <div class="flex items-center justify-between group">
           <span class="flex flex-col">
-            <span class="text-sm font-medium text-primary-text group-hover:text-white transition-colors">Disable logo overlays</span>
-            <span class="text-xs text-secondary-text">Request images without watermarks by default.</span>
+            <label for="nologo" class="cursor-pointer text-sm font-medium text-primary-text group-hover:text-white transition-colors">Disable logo overlays</label>
+            <label for="nologo" class="cursor-pointer text-xs text-secondary-text">Request images without watermarks by default.</label>
           </span>
-          <div class="relative w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent">
+          <label class="relative inline-flex items-center cursor-pointer">
             <input type="checkbox" id="nologo" class="sr-only peer" [checked]="settingsService.nologo()" (change)="onNologoChange($event)">
-          </div>
-        </label>
+            <div class="w-11 h-6 bg-gray-600 rounded-full transition-colors duration-300 peer-checked:bg-accent"></div>
+            <div class="absolute top-[2px] left-[2px] bg-white border-gray-300 border rounded-full h-5 w-5 transition-transform duration-300 peer-checked:translate-x-full peer-checked:border-white"></div>
+          </label>
+        </div>
         
-         <label for="privacy" class="flex items-center justify-between cursor-pointer group">
+        <!-- Private Toggle -->
+        <div class="flex items-center justify-between group">
           <span class="flex flex-col">
-            <span class="text-sm font-medium text-primary-text group-hover:text-white transition-colors">Private generations</span>
-            <span class="text-xs text-secondary-text">Request that generated images not be publicly indexed.</span>
+            <label for="privacy" class="cursor-pointer text-sm font-medium text-primary-text group-hover:text-white transition-colors">Private generations</label>
+            <label for="privacy" class="cursor-pointer text-xs text-secondary-text">Request that generated images not be publicly indexed.</label>
           </span>
-          <div class="relative w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent">
+          <label class="relative inline-flex items-center cursor-pointer">
             <input type="checkbox" id="privacy" class="sr-only peer" [checked]="settingsService.private()" (change)="onPrivateChange($event)">
-          </div>
-        </label>
+            <div class="w-11 h-6 bg-gray-600 rounded-full transition-colors duration-300 peer-checked:bg-accent"></div>
+            <div class="absolute top-[2px] left-[2px] bg-white border-gray-300 border rounded-full h-5 w-5 transition-transform duration-300 peer-checked:translate-x-full peer-checked:border-white"></div>
+          </label>
+        </div>
 
-        <label for="safety" class="flex items-center justify-between cursor-pointer group">
+        <!-- Safety Toggle -->
+        <div class="flex items-center justify-between group">
           <span class="flex flex-col">
-            <span class="text-sm font-medium text-primary-text group-hover:text-white transition-colors">Strict safety filters</span>
-            <span class="text-xs text-secondary-text">Enable content safety filters for generations.</span>
+            <label for="safety" class="cursor-pointer text-sm font-medium text-primary-text group-hover:text-white transition-colors">Strict safety filters</label>
+            <label for="safety" class="cursor-pointer text-xs text-secondary-text">Enable content safety filters for generations.</label>
           </span>
-          <div class="relative w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent">
+          <label class="relative inline-flex items-center cursor-pointer">
             <input type="checkbox" id="safety" class="sr-only peer" [checked]="settingsService.safe()" (change)="onSafeChange($event)">
-          </div>
-        </label>
+            <div class="w-11 h-6 bg-gray-600 rounded-full transition-colors duration-300 peer-checked:bg-accent"></div>
+            <div class="absolute top-[2px] left-[2px] bg-white border-gray-300 border rounded-full h-5 w-5 transition-transform duration-300 peer-checked:translate-x-full peer-checked:border-white"></div>
+          </label>
+        </div>
       </div>
     </div>
   </div>
@@ -49,15 +58,18 @@
   <div class="mt-8 border-t border-primary-border pt-8">
     <h3 class="text-xl font-bold tracking-tight text-white sm:text-2xl mb-2">Appearance</h3>
      <div class="mt-4 bg-secondary-bg/50 p-6 rounded-lg border border-primary-border">
-        <label for="theme" class="flex items-center justify-between cursor-pointer group">
+        <!-- Theme Toggle -->
+        <div class="flex items-center justify-between group">
           <span class="flex flex-col">
-            <span class="text-sm font-medium text-primary-text group-hover:text-white transition-colors">Dark Mode</span>
-            <span class="text-xs text-secondary-text">Enable the dark theme for the application.</span>
+            <label for="theme" class="cursor-pointer text-sm font-medium text-primary-text group-hover:text-white transition-colors">Dark Mode</label>
+            <label for="theme" class="cursor-pointer text-xs text-secondary-text">Enable the dark theme for the application.</label>
           </span>
-          <div class="relative w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent">
+          <label class="relative inline-flex items-center cursor-pointer">
             <input type="checkbox" id="theme" class="sr-only peer" [checked]="settingsService.themeDark()" (change)="onThemeChange($event)">
-          </div>
-        </label>
+            <div class="w-11 h-6 bg-gray-600 rounded-full transition-colors duration-300 peer-checked:bg-accent"></div>
+            <div class="absolute top-[2px] left-[2px] bg-white border-gray-300 border rounded-full h-5 w-5 transition-transform duration-300 peer-checked:translate-x-full peer-checked:border-white"></div>
+          </label>
+        </div>
     </div>
   </div>
 

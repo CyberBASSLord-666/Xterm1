@@ -3,8 +3,8 @@ import { DeviceService } from '../../services/device.service';
 import { ToastService } from '../../services/toast.service';
 import { GalleryService } from '../../services/gallery.service';
 import { SettingsService } from '../../services/settings.service';
-import { ImageUtilService } from '../../services/image-util.service';
-import { createDeviceWallpaper, composePromptForDevice, computeExactFitTarget, DeviceInfo, ExactFitTarget, listImageModels, ImageOptions } from '../../services/pollinations.client';
+import { GenerationService } from '../../services/generation.service';
+import { composePromptForDevice, computeExactFitTarget, DeviceInfo, ExactFitTarget, listImageModels, ImageOptions } from '../../services/pollinations.client';
 import { FormsModule } from '@angular/forms';
 
 interface StylePreset {
@@ -23,27 +23,51 @@ interface StylePreset {
   },
 })
 export class WizardComponent implements OnInit {
-  process = signal<'compose' | 'generate' | null>(null);
-  loading = computed(() => this.process() !== null);
-  status = signal('');
+  // --- Injected Services ---
+  deviceService = inject(DeviceService);
+  toastService = inject(ToastService);
+  galleryService = inject(GalleryService);
+  settingsService = inject(SettingsService);
+  generationService = inject(GenerationService);
+
+  // --- Local State ---
+  process = signal<'compose' | null>(null);
   prompt = signal('');
   lastTarget = signal<ExactFitTarget | null>(null);
 
-  // Image-to-Image
-  sourceImageUrl = signal<string | null>(null); // This will hold a blob URL for preview
+  // --- Image-to-Image ---
+  sourceImageUrl = signal<string | null>(null);
   dragging = signal(false);
   isLocalSourceImage = computed(() => this.sourceImageUrl()?.startsWith('blob:') ?? false);
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
   @ViewChild('historyButton') historyButton?: ElementRef<HTMLDivElement>;
   @ViewChild('historyDropdown') historyDropdown?: ElementRef<HTMLDivElement>;
 
-  // Models
+  // --- Models & Settings ---
   availableModels = signal<string[]>([]);
   selectedModel = signal('flux');
-
-  // Advanced settings
   seed = signal<number | undefined>(undefined);
   enhancePrompt = signal(true);
+  
+  // --- Computed State from Service & Local ---
+  loading = computed(() => 
+    this.process() === 'compose' || 
+    this.generationService.status() === 'generating' || 
+    this.generationService.status() === 'saving'
+  );
+
+  status = computed(() => {
+    if (this.process() === 'compose') {
+      return 'Composing prompt';
+    }
+    const genStatus = this.generationService.status();
+    if (genStatus === 'generating' || genStatus === 'saving' || genStatus === 'error') {
+      return this.generationService.statusMessage();
+    }
+    return '';
+  });
+
+  generatedImageUrl = computed(() => this.generationService.currentGenerationResult()?.blobUrl ?? null);
 
   readonly baseQualityStyles = ['ultra-high quality', 'hyperrealistic photography', '8K resolution', 'insane detail'];
 
@@ -125,19 +149,11 @@ export class WizardComponent implements OnInit {
   selectedPreset = signal<StylePreset>(this.presets[0]);
   
   currentStyles = computed(() => [...this.selectedPreset().styles, ...this.baseQualityStyles]);
-  
-  generatedImageUrl = signal<string | null>(null);
 
   private readonly historyKey = 'polliwall.promptHistory';
   private readonly wizardSettingsKey = 'polliwall.wizardSettings';
   promptHistory = signal<string[]>([]);
   isHistoryOpen = signal(false);
-
-  deviceService = inject(DeviceService);
-  toastService = inject(ToastService);
-  galleryService = inject(GalleryService);
-  settingsService = inject(SettingsService);
-  private imageUtilService = inject(ImageUtilService);
 
   supported: Record<string, Array<{ w: number; h: number }>> = {
     '9:19.5': [{w:1170,h:2532},{w:1284,h:2778}],
@@ -167,12 +183,10 @@ export class WizardComponent implements OnInit {
     }
     const target = event.target as Node;
     
-    // If the click is on the button, let the button's own handler toggle it.
     if (this.historyButton?.nativeElement.contains(target)) {
       return;
     }
     
-    // If the click is outside the dropdown, close it.
     if (this.historyDropdown && !this.historyDropdown.nativeElement.contains(target)) {
       this.isHistoryOpen.set(false);
     }
@@ -240,7 +254,6 @@ export class WizardComponent implements OnInit {
     try {
         const models = await listImageModels();
         this.availableModels.set(models);
-        // Ensure the default model is valid
         if (!models.includes(this.selectedModel())) {
             this.selectedModel.set(models.includes('flux') ? 'flux' : models[0] || '');
         }
@@ -252,6 +265,7 @@ export class WizardComponent implements OnInit {
   
   generateRandomSeed() {
       this.seed.set(Math.floor(Math.random() * 1000000000));
+      this.toastService.show('New random seed generated.');
   }
 
   private loadHistory() {
@@ -276,12 +290,14 @@ export class WizardComponent implements OnInit {
   useHistoryPrompt(p: string) {
     this.prompt.set(p);
     this.isHistoryOpen.set(false);
+    this.toastService.show('Loaded prompt from history.');
   }
 
   clearHistory() {
     this.promptHistory.set([]);
     localStorage.removeItem(this.historyKey);
     this.isHistoryOpen.set(false);
+    this.toastService.show('Prompt history cleared.');
   }
   
   useSuggestion(suggestion: string) {
@@ -304,12 +320,12 @@ export class WizardComponent implements OnInit {
       this.toastService.show('Please select an image file.');
       return;
     }
-    this.clearSourceImage(); // Revoke previous blob url if exists
+    this.clearSourceImage();
     const url = URL.createObjectURL(file);
     this.sourceImageUrl.set(url);
+    this.toastService.show('Image loaded for inspiration.');
   }
 
-  // Drag and Drop Handlers
   onDragOver(event: DragEvent) {
     event.preventDefault();
     this.dragging.set(true);
@@ -336,16 +352,22 @@ export class WizardComponent implements OnInit {
     }
   }
 
-
   async compose() {
     this.process.set('compose');
-    this.status.set('Composing prompt');
-    this.generatedImageUrl.set(null);
+    
+    // Reset any previous generation result when starting a new composition.
+    const genStatus = this.generationService.status();
+    if (genStatus === 'success' || genStatus === 'error' || genStatus === 'idle') {
+      this.generationService.reset();
+    }
     this.clearSourceImage();
+
     try {
       const info = this.deviceService.getInfo();
+      const currentPrompt = this.prompt().trim();
       const text = await composePromptForDevice(info, {
-        styles: this.currentStyles()
+        styles: this.currentStyles(),
+        basePrompt: currentPrompt
       }, { referrer: this.settingsService.referrer(), private: this.settingsService.private() });
       this.prompt.set(text);
       this.updateHistory(text);
@@ -356,7 +378,6 @@ export class WizardComponent implements OnInit {
       this.toastService.show(`Compose failed: ${e.message || e}`);
     } finally {
       this.process.set(null);
-      this.status.set('');
     }
   }
 
@@ -366,60 +387,32 @@ export class WizardComponent implements OnInit {
       this.toastService.show('Please compose or enter a prompt.');
       return;
     }
-    // Proactive check for local image-to-image which is not supported.
     if (this.isLocalSourceImage()) {
       this.toastService.show('Cannot generate: Local images can only be used for preview.');
       return;
     }
 
-    this.process.set('generate');
-    this.status.set('Generating image');
-    this.generatedImageUrl.set(null);
-    this.toastService.show('Sending prompt to AI for generation...');
-    try {
-      this.updateHistory(text);
-      const info: DeviceInfo = this.deviceService.getInfo();
-      const isImg2Img = !!this.sourceImageUrl();
-      
-      const options: ImageOptions = { 
-            referrer: this.settingsService.referrer(),
-            nologo: this.settingsService.nologo(),
-            private: this.settingsService.private(),
-            safe: this.settingsService.safe(),
-            model: isImg2Img ? 'kontext' : this.selectedModel(),
-            seed: this.seed(),
-            image: this.sourceImageUrl() ?? undefined,
-            enhance: !isImg2Img && this.enhancePrompt()
-      };
-      
-      const { blob, width, height, aspect, mode } = await createDeviceWallpaper({
-        device: info,
-        supported: this.supported,
-        prompt: text,
-        options: options
-      });
-
-      this.status.set('Saving to gallery');
-      this.toastService.show('Image received, saving to your gallery...');
-      const id = crypto.randomUUID();
-      const createdAt = new Date().toISOString();
-      const thumb = await this.imageUtilService.makeThumbnail(blob);
-      await this.galleryService.add({ 
-          id, createdAt, width, height, aspect, mode, 
-          model: options.model!, 
-          prompt: text, blob, thumb, 
-          presetName: this.selectedPreset().name, 
-          isFavorite: false, 
-          collectionId: null 
-      });
-      const generatedUrl = URL.createObjectURL(blob);
-      this.generatedImageUrl.set(generatedUrl);
-      this.toastService.show('Wallpaper generated and saved to gallery.');
-    } catch (e: any) {
-      this.toastService.show(`Generation failed: ${e.message || e}`);
-    } finally {
-      this.process.set(null);
-      this.status.set('');
-    }
+    this.updateHistory(text);
+    const info: DeviceInfo = this.deviceService.getInfo();
+    const isImg2Img = !!this.sourceImageUrl();
+    
+    const options: ImageOptions = { 
+          referrer: this.settingsService.referrer(),
+          nologo: this.settingsService.nologo(),
+          private: this.settingsService.private(),
+          safe: this.settingsService.safe(),
+          model: isImg2Img ? 'kontext' : this.selectedModel(),
+          seed: this.seed(),
+          image: this.sourceImageUrl() ?? undefined,
+          enhance: !isImg2Img && this.enhancePrompt()
+    };
+    
+    await this.generationService.generateWallpaper(
+      text,
+      options,
+      info,
+      this.supported,
+      this.selectedPreset().name
+    );
   }
 }

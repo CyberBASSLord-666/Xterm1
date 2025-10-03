@@ -1,4 +1,3 @@
-
 import { Injectable } from '@angular/core';
 import { db, GalleryItem, Collection } from './idb';
 
@@ -52,9 +51,9 @@ export class GalleryService {
   async moveItemsToCollection(ids: string[], collectionId: string | null): Promise<void> {
       const d = await db();
       const tx = d.transaction('images', 'readwrite');
-      const items = await Promise.all(ids.map(id => tx.store.get(id)));
+      const itemsToUpdate = await Promise.all(ids.map(id => tx.store.get(id)));
       
-      const updatedItems = items.map(item => {
+      const updatePromises = itemsToUpdate.map(item => {
           if (item) {
               item.collectionId = collectionId;
               return tx.store.put(item);
@@ -62,7 +61,7 @@ export class GalleryService {
           return Promise.resolve();
       });
       
-      await Promise.all(updatedItems);
+      await Promise.all(updatePromises);
       await tx.done;
   }
 

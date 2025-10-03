@@ -23,20 +23,32 @@ export class SettingsComponent {
     this.settingsService.referrer.set((event.target as HTMLInputElement).value);
   }
 
+  onReferrerBlur() {
+    this.toastService.show('Referrer setting saved.');
+  }
+
   onNologoChange(event: Event) {
-    this.settingsService.nologo.set((event.target as HTMLInputElement).checked);
+    const checked = (event.target as HTMLInputElement).checked;
+    this.settingsService.nologo.set(checked);
+    this.toastService.show(`Logo overlays ${checked ? 'disabled' : 'enabled'}.`);
   }
 
   onPrivateChange(event: Event) {
-    this.settingsService.private.set((event.target as HTMLInputElement).checked);
+    const checked = (event.target as HTMLInputElement).checked;
+    this.settingsService.private.set(checked);
+    this.toastService.show(`Private generations ${checked ? 'enabled' : 'disabled'}.`);
   }
 
   onSafeChange(event: Event) {
-    this.settingsService.safe.set((event.target as HTMLInputElement).checked);
+    const checked = (event.target as HTMLInputElement).checked;
+    this.settingsService.safe.set(checked);
+    this.toastService.show(`Strict safety filters ${checked ? 'enabled' : 'disabled'}.`);
   }
 
   onThemeChange(event: Event) {
-    this.settingsService.themeDark.set((event.target as HTMLInputElement).checked);
+    const checked = (event.target as HTMLInputElement).checked;
+    this.settingsService.themeDark.set(checked);
+    this.toastService.show(`Dark mode ${checked ? 'enabled' : 'disabled'}.`);
   }
   // --- End of type-safe event handlers ---
 

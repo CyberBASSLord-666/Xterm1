@@ -56,7 +56,7 @@
             <label for="prompt" class="block text-sm font-medium text-primary-text">
               {{ sourceImageUrl() ? 'Instructions for Image' : 'Your Prompt' }}
             </label>
-            <div #historyButton class="flex items-center gap-4">
+            <div class="flex items-center gap-4">
                 <button (click)="compose()" [disabled]="loading()" class="flex items-center justify-center text-xs bg-accent-secondary/80 hover:bg-accent-secondary disabled:bg-opacity-50 disabled:text-secondary-text disabled:cursor-not-allowed text-white font-bold py-1.5 px-3 rounded-md transition-colors">
                   @if(process() === 'compose') {
                     <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
@@ -66,7 +66,7 @@
                     <span>Compose with AI</span>
                   }
                 </button>
-                <div class="relative">
+                <div #historyButton class="relative">
                   <button (click)="isHistoryOpen.set(!isHistoryOpen())" class="text-xs text-accent-secondary hover:underline">History</button>
                   @if (isHistoryOpen()) {
                     <div #historyDropdown class="absolute right-0 mt-2 w-64 bg-secondary-bg border border-primary-border rounded-md shadow-lg z-10 animate-fade-in">
@@ -112,10 +112,22 @@
     <div class="bg-secondary-bg/50 p-4 rounded-lg border border-primary-border animate-fade-in-up" [style.animation-delay]="'100ms'">
         <h3 class="text-lg font-bold text-white mb-2 font-mono tracking-wider">Live Preview</h3>
         <div class="w-full aspect-[9/16] bg-primary-bg rounded-lg border-2 border-dashed border-gray-700 flex items-center justify-center overflow-hidden">
-        @if (process() === 'generate') {
+        @if (generationService.status() === 'generating' || generationService.status() === 'saving') {
           <div class="flex flex-col items-center justify-center text-secondary-text p-4 animate-fade-in">
-            <div class="w-12 h-12 rounded-full animate-pulse-glow"></div>
-            <span class="mt-4 text-sm font-medium">{{ status() }}...</span>
+            <div class="sinister-loader">
+              <svg viewBox="0 0 100 100" class="w-full h-full">
+                <circle class="orbit-path" cx="50" cy="50" r="40" fill="none" />
+                <circle class="orbit-path" cx="50" cy="50" r="30" fill="none" style="animation-delay: -2s; animation-direction: reverse;" />
+                <g class="orbit" style="animation-duration: 8s;">
+                  <circle class="particle" cx="50" cy="10" r="3" />
+                </g>
+                <g class="orbit" style="animation-duration: 6s; animation-direction: reverse;">
+                  <circle class="particle particle-2" cx="50" cy="20" r="2.5" />
+                </g>
+                <circle class="central-orb" cx="50" cy="50" r="12" />
+              </svg>
+            </div>
+            <span class="mt-4 text-sm font-medium animate-flicker">{{ status() }}...</span>
           </div>
         } @else if (generatedImageUrl(); as url) {
           <img [src]="url" alt="Generated Wallpaper" class="object-contain w-full h-full animate-fade-in" width="360" height="640">
@@ -135,7 +147,7 @@
           </div>
         }
         <button (click)="generate()" [disabled]="loading() || (!prompt() && !sourceImageUrl()) || isLocalSourceImage()" class="w-full flex justify-center items-center bg-accent hover:bg-opacity-80 disabled:bg-opacity-50 disabled:text-gray-400 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-md transition-colors text-lg shadow-[0_0_15px_rgba(220,38,38,0.5)] hover:shadow-[0_0_25px_rgba(220,38,38,0.8)]">
-          @if(process() === 'generate') {
+          @if(generationService.status() === 'generating' || generationService.status() === 'saving') {
             <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
             <span>{{ status() }}...</span>
           } @else {
