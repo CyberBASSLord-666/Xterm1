@@ -141,7 +141,12 @@ export class ValidationService {
     // This prevents ALL XSS attacks including attribute-based attacks
     
     // Remove any script tags that might have been double-encoded
-    sanitized = sanitized.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+    // Repeat removal until there are no script tags left
+    let prevSanitized;
+    do {
+      prevSanitized = sanitized;
+      sanitized = sanitized.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+    } while (sanitized !== prevSanitized);
     
     // Remove event handlers (onclick, onerror, etc.)
     sanitized = sanitized.replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, '');
