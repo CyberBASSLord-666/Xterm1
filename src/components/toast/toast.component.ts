@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, signal, OnDestroy, OnInit } from '@angular/core';
+import { Component, signal, OnDestroy, OnInit } from '@angular/core';
 
 @Component({
   selector: 'app-toast',

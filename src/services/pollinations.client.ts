@@ -17,8 +17,9 @@ type TextOptions = { model?: string; system?: string; private?: boolean; referre
 
 const IMAGE_API_BASE = 'https://image.pollinations.ai/prompt';
 const TEXT_API_BASE = 'https://text.pollinations.ai';
-const IMAGE_FEED_URL = 'https://image.pollinations.ai/feed';
-const TEXT_FEED_URL = 'https://text.pollinations.ai/feed';
+// Reserved for future use
+// const IMAGE_FEED_URL = 'https://image.pollinations.ai/feed';
+// const TEXT_FEED_URL = 'https://text.pollinations.ai/feed';
 const IMAGE_INTERVAL = 5000; // 1 request per 5 seconds
 const TEXT_INTERVAL = 3000; // 1 request per 3 seconds
 
@@ -319,7 +320,7 @@ export function textToSpeech(prompt: string): SpeechSynthesisUtterance {
 export async function composePromptForDevice(
     device: DeviceInfo,
     prefs: { styles: string[]; basePrompt?: string; },
-    options: TextOptions = {}
+    _options: TextOptions = {}
 ): Promise<string> {
     const basePromptInstruction = prefs.basePrompt 
         ? `
@@ -360,7 +361,7 @@ Generate a prompt that strictly adheres to these rules and embodies the user's p
     return response.text.trim();
 }
 
-export async function composeVariantPrompt(basePrompt: string, options: TextOptions = {}): Promise<string> {
+export async function composeVariantPrompt(basePrompt: string, _options: TextOptions = {}): Promise<string> {
     const systemPrompt = `You are a prompt refinement expert. Your task is to generate a subtle variation of the following hyperrealistic image prompt.
 
 **Rules for Variation:**
@@ -386,7 +387,7 @@ Generate the new, subtly varied prompt:`;
     return response.text.trim();
 }
 
-export async function composeRestylePrompt(basePrompt: string, styleDirective: string, options: TextOptions = {}): Promise<string> {
+export async function composeRestylePrompt(basePrompt: string, styleDirective: string, _options: TextOptions = {}): Promise<string> {
     const systemPrompt = `You are a visual style adaptation expert. Your task is to rewrite an image prompt to incorporate a new style directive, while strictly preserving its core subject and photorealistic essence.
 
 **Rules for Restyling:**

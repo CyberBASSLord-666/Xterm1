@@ -353,6 +353,12 @@ export class AccessibilityService {
    * Add skip links for keyboard navigation.
    */
   addSkipLinks(): void {
+    // Check if skip link already exists
+    if (document.querySelector('a[href="#main-content"]')) {
+      this.logger.info('Skip links already exist', undefined, 'Accessibility');
+      return;
+    }
+
     const skipLink = document.createElement('a');
     skipLink.href = '#main-content';
     skipLink.textContent = 'Skip to main content';

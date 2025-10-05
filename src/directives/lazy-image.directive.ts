@@ -4,6 +4,7 @@ import { Directive, ElementRef, Input, OnInit, OnDestroy, inject } from '@angula
  * Directive for lazy loading images using Intersection Observer.
  * Usage: <img lazyImage [src]="imageUrl" [lazySrc]="placeholderUrl">
  */
+// eslint-disable-next-line @angular-eslint/directive-selector
 @Directive({
   selector: 'img[lazyImage]',
   standalone: true

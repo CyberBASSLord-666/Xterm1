@@ -1,5 +1,7 @@
 
-import { openDB, DBSchema, IDBPDatabase, IDBPTransaction } from 'idb';
+import { openDB, DBSchema, IDBPDatabase } from 'idb';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import type { IDBPTransaction } from 'idb';
 
 export interface GalleryItem {
   id: string;

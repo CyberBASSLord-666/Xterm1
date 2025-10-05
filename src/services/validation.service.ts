@@ -117,6 +117,7 @@ export class ValidationService {
    */
   sanitizeString(input: string): string {
     // Remove null bytes and control characters
+    // eslint-disable-next-line no-control-regex
     return input.replace(/[\x00-\x1F\x7F]/g, '');
   }
 
@@ -131,8 +132,9 @@ export class ValidationService {
     let sanitized = div.innerHTML;
 
     // Define allowed tags and attributes for rich text (if needed)
-    const allowedTags = ['b', 'i', 'em', 'strong', 'u', 'p', 'br', 'span'];
-    const allowedAttributes: Record<string, string[]> = {
+    // Reserved for future whitelist-based filtering
+    const _allowedTags = ['b', 'i', 'em', 'strong', 'u', 'p', 'br', 'span'];
+    const _allowedAttributes: Record<string, string[]> = {
       'span': ['class'],
       'a': ['href', 'title'], // Only if links are needed
     };
