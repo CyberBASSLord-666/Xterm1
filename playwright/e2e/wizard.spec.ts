@@ -21,7 +21,7 @@ test.describe('Wallpaper Generation Wizard', () => {
     await page.waitForSelector('app-root', { state: 'visible', timeout: 10000 });
     
     // Wait for wizard form to load
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('button:has-text("generate")', { state: 'visible', timeout: 5000 });
   });
   
   test('should display the wizard form', async ({ page }) => {
