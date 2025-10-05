@@ -16,6 +16,10 @@
             "index": "index.html",
             "browser": "index.tsx",
             "tsConfig": "tsconfig.json",
+            "inlineStyleLanguage": "css",
+            "optimization": {
+              "fonts": false
+            },
             "assets": [
               "favicon.ico",
               "manifest.webmanifest"
@@ -26,6 +30,9 @@
           },
           "configurations": {
             "production": {
+              "optimization": {
+                "fonts": false
+              },
               "budgets": [
                 {
                   "type": "initial",
