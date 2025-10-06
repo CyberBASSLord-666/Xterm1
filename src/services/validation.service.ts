@@ -114,11 +114,16 @@ export class ValidationService {
 
   /**
    * Sanitize a string by removing potentially dangerous characters.
+   * Removes control characters including null bytes according to OWASP guidelines.
    */
   sanitizeString(input: string): string {
-    // Remove null bytes and control characters
-    // eslint-disable-next-line no-control-regex
-    return input.replace(/[\x00-\x1F\x7F]/g, '');
+    // Remove null bytes and control characters (C0 and C1 control codes)
+    // This is intentional and necessary for security - not a lint error
+    // References: OWASP Input Validation Cheat Sheet
+    // Control characters can cause injection attacks and data corruption
+    return input
+      .replace(/[\x00-\x1F\x7F-\x9F]/g, '') // Remove all control characters
+      .trim(); // Remove leading/trailing whitespace
   }
 
   /**

@@ -18,6 +18,8 @@
             "tsConfig": "tsconfig.json",
             "inlineStyleLanguage": "css",
             "optimization": {
+              "scripts": false,
+              "styles": false,
               "fonts": false
             },
             "assets": [
@@ -31,7 +33,14 @@
           "configurations": {
             "production": {
               "optimization": {
-                "fonts": false
+                "scripts": true,
+                "styles": {
+                  "minify": true,
+                  "inlineCritical": true
+                },
+                "fonts": {
+                  "inline": false
+                }
               },
               "budgets": [
                 {

@@ -261,23 +261,43 @@ describe('AccessibilityService', () => {
   });
 
   describe('addSkipLinks', () => {
-    it('should add skip link to body', () => {
-      service.addSkipLinks();
-
-      const skipLink = document.querySelector('a[href="#main-content"]');
-      expect(skipLink).toBeDefined();
-      expect(skipLink?.textContent).toBe('Skip to main content');
+    beforeEach(() => {
+      // Clean up any existing skip links containers
+      document.querySelectorAll('.skip-links-container').forEach(el => el.remove());
     });
 
-    it('should only add skip link once', () => {
-      // Remove any existing skip links first
-      document.querySelectorAll('a[href="#main-content"]').forEach(el => el.remove());
+    it('should add skip links container to page', () => {
+      service.addSkipLinks();
+
+      const container = document.querySelector('.skip-links-container');
+      expect(container).toBeDefined();
+      expect(container?.getAttribute('aria-label')).toBe('Skip links');
       
+      // Should have multiple skip links
+      const skipLinks = container?.querySelectorAll('a.skip-link');
+      expect(skipLinks?.length).toBeGreaterThan(0);
+    });
+
+    it('should only add skip link container once', () => {
       service.addSkipLinks();
       service.addSkipLinks();
 
-      const skipLinks = document.querySelectorAll('a[href="#main-content"]');
-      expect(skipLinks.length).toBe(1);
+      const containers = document.querySelectorAll('.skip-links-container');
+      expect(containers.length).toBe(1);
+    });
+
+    it('should create main content target with proper attributes', () => {
+      // Add a main element
+      const main = document.createElement('main');
+      document.body.appendChild(main);
+
+      service.addSkipLinks();
+
+      expect(main.id).toBe('main-content');
+      expect(main.getAttribute('tabindex')).toBe('-1');
+
+      // Clean up
+      main.remove();
     });
   });
 });

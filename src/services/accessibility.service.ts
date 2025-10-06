@@ -350,34 +350,80 @@ export class AccessibilityService {
   }
 
   /**
-   * Add skip links for keyboard navigation.
+   * Add comprehensive skip links for keyboard navigation.
+   * Provides multiple navigation shortcuts for improved accessibility.
    */
   addSkipLinks(): void {
-    // Check if skip link already exists
-    if (document.querySelector('a[href="#main-content"]')) {
+    // Check if skip links already exist
+    const existingContainer = document.querySelector('.skip-links-container');
+    if (existingContainer) {
       this.logger.info('Skip links already exist', undefined, 'Accessibility');
       return;
     }
 
-    const skipLink = document.createElement('a');
-    skipLink.href = '#main-content';
-    skipLink.textContent = 'Skip to main content';
-    skipLink.className = 'sr-only sr-only-focusable';
-    skipLink.style.cssText = `
+    // Create container for skip links
+    const container = document.createElement('nav');
+    container.className = 'skip-links-container';
+    container.setAttribute('aria-label', 'Skip links');
+    container.style.cssText = `
       position: absolute;
       left: -9999px;
-      z-index: 999;
+      z-index: 9999;
+      background: #000;
+      color: #fff;
+      padding: 1rem;
     `;
-    skipLink.addEventListener('focus', () => {
-      skipLink.style.left = '0';
-      skipLink.style.top = '0';
-    });
-    skipLink.addEventListener('blur', () => {
-      skipLink.style.left = '-9999px';
+
+    // Define skip links
+    const links = [
+      { href: '#main-content', text: 'Skip to main content' },
+      { href: '#navigation', text: 'Skip to navigation' },
+      { href: '#footer', text: 'Skip to footer' },
+    ];
+
+    links.forEach((linkData) => {
+      const skipLink = document.createElement('a');
+      skipLink.href = linkData.href;
+      skipLink.textContent = linkData.text;
+      skipLink.className = 'skip-link';
+      skipLink.style.cssText = `
+        display: block;
+        color: #fff;
+        text-decoration: underline;
+        padding: 0.5rem 0;
+      `;
+      
+      skipLink.addEventListener('focus', () => {
+        container.style.left = '1rem';
+        container.style.top = '1rem';
+      });
+      
+      skipLink.addEventListener('blur', () => {
+        container.style.left = '-9999px';
+      });
+      
+      skipLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        const target = document.querySelector(linkData.href);
+        if (target) {
+          (target as HTMLElement).focus();
+          (target as HTMLElement).scrollIntoView({ behavior: 'smooth' });
+        }
+      });
+
+      container.appendChild(skipLink);
     });
 
-    document.body.insertBefore(skipLink, document.body.firstChild);
-    this.logger.info('Skip links added', undefined, 'Accessibility');
+    document.body.insertBefore(container, document.body.firstChild);
+    
+    // Ensure main content has proper id
+    const mainContent = document.querySelector('main, [role="main"]');
+    if (mainContent && !mainContent.id) {
+      mainContent.id = 'main-content';
+      mainContent.setAttribute('tabindex', '-1'); // Make focusable
+    }
+
+    this.logger.info('Skip links added successfully', { count: links.length }, 'Accessibility');
   }
 
   /**

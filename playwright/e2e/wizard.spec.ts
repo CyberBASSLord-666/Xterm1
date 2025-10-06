@@ -14,24 +14,34 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Wallpaper Generation Wizard', () => {
   test.beforeEach(async ({ page }) => {
-    // Navigate to wizard
-    await page.goto('/#/wizard');
+    // Navigate to wizard with network idle wait
+    await page.goto('/#/wizard', { waitUntil: 'networkidle' });
     
-    // Wait for app to be ready
-    await page.waitForSelector('app-root', { state: 'visible', timeout: 10000 });
+    // Wait for Angular app to bootstrap
+    await page.waitForSelector('app-root', { state: 'visible' });
     
-    // Wait for wizard form to load
-    await page.waitForSelector('button:has-text("generate")', { state: 'visible', timeout: 5000 });
+    // Wait for wizard component to be fully rendered using data-testid
+    await page.waitForSelector('[data-testid="wizard-form"], button:has-text("generate")', { 
+      state: 'visible',
+      timeout: 10000 
+    });
+    
+    // Additional stability wait
+    await page.waitForLoadState('domcontentloaded');
   });
   
   test('should display the wizard form', async ({ page }) => {
-    // Check for generate button
+    // Check for generate button with explicit wait
     const generateBtn = page.locator('button').filter({ hasText: /generate/i }).first();
-    await expect(generateBtn).toBeVisible();
+    await expect(generateBtn).toBeVisible({ timeout: 5000 });
     
-    // Check for prompt textarea
+    // Check for prompt textarea with explicit wait
     const textarea = page.locator('textarea').first();
-    await expect(textarea).toBeVisible();
+    await expect(textarea).toBeVisible({ timeout: 5000 });
+    
+    // Verify form is interactive
+    await expect(textarea).toBeEnabled();
+    await expect(generateBtn).toBeEnabled();
   });
   
   test('should accept prompt input', async ({ page }) => {

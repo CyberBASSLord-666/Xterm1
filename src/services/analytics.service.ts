@@ -9,6 +9,15 @@ export interface AnalyticsEvent {
   label?: string;
   value?: number;
   timestamp: Date;
+  metadata?: Record<string, string | number | boolean>;
+}
+
+export interface AnalyticsConfig {
+  enabled: boolean;
+  trackingId?: string;
+  anonymizeIp?: boolean;
+  cookieFlags?: string;
+  debugMode?: boolean;
 }
 
 /**
@@ -97,10 +106,26 @@ export class AnalyticsService {
   }
 
   /**
-   * Track a custom event.
+   * Track a custom event with full type safety.
    * @param event The event to track
    */
   trackEvent(event: Omit<AnalyticsEvent, 'timestamp'>): void {
+    // Validate event structure
+    if (!event.name || typeof event.name !== 'string') {
+      this.logger.warn('Invalid event name', event, 'Analytics');
+      return;
+    }
+    
+    if (!event.category || typeof event.category !== 'string') {
+      this.logger.warn('Invalid event category', event, 'Analytics');
+      return;
+    }
+    
+    if (!event.action || typeof event.action !== 'string') {
+      this.logger.warn('Invalid event action', event, 'Analytics');
+      return;
+    }
+
     const fullEvent: AnalyticsEvent = {
       ...event,
       timestamp: new Date(),
@@ -115,12 +140,25 @@ export class AnalyticsService {
     this.logger.debug('Analytics event tracked', fullEvent, 'Analytics');
 
     if (this.enabled && (window as any).gtag) {
-      (window as any).gtag('event', event.action, {
-        event_category: event.category,
-        event_label: event.label,
-        value: event.value,
-        non_interaction: false,
-      });
+      try {
+        const eventParams: Record<string, any> = {
+          event_category: event.category,
+          event_label: event.label,
+          non_interaction: false,
+        };
+        
+        if (typeof event.value === 'number') {
+          eventParams.value = event.value;
+        }
+        
+        if (event.metadata) {
+          Object.assign(eventParams, event.metadata);
+        }
+        
+        (window as any).gtag('event', event.action, eventParams);
+      } catch (error) {
+        this.logger.error('Failed to send event to GA', error, 'Analytics');
+      }
     }
   }
 
