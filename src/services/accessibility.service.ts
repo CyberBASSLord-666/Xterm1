@@ -364,7 +364,19 @@ export class AccessibilityService {
     // Create container for skip links
     const container = document.createElement('nav');
     container.className = 'skip-links-container';
-    container.setAttribute('aria-label', 'Skip links');
+    // Add a visible heading for screen readers and sighted users
+    const heading = document.createElement('h2');
+    heading.id = 'skip-links-heading';
+    heading.textContent = 'Skip navigation links';
+    heading.style.cssText = `
+      position: absolute;
+      left: -9999px;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+    `;
+    container.appendChild(heading);
+    container.setAttribute('aria-labelledby', 'skip-links-heading');
     container.style.cssText = `
       position: absolute;
       left: -9999px;
