@@ -15,7 +15,9 @@
     "lint": "eslint \"src/**/*.{ts,html}\"",
     "lint:fix": "eslint \"src/**/*.{ts,html}\" --fix",
     "format": "prettier --write \"src/**/*.{ts,html,css,scss,json}\"",
-    "format:check": "prettier --check \"src/**/*.{ts,html,css,scss,json}\""
+    "format:check": "prettier --check \"src/**/*.{ts,html,css,scss,json}\"",
+    "security:check": "bash scripts/validate-security.sh",
+    "pre-deploy": "npm run lint && npm test -- --watchAll=false && npm run build -- --configuration=production && npm run security:check"
   },
   "dependencies": {
     "@angular/common": "^20.2.0",
