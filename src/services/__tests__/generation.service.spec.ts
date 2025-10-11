@@ -72,13 +72,16 @@ describe('GenerationService', () => {
       galleryItem: {
         id: 'test',
         prompt: 'test',
-        imageUrl: 'test',
-        thumbnailUrl: 'test',
+        blob: new Blob(['image data'], { type: 'image/png' }),
+        thumb: new Blob(['thumb data'], { type: 'image/png' }),
         createdAt: new Date().toISOString(),
         isFavorite: false,
         width: 1920,
         height: 1080,
-        collectionIds: []
+        aspect: '16:9',
+        mode: 'exact',
+        model: 'test-model',
+        collectionId: null
       },
       blobUrl: 'blob:test'
     });

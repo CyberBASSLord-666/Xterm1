@@ -46,3 +46,31 @@ global.createImageBitmap = jest.fn().mockImplementation(() =>
 // Mock URL.createObjectURL and revokeObjectURL
 global.URL.createObjectURL = jest.fn(() => 'blob:mock-url');
 global.URL.revokeObjectURL = jest.fn();
+
+// Mock window.screen and window.innerWidth/innerHeight for DeviceService
+Object.defineProperty(window, 'screen', {
+  writable: true,
+  configurable: true,
+  value: {
+    width: 1920,
+    height: 1080,
+  },
+});
+
+Object.defineProperty(window, 'innerWidth', {
+  writable: true,
+  configurable: true,
+  value: 1024,
+});
+
+Object.defineProperty(window, 'innerHeight', {
+  writable: true,
+  configurable: true,
+  value: 768,
+});
+
+Object.defineProperty(window, 'devicePixelRatio', {
+  writable: true,
+  configurable: true,
+  value: 1,
+});
