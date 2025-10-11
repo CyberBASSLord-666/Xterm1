@@ -169,7 +169,7 @@ export class ValidationService {
     sanitized = sanitized.replace(/vbscript:/gi, '');
     
     // Remove any suspicious attribute patterns
-    sanitized = sanitized.replace(/\s*style\s*=\s*["'][^"']*expression\([^"']*\)["']/gi, '');
+    sanitized = sanitized.replace(/\s*style\s*=\s*["'][^"']*(expression\([^"']*\)|url\s*\(\s*['"]?\s*(?:javascript:|data:|vbscript:)[^"')]*['"]?\s*\))[^"']*["']/gi, '');
     
     return sanitized;
   }
