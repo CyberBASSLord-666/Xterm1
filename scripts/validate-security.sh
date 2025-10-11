@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Security Validation Script
 # This script performs comprehensive security checks before deployment
