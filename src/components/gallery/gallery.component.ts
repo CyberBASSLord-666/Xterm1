@@ -51,7 +51,7 @@ export class GalleryComponent implements OnInit, OnDestroy {
       // Date filter
       if (dateFilter !== 'all') {
         const itemDate = new Date(item.createdAt);
-        let dateThreshold = new Date(now);
+        const dateThreshold = new Date(now);
         
         if (dateFilter === 'today') {
           dateThreshold.setDate(now.getDate() - 1);

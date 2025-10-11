@@ -1,9 +1,11 @@
 import 'jest-preset-angular/setup-jest';
 
-// Mock window.matchMedia for testing
+ copilot/fix-cb260cd0-e9f5-43c9-819f-ea0ef53a3483
+// Mock matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
-  value: jest.fn().mockImplementation(query => ({
+  value: jest.fn().mockImplementation((query) => ({
+ main
     matches: false,
     media: query,
     onchange: null,
@@ -33,3 +35,18 @@ global.ResizeObserver = class ResizeObserver {
   observe() {}
   unobserve() {}
 } as any;
+ copilot/fix-cb260cd0-e9f5-43c9-819f-ea0ef53a3483
+
+// Mock createImageBitmap
+global.createImageBitmap = jest.fn().mockImplementation(() =>
+  Promise.resolve({
+    width: 100,
+    height: 100,
+    close: jest.fn(),
+  } as any)
+);
+
+// Mock URL.createObjectURL and revokeObjectURL
+global.URL.createObjectURL = jest.fn(() => 'blob:mock-url');
+global.URL.revokeObjectURL = jest.fn();
+ main

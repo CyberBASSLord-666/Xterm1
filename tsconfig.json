@@ -16,7 +16,7 @@
       "ES2022",
       "dom"
     ],
-    "disableTypeScriptVersionCheck": true,
+    "types": ["node"],
     "sourceMap": true,
     "declaration": false,
     "downlevelIteration": true,
@@ -27,6 +27,16 @@
   },
   "files": [
     "index.tsx"
+  ],
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.spec.ts",
+    "playwright",
+    "cypress"
   ],
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,

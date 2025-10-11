@@ -31,3 +31,13 @@ test-results
 *.njsproj
 *.sln
 *.sw?
+
+# Testing artifacts
+/cypress/videos
+/cypress/screenshots
+/cypress/downloads
+/playwright-report
+/playwright/.cache
+/test-results
+*.spec.js.map
+/coverage

@@ -17,14 +17,37 @@ type TextOptions = { model?: string; system?: string; private?: boolean; referre
 
 const IMAGE_API_BASE = 'https://image.pollinations.ai/prompt';
 const TEXT_API_BASE = 'https://text.pollinations.ai';
-const IMAGE_FEED_URL = 'https://image.pollinations.ai/feed';
-const TEXT_FEED_URL = 'https://text.pollinations.ai/feed';
+// Reserved for future use
+// const IMAGE_FEED_URL = 'https://image.pollinations.ai/feed';
+// const TEXT_FEED_URL = 'https://text.pollinations.ai/feed';
 const IMAGE_INTERVAL = 5000; // 1 request per 5 seconds
 const TEXT_INTERVAL = 3000; // 1 request per 3 seconds
 
-// Gemini API Client
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-const geminiModel = 'gemini-2.5-flash';
+// Gemini API Client - initialized lazily with API key
+let ai: GoogleGenAI | null = null;
+const geminiModel = 'gemini-2.0-flash-exp';
+
+/**
+ * Initialize the Gemini AI client with an API key.
+ * This must be called before using any Gemini-powered features.
+ */
+export function initializeGeminiClient(apiKey: string): void {
+    if (!apiKey || apiKey.trim().length === 0) {
+        console.warn('Gemini API key is empty. AI features will not be available.');
+        return;
+    }
+    ai = new GoogleGenAI({ apiKey });
+}
+
+/**
+ * Check if the Gemini client is initialized.
+ */
+function ensureGeminiClient(): GoogleGenAI {
+    if (!ai) {
+        throw new Error('Gemini API client is not initialized. Please configure your API key in settings.');
+    }
+    return ai;
+}
 
 type RequestFn<T> = () => Promise<T>;
 
@@ -97,9 +120,15 @@ async function fetchWithRetries(
  * A robust queue for rate-limiting API requests.
  * It ensures that requests are processed one at a time, with a minimum interval
  * between the completion of one request and the start of the next.
+ * Supports request cancellation via AbortSignal.
  */
 class RequestQueue {
-    private queue: Array<{ requestFn: RequestFn<any>, resolve: (value: any) => void, reject: (reason?: any) => void }> = [];
+    private queue: Array<{ 
+        requestFn: RequestFn<any>, 
+        resolve: (value: any) => void, 
+        reject: (reason?: any) => void,
+        abortController?: AbortController 
+    }> = [];
     private isProcessing = false;
 
     constructor(private interval: number) {}
@@ -107,15 +136,34 @@ class RequestQueue {
     /**
      * Adds a request function to the queue.
      * @param requestFn The async function to execute.
+     * @param abortController Optional AbortController for request cancellation.
      * @returns A promise that resolves or rejects with the result of the requestFn.
      */
-    add<T>(requestFn: RequestFn<T>): Promise<T> {
+    add<T>(requestFn: RequestFn<T>, abortController?: AbortController): Promise<T> {
         return new Promise<T>((resolve, reject) => {
-            this.queue.push({ requestFn, resolve, reject });
+            this.queue.push({ requestFn, resolve, reject, abortController });
             if (!this.isProcessing) {
                 this.processQueue();
             }
         });
+    }
+
+    /**
+     * Cancel all pending requests in the queue.
+     */
+    cancelAll(): void {
+        for (const item of this.queue) {
+            item.abortController?.abort();
+            item.reject(new Error('Request cancelled'));
+        }
+        this.queue = [];
+    }
+
+    /**
+     * Get the number of pending requests in the queue.
+     */
+    get pending(): number {
+        return this.queue.length;
     }
 
     private async processQueue() {
@@ -125,7 +173,14 @@ class RequestQueue {
         }
 
         this.isProcessing = true;
-        const { requestFn, resolve, reject } = this.queue.shift()!;
+        const { requestFn, resolve, reject, abortController } = this.queue.shift()!;
+
+        // Check if request was already cancelled
+        if (abortController?.signal.aborted) {
+            reject(new Error('Request cancelled'));
+            setTimeout(() => this.processQueue(), this.interval);
+            return;
+        }
 
         try {
             const result = await requestFn();
@@ -265,7 +320,7 @@ export function textToSpeech(prompt: string): SpeechSynthesisUtterance {
 export async function composePromptForDevice(
     device: DeviceInfo,
     prefs: { styles: string[]; basePrompt?: string; },
-    options: TextOptions = {}
+    _options: TextOptions = {}
 ): Promise<string> {
     const basePromptInstruction = prefs.basePrompt 
         ? `
@@ -291,7 +346,8 @@ ${basePromptInstruction}
 
 Generate a prompt that strictly adheres to these rules and embodies the user's preferences.`;
 
-    const response = await ai.models.generateContent({
+    const client = ensureGeminiClient();
+    const response = await client.models.generateContent({
       model: geminiModel,
       contents: 'Create a prompt based on my system instructions.',
       config: {
@@ -299,10 +355,13 @@ Generate a prompt that strictly adheres to these rules and embodies the user's p
       }
     });
 
+    if (!response.text) {
+        throw new Error('No text response from Gemini API');
+    }
     return response.text.trim();
 }
 
-export async function composeVariantPrompt(basePrompt: string, options: TextOptions = {}): Promise<string> {
+export async function composeVariantPrompt(basePrompt: string, _options: TextOptions = {}): Promise<string> {
     const systemPrompt = `You are a prompt refinement expert. Your task is to generate a subtle variation of the following hyperrealistic image prompt.
 
 **Rules for Variation:**
@@ -315,16 +374,20 @@ Base prompt: "${basePrompt}"
 
 Generate the new, subtly varied prompt:`;
 
-    const response = await ai.models.generateContent({
+    const client = ensureGeminiClient();
+    const response = await client.models.generateContent({
         model: geminiModel,
         contents: "Generate a new prompt based on the base prompt and instructions.",
         config: { systemInstruction: systemPrompt }
     });
     
+    if (!response.text) {
+        throw new Error('No text response from Gemini API');
+    }
     return response.text.trim();
 }
 
-export async function composeRestylePrompt(basePrompt: string, styleDirective: string, options: TextOptions = {}): Promise<string> {
+export async function composeRestylePrompt(basePrompt: string, styleDirective: string, _options: TextOptions = {}): Promise<string> {
     const systemPrompt = `You are a visual style adaptation expert. Your task is to rewrite an image prompt to incorporate a new style directive, while strictly preserving its core subject and photorealistic essence.
 
 **Rules for Restyling:**
@@ -338,11 +401,15 @@ Style directive to integrate: "${styleDirective}"
 
 Generate the new, restyled prompt:`;
     
-    const response = await ai.models.generateContent({
+    const client = ensureGeminiClient();
+    const response = await client.models.generateContent({
         model: geminiModel,
         contents: "Generate a new prompt based on the base prompt, style directive, and instructions.",
         config: { systemInstruction: systemPrompt }
     });
     
+    if (!response.text) {
+        throw new Error('No text response from Gemini API');
+    }
     return response.text.trim();
 }

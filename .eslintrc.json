@@ -1,9 +1,17 @@
 {
   "root": true,
-  "ignorePatterns": ["projects/**/*"],
+  "ignorePatterns": ["dist", "node_modules", "*.js", "playwright", "cypress", "**/*.spec.ts"],
   "overrides": [
     {
       "files": ["*.ts"],
+      "excludedFiles": ["**/*.spec.ts", "playwright/**/*", "cypress/**/*"],
+      "parserOptions": {
+        "project": ["tsconfig.json"],
+        "createDefaultProgram": true
+      },
+
+
+ main
       "extends": [
         "eslint:recommended",
         "plugin:@typescript-eslint/recommended",
@@ -15,6 +23,7 @@
           "error",
           {
             "type": "attribute",
+            "prefix": ["app", "lazyImage"],
             "prefix": "app",
             "style": "camelCase"
           }
@@ -23,21 +32,26 @@
           "error",
           {
             "type": "element",
-            "prefix": "app",
+ copilot/fix-cb260cd0-e9f5-43c9-819f-ea0ef53a3483
+            "prefix": ["app", "pw"],
             "style": "kebab-case"
           }
         ],
+        "@typescript-eslint/explicit-function-return-type": "warn",
         "@typescript-eslint/no-explicit-any": "warn",
-        "@typescript-eslint/no-unused-vars": "warn"
+        "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
+        "no-console": ["warn", { "allow": ["warn", "error"] }]
+ main
       }
     },
     {
       "files": ["*.html"],
-      "extends": [
-        "plugin:@angular-eslint/template/recommended",
-        "plugin:@angular-eslint/template/accessibility"
-      ],
-      "rules": {}
+ copilot/fix-cb260cd0-e9f5-43c9-819f-ea0ef53a3483
+      "extends": ["plugin:@angular-eslint/template/recommended"],
+      "rules": {
+        "@angular-eslint/template/no-negated-async": "error"
+      }
+ main
     }
   ]
 }

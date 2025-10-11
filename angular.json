@@ -16,6 +16,12 @@
             "index": "index.html",
             "browser": "index.tsx",
             "tsConfig": "tsconfig.json",
+            "inlineStyleLanguage": "css",
+            "optimization": {
+              "scripts": false,
+              "styles": false,
+              "fonts": false
+            },
             "assets": [
               "favicon.ico",
               "manifest.webmanifest"
@@ -26,6 +32,16 @@
           },
           "configurations": {
             "production": {
+              "optimization": {
+                "scripts": true,
+                "styles": {
+                  "minify": true,
+                  "inlineCritical": true
+                },
+                "fonts": {
+                  "inline": false
+                }
+              },
               "budgets": [
                 {
                   "type": "initial",
@@ -39,8 +55,7 @@
                 }
               ],
               "outputHashing": "all",
-              "serviceWorker": true,
-              "ngswConfigPath": "ngsw-config.json"
+              "serviceWorker": "ngsw-config.json"
             },
             "development": {
               "optimization": false,
