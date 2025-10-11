@@ -10,8 +10,11 @@
     "test:coverage": "jest --coverage",
     "e2e": "playwright test --ui",
     "e2e:headless": "playwright test",
+ copilot/fix-cb260cd0-e9f5-43c9-819f-ea0ef53a3483
     "e2e:cypress": "cypress open",
     "e2e:cypress:headless": "cypress run",
+
+ main
     "lint": "eslint \"src/**/*.{ts,html}\"",
     "lint:fix": "eslint \"src/**/*.{ts,html}\" --fix",
     "format": "prettier --write \"src/**/*.{ts,html,css,scss,json}\"",

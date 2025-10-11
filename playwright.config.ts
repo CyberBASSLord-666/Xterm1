@@ -1,5 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 
+ copilot/fix-cb260cd0-e9f5-43c9-819f-ea0ef53a3483
 /**
  * Playwright Configuration
  * Production-grade E2E testing setup with full browser coverage
@@ -59,21 +60,29 @@ export default defineConfig({
   },
   
   /* Configure projects for major browsers */
+ main
   projects: [
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
+ copilot/fix-cb260cd0-e9f5-43c9-819f-ea0ef53a3483
     
+
+ main
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
     },
+ copilot/fix-cb260cd0-e9f5-43c9-819f-ea0ef53a3483
     
+
+ main
     {
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
     },
+ copilot/fix-cb260cd0-e9f5-43c9-819f-ea0ef53a3483
     
     /* Test against mobile viewports */
     {
@@ -92,5 +101,6 @@ export default defineConfig({
     url: 'http://localhost:4200',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
+ main
   },
 });
