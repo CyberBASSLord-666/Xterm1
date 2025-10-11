@@ -26,10 +26,18 @@ export class AppInitializerService {
   initialize(): Promise<void> {
     return this.perfMonitor.measureAsync('AppInitialization', async () => {
       try {
+        // Validate environment configuration
+        this.validateEnvironment();
+
         // Set log level based on environment
         const logLevel = environment.production ? LogLevel.WARN : LogLevel.DEBUG;
         this.logger.setLogLevel(logLevel);
         this.logger.info('Application initializing...', { environment: environment.production ? 'production' : 'development' }, 'AppInitializer');
+
+        // Security check: ensure HTTPS in production
+        if (environment.production && typeof window !== 'undefined') {
+          this.enforceSecureConnection();
+        }
 
         // Start cache cleanup
         this.requestCache.startPeriodicCleanup(60000); // Every minute
@@ -56,6 +64,42 @@ export class AppInitializerService {
         throw error;
       }
     });
+  }
+
+  /**
+   * Validate environment configuration.
+   * Ensures all required configuration is present and valid.
+   */
+  private validateEnvironment(): void {
+    if (typeof environment === 'undefined') {
+      throw new Error('Environment configuration is missing');
+    }
+
+    if (typeof environment.production !== 'boolean') {
+      throw new Error('Environment production flag must be a boolean');
+    }
+
+    // Validate that geminiApiKey is a string (can be empty)
+    if (typeof environment.geminiApiKey !== 'string') {
+      throw new Error('Environment geminiApiKey must be a string');
+    }
+
+    this.logger.debug('Environment validation passed', { production: environment.production }, 'AppInitializer');
+  }
+
+  /**
+   * Enforce secure connection in production.
+   * Redirects to HTTPS if accessed via HTTP.
+   */
+  private enforceSecureConnection(): void {
+    const isSecure = window.location.protocol === 'https:';
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+    if (!isSecure && !isLocalhost) {
+      this.logger.warn('Insecure connection detected in production. Redirecting to HTTPS...', undefined, 'AppInitializer');
+      // Redirect to HTTPS
+      window.location.href = window.location.href.replace('http://', 'https://');
+    }
   }
 
   /**

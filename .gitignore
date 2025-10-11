@@ -41,3 +41,39 @@ test-results
 /test-results
 *.spec.js.map
 /coverage
+
+# Environment files (security - never commit secrets)
+.env
+.env.local
+.env.production
+.env.development
+.env.test
+*.env
+.envrc
+
+# Secrets and keys (security - never commit credentials)
+*.pem
+*.key
+*.cert
+*.crt
+secrets/
+.secrets
+
+# Build artifacts
+*.tsbuildinfo
+.angular/
+.cache
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.backup
+*.old
+*.orig
+
+# OS files
+Thumbs.db
+Desktop.ini
+*~

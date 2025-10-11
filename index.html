@@ -3,10 +3,16 @@
 <head>
   <meta charset="utf-8">
   <title>PolliWall - AI Wallpaper Studio</title>
+  <meta name="description" content="Create stunning AI-generated wallpapers with PolliWall. Professional-grade image generation powered by AI.">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#f9fafb">
+  
+  <!-- Security: Content Security Policy -->
+  <!-- Note: CSP is configured via HTTP headers for production (see _headers, vercel.json, nginx.conf.example) -->
+  <!-- This meta tag serves as a fallback and for local development -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://aistudiocdn.com https://next.esm.sh https://esm.sh; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://image.pollinations.ai; connect-src 'self' https://image.pollinations.ai https://text.pollinations.ai https://generativelanguage.googleapis.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -204,9 +210,10 @@
       border-color: var(--accent-primary) !important;
   }
 </style>
+<!-- Preconnect to external font resources for performance -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700&family=Roboto+Mono:wght@700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700&family=Roboto+Mono:wght@700&display=swap" rel="stylesheet" crossorigin="anonymous">
 <script type="importmap">
 {
   "imports": {
