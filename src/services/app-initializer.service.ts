@@ -98,7 +98,8 @@ export class AppInitializerService {
     if (!isSecure && !isLocalhost) {
       this.logger.warn('Insecure connection detected in production. Redirecting to HTTPS...', undefined, 'AppInitializer');
       // Redirect to HTTPS
-      window.location.href = window.location.href.replace('http://', 'https://');
+      window.location.protocol = 'https:';
+      window.location.reload();
     }
   }
 
