@@ -2,73 +2,84 @@ import { Directive, ElementRef, Input, OnInit, OnDestroy, inject } from '@angula
 
 /**
  * Directive for lazy loading images using Intersection Observer.
- * Usage: <img lazyImage [src]="imageUrl" [lazySrc]="placeholderUrl">
+ * Usage: <img [appLazyImage]="imageUrl" [lazySrc]="placeholderUrl">
  */
-// eslint-disable-next-line @angular-eslint/directive-selector
 @Directive({
-  selector: 'img[lazyImage]',
+  selector: 'img[appLazyImage]',
   standalone: true
 })
 export class LazyImageDirective implements OnInit, OnDestroy {
+  private readonly elementRef = inject<ElementRef<HTMLImageElement>>(ElementRef);
+  private observer?: IntersectionObserver;
+  private targetSrc: string | null = null;
+  private hasLoaded = false;
+
+  @Input()
+  set appLazyImage(value: string | null) {
+    const nextValue = value ?? null;
+    const previousValue = this.targetSrc;
+    this.targetSrc = nextValue;
+
+    if (previousValue !== nextValue) {
+      this.hasLoaded = false;
+    }
+    const element = this.elementRef.nativeElement;
+
+    if (this.hasLoaded) {
+      if (this.targetSrc) {
+        this.loadImage(element, this.targetSrc);
+      } else {
+        element.removeAttribute('src');
+      }
+    } else if (this.targetSrc) {
+      element.dataset.lazySrc = this.targetSrc;
+    } else {
+      delete element.dataset.lazySrc;
+    }
+  }
+
   @Input() lazySrc?: string; // Optional placeholder image
   @Input() lazyThreshold: number = 0.1; // Percentage of image visible before loading
 
-  private elementRef = inject(ElementRef);
-  private observer?: IntersectionObserver;
-
   ngOnInit(): void {
-    const element = this.elementRef.nativeElement as HTMLImageElement;
+    const element = this.elementRef.nativeElement;
 
-    // Set placeholder if provided
     if (this.lazySrc) {
       element.src = this.lazySrc;
     }
 
-    // Store the actual image URL
-    const actualSrc = element.getAttribute('src');
-    if (!actualSrc) {
+    if (!this.targetSrc) {
       return;
     }
 
-    // Create intersection observer
-    this.observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            const img = entry.target as HTMLImageElement;
-            const src = img.dataset['lazySrc'];
-            
-            if (src) {
-              // Start loading the actual image
-              const tempImg = new Image();
-              tempImg.onload = () => {
-                img.src = src;
-                img.classList.add('lazy-loaded');
-              };
-              tempImg.onerror = () => {
-                img.classList.add('lazy-error');
-              };
-              tempImg.src = src;
-            }
+    if (!('IntersectionObserver' in window)) {
+      this.loadImage(element, this.targetSrc);
+      return;
+    }
 
-            // Stop observing this image
-            this.observer?.unobserve(img);
+    this.observer = new IntersectionObserver(
+      (entries: IntersectionObserverEntry[]): void => {
+        entries.forEach((entry: IntersectionObserverEntry) => {
+          if (!entry.isIntersecting) {
+            return;
           }
+
+          const img = entry.target as HTMLImageElement;
+          const src = this.targetSrc ?? img.dataset.lazySrc;
+
+          if (src) {
+            this.loadImage(img, src);
+          }
+
+          this.observer?.unobserve(img);
         });
       },
       {
         threshold: this.lazyThreshold,
-        rootMargin: '50px' // Start loading 50px before image enters viewport
+        rootMargin: '50px'
       }
     );
 
-    // Store actual src in data attribute and use placeholder
-    element.dataset['lazySrc'] = actualSrc;
-    if (this.lazySrc) {
-      element.src = this.lazySrc;
-    }
-
-    // Start observing
     this.observer.observe(element);
   }
 
@@ -76,5 +87,23 @@ export class LazyImageDirective implements OnInit, OnDestroy {
     if (this.observer) {
       this.observer.disconnect();
     }
+  }
+
+  private loadImage(element: HTMLImageElement, src: string): void {
+    const resolvedSrc = src;
+    const tempImg = new Image();
+
+    tempImg.onload = () => {
+      element.src = resolvedSrc;
+      element.classList.add('lazy-loaded');
+      element.classList.remove('lazy-error');
+      this.hasLoaded = true;
+    };
+
+    tempImg.onerror = () => {
+      element.classList.add('lazy-error');
+    };
+
+    tempImg.src = resolvedSrc;
   }
 }
