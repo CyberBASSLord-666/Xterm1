@@ -30,14 +30,10 @@ jobs:
       - run: npm test -- --coverage --watchAll=false
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
- copilot/fix-cb260cd0-e9f5-43c9-819f-ea0ef53a3483
-
- main
         with:
           file: ./coverage/lcov.info
           flags: unittests
           name: codecov-umbrella
- copilot/fix-cb260cd0-e9f5-43c9-819f-ea0ef53a3483
 
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v4
@@ -46,7 +42,6 @@ jobs:
           name: coverage-report
           path: coverage/
           retention-days: 7
- main
 
   build:
     runs-on: ubuntu-latest
@@ -102,13 +97,11 @@ jobs:
         with:
           name: dist-production
           path: dist/
- copilot/fix-cb260cd0-e9f5-43c9-819f-ea0ef53a3483
 
       - name: Start static server
         run: |
           npx serve dist/app --listen 8080 &
           sleep 3
- main
       - name: Run Lighthouse CI
         uses: treosh/lighthouse-ci-action@v10
         with:
