@@ -170,7 +170,17 @@ export class ValidationService {
 
   private static readonly allowedTargetValues: ReadonlySet<string> = new Set(['_self', '_blank', '_parent', '_top']);
 
-  private static readonly allowedRelTokens: ReadonlySet<string> = new Set([
+private static readonly allowedRelTokens: ReadonlySet<string> = new Set([
+    'alternate',
+    'author',
+    'help',
+    'license',
+    'next',
+    'nofollow',
+    'noopener',
+    'noreferrer',
+    'prev'
+  ]);
     'alternate',
     'author',
     'external',
