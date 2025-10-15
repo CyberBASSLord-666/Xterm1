@@ -1,4 +1,3 @@
-
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type { IDBPTransaction } from 'idb';
@@ -23,22 +22,22 @@ export interface GalleryItem {
 }
 
 export interface Collection {
-    id: string;
-    name: string;
-    createdAt: string;
+  id: string;
+  name: string;
+  createdAt: string;
 }
 
 interface WallSchema extends DBSchema {
   images: {
     key: string; // id
     value: GalleryItem;
-    indexes: { 'by_createdAt': string; 'by_collectionId': string };
+    indexes: { by_createdAt: string; by_collectionId: string };
   };
   collections: {
     key: string; //id
     value: Collection;
-    indexes: { 'by_name': string };
-  }
+    indexes: { by_name: string };
+  };
 }
 
 let dbp: Promise<IDBPDatabase<WallSchema>> | null = null;
@@ -48,14 +47,15 @@ export function db(): Promise<IDBPDatabase<WallSchema>> {
     dbp = openDB<WallSchema>('polliwall', 2, {
       upgrade(database, oldVersion, newVersion, transaction) {
         if (oldVersion < 1) {
-            const imageStore = database.createObjectStore('images', { keyPath: 'id' });
-            imageStore.createIndex('by_createdAt', 'createdAt');
+          const imageStore = database.createObjectStore('images', { keyPath: 'id' });
+          imageStore.createIndex('by_createdAt', 'createdAt');
         }
         if (oldVersion < 2) {
-            const imageStore = transaction.objectStore('images');
-            imageStore.createIndex('by_collectionId', 'collectionId');
-            database.createObjectStore('collections', { keyPath: 'id' })
-                .createIndex('by_name', 'name');
+          const imageStore = transaction.objectStore('images');
+          imageStore.createIndex('by_collectionId', 'collectionId');
+          database
+            .createObjectStore('collections', { keyPath: 'id' })
+            .createIndex('by_name', 'name');
         }
       },
     });

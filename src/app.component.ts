@@ -1,6 +1,3 @@
-
-
-
 import { Component, ChangeDetectionStrategy, inject, effect, signal } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { ToastComponent } from './components/toast/toast.component';
@@ -31,15 +28,15 @@ export class AppComponent {
       }
     });
   }
-  
+
   toggleTheme() {
-    this.settingsService.themeDark.update(current => !current);
+    this.settingsService.themeDark.update((current) => !current);
     const mode = this.settingsService.themeDark() ? 'Dark' : 'Light';
     this.toastService.show(`${mode} theme enabled`);
   }
-  
+
   toggleMobileMenu() {
-    this.isMobileMenuOpen.update(v => !v);
+    this.isMobileMenuOpen.update((v) => !v);
   }
 
   closeMobileMenu() {

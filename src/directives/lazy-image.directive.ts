@@ -7,7 +7,7 @@ import { Directive, ElementRef, Input, OnInit, OnDestroy, inject } from '@angula
 // eslint-disable-next-line @angular-eslint/directive-selector
 @Directive({
   selector: 'img[lazyImage]',
-  standalone: true
+  standalone: true,
 })
 export class LazyImageDirective implements OnInit, OnDestroy {
   @Input() lazySrc?: string; // Optional placeholder image
@@ -33,11 +33,11 @@ export class LazyImageDirective implements OnInit, OnDestroy {
     // Create intersection observer
     this.observer = new IntersectionObserver(
       (entries) => {
-        entries.forEach(entry => {
+        entries.forEach((entry) => {
           if (entry.isIntersecting) {
             const img = entry.target as HTMLImageElement;
             const src = img.dataset['lazySrc'];
-            
+
             if (src) {
               // Start loading the actual image
               const tempImg = new Image();
@@ -58,7 +58,7 @@ export class LazyImageDirective implements OnInit, OnDestroy {
       },
       {
         threshold: this.lazyThreshold,
-        rootMargin: '50px' // Start loading 50px before image enters viewport
+        rootMargin: '50px', // Start loading 50px before image enters viewport
       }
     );
 

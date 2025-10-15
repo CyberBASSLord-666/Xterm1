@@ -1,4 +1,11 @@
-import { Component, ChangeDetectionStrategy, inject, OnInit, OnDestroy, signal } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  inject,
+  OnInit,
+  OnDestroy,
+  signal,
+} from '@angular/core';
 import { ToastService } from '../../services/toast.service';
 
 interface FeedImageEvent {
@@ -13,7 +20,7 @@ interface FeedImageEvent {
 interface FeedTextEvent {
   response: string;
   model: string;
-  messages?: { role: string, content: string }[];
+  messages?: { role: string; content: string }[];
 }
 
 @Component({
@@ -23,15 +30,15 @@ interface FeedTextEvent {
 })
 export class FeedComponent implements OnInit, OnDestroy {
   private toast = inject(ToastService);
-  
+
   feedItems = signal<FeedImageEvent[]>([]);
   textFeedItems = signal<FeedTextEvent[]>([]);
   feedMode = signal<'image' | 'text'>('image');
   isPaused = signal<boolean>(false);
-  
+
   private imageEventSource: EventSource | null = null;
   private textEventSource: EventSource | null = null;
-  
+
   // Reconnection backoff strategy properties
   private imageReconnectDelay = 2000; // ms
   private textReconnectDelay = 2000; // ms
@@ -54,7 +61,7 @@ export class FeedComponent implements OnInit, OnDestroy {
       if (!event.data || this.feedMode() !== 'image' || this.isPaused()) return;
       try {
         const data: FeedImageEvent = JSON.parse(event.data);
-        this.feedItems.update(list => [data, ...list.slice(0, 99)]); // Keep list to 100 items
+        this.feedItems.update((list) => [data, ...list.slice(0, 99)]); // Keep list to 100 items
       } catch (e) {
         console.warn('Non-JSON image feed event:', event.data);
       }
@@ -64,9 +71,9 @@ export class FeedComponent implements OnInit, OnDestroy {
       console.error('Image feed error, reconnecting...', err);
       this.toast.show(`Image feed disconnected. Retrying in ${this.imageReconnectDelay / 1000}s.`);
       this.imageEventSource?.close(); // Close the faulty source
-      
+
       setTimeout(() => this.connectImageFeed(), this.imageReconnectDelay);
-      
+
       // Increase delay for the next attempt
       this.imageReconnectDelay = Math.min(this.imageReconnectDelay * 2, this.maxReconnectDelay);
     };
@@ -85,7 +92,7 @@ export class FeedComponent implements OnInit, OnDestroy {
       if (!event.data || this.feedMode() !== 'text' || this.isPaused()) return;
       try {
         const data: FeedTextEvent = JSON.parse(event.data);
-        this.textFeedItems.update(list => [data, ...list.slice(0, 99)]);
+        this.textFeedItems.update((list) => [data, ...list.slice(0, 99)]);
       } catch (e) {
         console.warn('Non-JSON text feed event:', event.data);
       }
@@ -97,7 +104,7 @@ export class FeedComponent implements OnInit, OnDestroy {
       this.textEventSource?.close(); // Close the faulty source
 
       setTimeout(() => this.connectTextFeed(), this.textReconnectDelay);
-      
+
       // Increase delay for the next attempt
       this.textReconnectDelay = Math.min(this.textReconnectDelay * 2, this.maxReconnectDelay);
     };
@@ -105,7 +112,7 @@ export class FeedComponent implements OnInit, OnDestroy {
 
   toggleFeedMode(mode: 'image' | 'text'): void {
     if (this.feedMode() === mode) return;
-    
+
     this.feedMode.set(mode);
     if (mode === 'image') {
       this.textEventSource?.close();
@@ -121,7 +128,7 @@ export class FeedComponent implements OnInit, OnDestroy {
   }
 
   togglePause(): void {
-    this.isPaused.update(v => !v);
+    this.isPaused.update((v) => !v);
     this.toast.show(this.isPaused() ? 'Feed paused.' : 'Feed resumed.');
   }
 

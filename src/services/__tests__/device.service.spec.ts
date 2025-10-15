@@ -9,23 +9,23 @@ describe('DeviceService', () => {
     Object.defineProperty(window, 'innerWidth', {
       writable: true,
       configurable: true,
-      value: 1024
+      value: 1024,
     });
-    
+
     Object.defineProperty(window, 'innerHeight', {
       writable: true,
       configurable: true,
-      value: 768
+      value: 768,
     });
-    
+
     Object.defineProperty(window, 'devicePixelRatio', {
       writable: true,
       configurable: true,
-      value: 1
+      value: 1,
     });
-    
+
     TestBed.configureTestingModule({
-      providers: [DeviceService]
+      providers: [DeviceService],
     });
     service = TestBed.inject(DeviceService);
   });
@@ -41,18 +41,18 @@ describe('DeviceService', () => {
       configurable: true,
       value: {
         width: 1920,
-        height: 1080
-      }
+        height: 1080,
+      },
     });
-    
+
     Object.defineProperty(window, 'devicePixelRatio', {
       writable: true,
       configurable: true,
-      value: 2
+      value: 2,
     });
-    
+
     const info = service.getInfo();
-    
+
     expect(info).toBeDefined();
     expect(info.width).toBeGreaterThan(0);
     expect(info.height).toBeGreaterThan(0);
@@ -64,23 +64,23 @@ describe('DeviceService', () => {
     Object.defineProperty(window, 'devicePixelRatio', {
       writable: true,
       configurable: true,
-      value: mockDpr
+      value: mockDpr,
     });
-    
+
     Object.defineProperty(window.screen, 'width', {
       writable: true,
       configurable: true,
-      value: 1920
+      value: 1920,
     });
-    
+
     Object.defineProperty(window.screen, 'height', {
       writable: true,
       configurable: true,
-      value: 1080
+      value: 1080,
     });
-    
+
     const info = service.getInfo();
-    
+
     expect(info.width).toBe(Math.round(1920 * mockDpr));
     expect(info.height).toBe(Math.round(1080 * mockDpr));
     expect(info.dpr).toBe(mockDpr);
@@ -91,31 +91,31 @@ describe('DeviceService', () => {
     Object.defineProperty(window, 'screen', {
       writable: true,
       configurable: true,
-      value: undefined
+      value: undefined,
     });
-    
+
     Object.defineProperty(window, 'innerWidth', {
       writable: true,
       configurable: true,
-      value: 1024
+      value: 1024,
     });
-    
+
     Object.defineProperty(window, 'innerHeight', {
       writable: true,
       configurable: true,
-      value: 768
+      value: 768,
     });
-    
+
     const info = service.getInfo();
-    
+
     expect(info.width).toBeGreaterThan(0);
     expect(info.height).toBeGreaterThan(0);
-    
+
     // Restore
     Object.defineProperty(window, 'screen', {
       writable: true,
       configurable: true,
-      value: originalScreen
+      value: originalScreen,
     });
   });
 
@@ -124,18 +124,18 @@ describe('DeviceService', () => {
     Object.defineProperty(window, 'devicePixelRatio', {
       writable: true,
       configurable: true,
-      value: undefined
+      value: undefined,
     });
-    
+
     const info = service.getInfo();
-    
+
     expect(info.dpr).toBe(1);
-    
+
     // Restore
     Object.defineProperty(window, 'devicePixelRatio', {
       writable: true,
       configurable: true,
-      value: originalDpr
+      value: originalDpr,
     });
   });
 });

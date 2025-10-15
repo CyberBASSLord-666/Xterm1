@@ -56,7 +56,11 @@ export class KeyboardShortcutsService {
    */
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
-    this.logger.debug(`Keyboard shortcuts ${enabled ? 'enabled' : 'disabled'}`, undefined, 'KeyboardShortcuts');
+    this.logger.debug(
+      `Keyboard shortcuts ${enabled ? 'enabled' : 'disabled'}`,
+      undefined,
+      'KeyboardShortcuts'
+    );
   }
 
   /**
@@ -88,7 +92,7 @@ export class KeyboardShortcutsService {
       for (const [id, config] of this.shortcuts.entries()) {
         if (this.matchesShortcut(event, config)) {
           this.logger.debug(`Triggered shortcut: ${id}`, undefined, 'KeyboardShortcuts');
-          
+
           if (config.preventDefault) {
             event.preventDefault();
             event.stopPropagation();
@@ -99,7 +103,7 @@ export class KeyboardShortcutsService {
           } catch (error) {
             this.logger.error(`Error executing shortcut ${id}`, error, 'KeyboardShortcuts');
           }
-          
+
           break;
         }
       }

@@ -9,7 +9,7 @@ import { FormsModule } from '@angular/forms';
   selector: 'pw-settings',
   templateUrl: './settings.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule]
+  imports: [FormsModule],
 })
 export class SettingsComponent {
   settingsService = inject(SettingsService);
@@ -17,7 +17,7 @@ export class SettingsComponent {
   private toastService = inject(ToastService);
 
   isExporting = signal(false);
-  
+
   // --- Type-safe event handlers ---
   onReferrerInput(event: Event) {
     this.settingsService.referrer.set((event.target as HTMLInputElement).value);
@@ -57,40 +57,40 @@ export class SettingsComponent {
     this.isExporting.set(true);
     this.toastService.show('Preparing gallery for export...');
     try {
-        const items = await this.galleryService.list();
-        if (items.length === 0) {
-            this.toastService.show('Your gallery is empty.');
-            return;
-        }
+      const items = await this.galleryService.list();
+      if (items.length === 0) {
+        this.toastService.show('Your gallery is empty.');
+        return;
+      }
 
-        const zip = new JSZip();
-        const metadata = [];
+      const zip = new JSZip();
+      const metadata = [];
 
-        for (const item of items) {
-            const { blob, thumb, ...meta } = item;
-            metadata.push(meta);
-            zip.file(`images/${item.id}.jpg`, blob, { binary: true });
-            zip.file(`thumbnails/${item.id}.jpg`, thumb, { binary: true });
-        }
-        
-        zip.file('metadata.json', JSON.stringify(metadata, null, 2));
+      for (const item of items) {
+        const { blob, thumb, ...meta } = item;
+        metadata.push(meta);
+        zip.file(`images/${item.id}.jpg`, blob, { binary: true });
+        zip.file(`thumbnails/${item.id}.jpg`, thumb, { binary: true });
+      }
 
-        this.toastService.show('Generating ZIP file...');
-        const content = await zip.generateAsync({ type: 'blob' });
-        
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(content);
-        link.download = `PolliWall_Export_${new Date().toISOString().split('T')[0]}.zip`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(link.href);
+      zip.file('metadata.json', JSON.stringify(metadata, null, 2));
 
-        this.toastService.show('Export started successfully!');
-    } catch(e: any) {
-        this.toastService.show(`Export failed: ${e.message}`);
+      this.toastService.show('Generating ZIP file...');
+      const content = await zip.generateAsync({ type: 'blob' });
+
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(content);
+      link.download = `PolliWall_Export_${new Date().toISOString().split('T')[0]}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+
+      this.toastService.show('Export started successfully!');
+    } catch (e: any) {
+      this.toastService.show(`Export failed: ${e.message}`);
     } finally {
-        this.isExporting.set(false);
+      this.isExporting.set(false);
     }
   }
 }

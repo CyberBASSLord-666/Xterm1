@@ -1,126 +1,311 @@
 <div class="px-4 sm:px-0">
-@if (item(); as it) {
-  <div class="grid grid-cols-1 lg:grid-cols-7 gap-8">
-    <!-- Main Image -->
-    <section class="lg:col-span-4 animate-fade-in-up">
-      <div class="sticky top-24">
-        <a routerLink="/gallery" class="flex items-center gap-2 text-sm text-secondary-text hover:text-primary-text transition-colors mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+  @if (item(); as it) {
+    <div class="grid grid-cols-1 lg:grid-cols-7 gap-8">
+      <!-- Main Image -->
+      <section class="lg:col-span-4 animate-fade-in-up">
+        <div class="sticky top-24">
+          <a
+            routerLink="/gallery"
+            class="flex items-center gap-2 text-sm text-secondary-text hover:text-primary-text transition-colors mb-4"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-5 w-5"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
+                clip-rule="evenodd"
+              />
+            </svg>
             Back to Gallery
-        </a>
-        <div class="bg-secondary-bg/50 p-2 rounded-lg border border-primary-border">
-          <img [src]="itemUrl()" alt="original" class="w-full rounded-md" width="500" height="888">
+          </a>
+          <div class="bg-secondary-bg/50 p-2 rounded-lg border border-primary-border">
+            <img
+              [src]="itemUrl()"
+              alt="original"
+              class="w-full rounded-md"
+              width="500"
+              height="888"
+            />
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- Details & Actions -->
-    <section class="lg:col-span-3 space-y-6 animate-fade-in-up" style="animation-delay: 100ms;">
-      <div class="sticky top-24 space-y-6">
-        <div>
-          <h2 class="text-3xl font-bold text-white font-mono tracking-wider">Editor</h2>
-          <div class="mt-4 p-4 text-sm text-secondary-text space-y-2 bg-secondary-bg/50 rounded-lg border border-primary-border">
-            <p><strong class="font-mono tracking-wide">PROMPT:</strong><br><span class="text-primary-text">{{it.prompt}}</span></p>
-            <div class="flex gap-4 pt-2 font-mono tracking-wide">
-                <p><strong>DIMS:</strong> <span class="text-primary-text">{{it.width}}x{{it.height}}</span></p>
-                <p><strong>MODEL:</strong> <span class="text-primary-text">{{it.model}}</span></p>
+      <!-- Details & Actions -->
+      <section class="lg:col-span-3 space-y-6 animate-fade-in-up" style="animation-delay: 100ms">
+        <div class="sticky top-24 space-y-6">
+          <div>
+            <h2 class="text-3xl font-bold text-white font-mono tracking-wider">Editor</h2>
+            <div
+              class="mt-4 p-4 text-sm text-secondary-text space-y-2 bg-secondary-bg/50 rounded-lg border border-primary-border"
+            >
+              <p>
+                <strong class="font-mono tracking-wide">PROMPT:</strong><br /><span
+                  class="text-primary-text"
+                  >{{ it.prompt }}</span
+                >
+              </p>
+              <div class="flex gap-4 pt-2 font-mono tracking-wide">
+                <p>
+                  <strong>DIMS:</strong>
+                  <span class="text-primary-text">{{ it.width }}x{{ it.height }}</span>
+                </p>
+                <p>
+                  <strong>MODEL:</strong> <span class="text-primary-text">{{ it.model }}</span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="bg-secondary-bg/50 p-4 rounded-lg border border-primary-border space-y-4">
+            <div class="grid grid-cols-4 gap-2">
+              <button
+                (click)="toggleFavorite()"
+                class="flex flex-col items-center justify-center p-2 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors h-20"
+                [title]="it.isFavorite ? 'Remove from favorites' : 'Add to favorites'"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-6 w-6 mb-1 transition-colors"
+                  [class.text-danger]="it.isFavorite"
+                  [class.fill-current]="it.isFavorite"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"
+                  />
+                </svg>
+                <span class="text-xs font-bold">Favorite</span>
+              </button>
+              <button
+                (click)="downloadImage()"
+                class="flex flex-col items-center justify-center p-2 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors h-20"
+                title="Download Image"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-6 w-6 mb-1"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+                <span class="text-xs font-bold">Download</span>
+              </button>
+              <button
+                (click)="shareImage()"
+                class="flex flex-col items-center justify-center p-2 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors h-20"
+                title="Share Image"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-6 w-6 mb-1"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.875-5.95l-4.94-2.47A3.001 3.001 0 0015 8z"
+                  />
+                </svg>
+                <span class="text-xs font-bold">Share</span>
+              </button>
+              <button
+                (click)="previewAudio()"
+                class="flex flex-col items-center justify-center p-2 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors h-20"
+                title="Generate audio preview of prompt"
+              >
+                @if (audioWorking()) {
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-6 w-6 mb-1 text-accent animate-pulse"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM12.293 7.293a1 1 0 011.414 0L15 8.586l1.293-1.293a1 1 0 111.414 1.414L16.414 10l1.293 1.293a1 1 0 01-1.414 1.414L15 11.414l-1.293 1.293a1 1 0 01-1.414-1.414L13.586 10l-1.293-1.293a1 1 0 010-1.414z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
+                } @else {
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-6 w-6 mb-1"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      d="M10 2a6 6 0 00-6 6v3.586l-1.707 1.707A1 1 0 003 15v4a1 1 0 001 1h12a1 1 0 001-1v-4a1 1 0 00-.293-.707L16 11.586V8a6 6 0 00-6-6zM8 8a2 2 0 114 0v3a2 2 0 11-4 0V8z"
+                    />
+                  </svg>
+                }
+                <span class="text-xs font-bold">{{ audioWorking() ? 'Stop' : 'Audio' }}</span>
+              </button>
+            </div>
+            <hr class="border-primary-border" />
+            <div>
+              <h3 class="text-lg font-bold text-white font-mono tracking-wider">Subtle Variant</h3>
+              <p class="text-sm text-secondary-text mt-1 mb-3">
+                Generate a slight variation, changing minor details.
+              </p>
+              <button
+                (click)="makeVariant()"
+                [disabled]="working()"
+                class="w-full flex justify-center items-center bg-accent-secondary hover:bg-opacity-80 disabled:bg-opacity-50 disabled:text-secondary-text disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md transition-colors"
+              >
+                @if (working()) {
+                  <svg
+                    class="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      class="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="4"
+                    ></circle>
+                    <path
+                      class="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  Creating...
+                } @else {
+                  Create Variant
+                }
+              </button>
+            </div>
+            <hr class="border-primary-border" />
+            <div>
+              <h3 class="text-lg font-bold text-white font-mono tracking-wider">Restyle</h3>
+              <p class="text-sm text-secondary-text mt-1 mb-3">
+                Apply a new style while preserving the composition.
+              </p>
+              <label for="restyle" class="block text-sm font-medium text-secondary-text mb-1"
+                >Style directive</label
+              >
+              <input
+                id="restyle"
+                [value]="restyle()"
+                (input)="onRestyleInput($event)"
+                class="w-full bg-primary-bg border-gray-700 text-primary-text rounded-md p-2 focus:ring-2 focus:ring-accent focus:border-accent transition mb-3"
+              />
+              <button
+                (click)="makeRestyle()"
+                [disabled]="working()"
+                class="w-full flex justify-center items-center bg-accent hover:bg-opacity-80 disabled:bg-opacity-50 disabled:text-secondary-text disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md transition-colors"
+              >
+                @if (working()) {
+                  <svg
+                    class="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      class="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="4"
+                    ></circle>
+                    <path
+                      class="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  Restyling...
+                } @else {
+                  Generate Restyle
+                }
+              </button>
+            </div>
+          </div>
+
+          <!-- Lineage -->
+          <div>
+            <h2 class="text-2xl font-bold text-white mb-4 font-mono tracking-wider">Lineage</h2>
+            <div class="bg-secondary-bg/50 p-4 rounded-lg border border-primary-border space-y-4">
+              @if (lineage().parent; as parent) {
+                <div>
+                  <h3 class="text-lg font-bold text-white mb-2 font-mono tracking-wider">Parent</h3>
+                  <a
+                    [routerLink]="['/edit', parent.id]"
+                    class="group block rounded-md overflow-hidden relative"
+                  >
+                    <img
+                      [src]="lineageUrls().get(parent.id)!"
+                      [alt]="parent.prompt"
+                      class="w-full rounded-md group-hover:opacity-80 transition-opacity animate-fade-in"
+                      width="240"
+                      height="426"
+                    />
+                    <div
+                      class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                    >
+                      <span class="text-white font-bold">View Parent</span>
+                    </div>
+                  </a>
+                </div>
+              }
+              @if (lineage().children.length > 0) {
+                <div>
+                  <h3 class="text-lg font-bold text-white mb-2 font-mono tracking-wider">
+                    Children
+                  </h3>
+                  <div class="grid grid-cols-2 gap-2">
+                    @for (child of lineage().children; track child.id; let i = $index) {
+                      <a
+                        [routerLink]="['/edit', child.id]"
+                        class="group block animate-fade-in-up relative overflow-hidden rounded-md"
+                        [style.animation-delay]="i * 50 + 'ms'"
+                      >
+                        <img
+                          [src]="lineageUrls().get(child.id)!"
+                          [alt]="child.prompt"
+                          class="w-full rounded-md group-hover:opacity-80 transition-opacity"
+                          width="240"
+                          height="426"
+                        />
+                        <div
+                          class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                        >
+                          <span class="text-white text-center text-xs p-1 uppercase font-bold">{{
+                            child.lineage?.kind
+                          }}</span>
+                        </div>
+                      </a>
+                    }
+                  </div>
+                </div>
+              }
+              @if (!lineage().parent && lineage().children.length === 0) {
+                <p class="text-sm text-secondary-text">
+                  This is an original creation with no variants or restyles yet.
+                </p>
+              }
             </div>
           </div>
         </div>
-        
-        <!-- Actions -->
-        <div class="bg-secondary-bg/50 p-4 rounded-lg border border-primary-border space-y-4">
-             <div class="grid grid-cols-4 gap-2">
-                <button (click)="toggleFavorite()" class="flex flex-col items-center justify-center p-2 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors h-20" [title]="it.isFavorite ? 'Remove from favorites' : 'Add to favorites'">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-1 transition-colors" [class.text-danger]="it.isFavorite" [class.fill-current]="it.isFavorite" viewBox="0 0 20 20" fill="currentColor"><path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" /></svg>
-                    <span class="text-xs font-bold">Favorite</span>
-                </button>
-                <button (click)="downloadImage()" class="flex flex-col items-center justify-center p-2 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors h-20" title="Download Image">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-1" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
-                    <span class="text-xs font-bold">Download</span>
-                </button>
-                <button (click)="shareImage()" class="flex flex-col items-center justify-center p-2 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors h-20" title="Share Image">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-1" viewBox="0 0 20 20" fill="currentColor"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.875-5.95l-4.94-2.47A3.001 3.001 0 0015 8z" /></svg>
-                    <span class="text-xs font-bold">Share</span>
-                </button>
-                <button (click)="previewAudio()" class="flex flex-col items-center justify-center p-2 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors h-20" title="Generate audio preview of prompt">
-                    @if (audioWorking()) {
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-1 text-accent animate-pulse" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM12.293 7.293a1 1 0 011.414 0L15 8.586l1.293-1.293a1 1 0 111.414 1.414L16.414 10l1.293 1.293a1 1 0 01-1.414 1.414L15 11.414l-1.293 1.293a1 1 0 01-1.414-1.414L13.586 10l-1.293-1.293a1 1 0 010-1.414z" clip-rule="evenodd" />
-                      </svg>
-                    } @else {
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-1" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M10 2a6 6 0 00-6 6v3.586l-1.707 1.707A1 1 0 003 15v4a1 1 0 001 1h12a1 1 0 001-1v-4a1 1 0 00-.293-.707L16 11.586V8a6 6 0 00-6-6zM8 8a2 2 0 114 0v3a2 2 0 11-4 0V8z" />
-                      </svg>
-                    }
-                    <span class="text-xs font-bold">{{ audioWorking() ? 'Stop' : 'Audio' }}</span>
-                </button>
-            </div>
-            <hr class="border-primary-border"/>
-            <div>
-              <h3 class="text-lg font-bold text-white font-mono tracking-wider">Subtle Variant</h3>
-              <p class="text-sm text-secondary-text mt-1 mb-3">Generate a slight variation, changing minor details.</p>
-              <button (click)="makeVariant()" [disabled]="working()" class="w-full flex justify-center items-center bg-accent-secondary hover:bg-opacity-80 disabled:bg-opacity-50 disabled:text-secondary-text disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md transition-colors">
-                @if(working()){ 
-                  <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                  Creating... 
-                } @else { Create Variant }
-              </button>
-            </div>
-            <hr class="border-primary-border"/>
-            <div>
-              <h3 class="text-lg font-bold text-white font-mono tracking-wider">Restyle</h3>
-              <p class="text-sm text-secondary-text mt-1 mb-3">Apply a new style while preserving the composition.</p>
-              <label for="restyle" class="block text-sm font-medium text-secondary-text mb-1">Style directive</label>
-              <input id="restyle" [value]="restyle()" (input)="onRestyleInput($event)" class="w-full bg-primary-bg border-gray-700 text-primary-text rounded-md p-2 focus:ring-2 focus:ring-accent focus:border-accent transition mb-3">
-              <button (click)="makeRestyle()" [disabled]="working()" class="w-full flex justify-center items-center bg-accent hover:bg-opacity-80 disabled:bg-opacity-50 disabled:text-secondary-text disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md transition-colors">
-                 @if(working()){ 
-                  <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                  Restyling... 
-                } @else { Generate Restyle }
-              </button>
-            </div>
-        </div>
-        
-        <!-- Lineage -->
-        <div>
-          <h2 class="text-2xl font-bold text-white mb-4 font-mono tracking-wider">Lineage</h2>
-           <div class="bg-secondary-bg/50 p-4 rounded-lg border border-primary-border space-y-4">
-              @if(lineage().parent; as parent) {
-                  <div>
-                      <h3 class="text-lg font-bold text-white mb-2 font-mono tracking-wider">Parent</h3>
-                      <a [routerLink]="['/edit', parent.id]" class="group block rounded-md overflow-hidden relative">
-                          <img [src]="lineageUrls().get(parent.id)!" [alt]="parent.prompt" class="w-full rounded-md group-hover:opacity-80 transition-opacity animate-fade-in" width="240" height="426">
-                          <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <span class="text-white font-bold">View Parent</span>
-                          </div>
-                      </a>
-                  </div>
-              }
-               @if(lineage().children.length > 0) {
-                  <div>
-                      <h3 class="text-lg font-bold text-white mb-2 font-mono tracking-wider">Children</h3>
-                      <div class="grid grid-cols-2 gap-2">
-                          @for(child of lineage().children; track child.id; let i = $index) {
-                             <a [routerLink]="['/edit', child.id]" class="group block animate-fade-in-up relative overflow-hidden rounded-md" [style.animation-delay]="i * 50 + 'ms'">
-                                  <img [src]="lineageUrls().get(child.id)!" [alt]="child.prompt" class="w-full rounded-md group-hover:opacity-80 transition-opacity" width="240" height="426">
-                                  <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                    <span class="text-white text-center text-xs p-1 uppercase font-bold">{{child.lineage?.kind}}</span>
-                                  </div>
-                              </a>
-                          }
-                      </div>
-                  </div>
-              }
-              @if(!lineage().parent && lineage().children.length === 0) {
-                  <p class="text-sm text-secondary-text">This is an original creation with no variants or restyles yet.</p>
-              }
-           </div>
-        </div>
-      </div>
-    </section>
-  </div>
-} @else {
-  <p>Loading item...</p>
-}
+      </section>
+    </div>
+  } @else {
+    <p>Loading item...</p>
+  }
 </div>

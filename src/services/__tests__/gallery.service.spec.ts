@@ -7,7 +7,7 @@ describe('GalleryService', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [GalleryService]
+      providers: [GalleryService],
     });
     service = TestBed.inject(GalleryService);
   });
@@ -64,7 +64,7 @@ describe('GalleryService', () => {
       aspect: '16:9',
       mode: 'exact' as const,
       model: 'flux',
-      collectionId: null
+      collectionId: null,
     };
 
     expect(mockItem.id).toBe('test-id');

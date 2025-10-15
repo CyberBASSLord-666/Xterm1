@@ -263,7 +263,7 @@ describe('AccessibilityService', () => {
   describe('addSkipLinks', () => {
     beforeEach(() => {
       // Clean up any existing skip links containers
-      document.querySelectorAll('.skip-links-container').forEach(el => el.remove());
+      document.querySelectorAll('.skip-links-container').forEach((el) => el.remove());
     });
 
     it('should add skip links container to page', () => {
@@ -272,7 +272,7 @@ describe('AccessibilityService', () => {
       const container = document.querySelector('.skip-links-container');
       expect(container).toBeDefined();
       expect(container?.getAttribute('aria-labelledby')).toBe('skip-links-heading');
-      
+
       // Should have multiple skip links
       const skipLinks = container?.querySelectorAll('a.skip-link');
       expect(skipLinks?.length).toBeGreaterThan(0);

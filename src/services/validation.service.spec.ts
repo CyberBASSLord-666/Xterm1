@@ -30,14 +30,14 @@ describe('ValidationService', () => {
       const longPrompt = 'a'.repeat(2001);
       const result = service.validatePrompt(longPrompt);
       expect(result.isValid).toBe(false);
-      expect(result.errors.some(e => e.includes('too long'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('too long'))).toBe(true);
     });
 
     it('should reject prompt with too many special characters', () => {
       const specialChars = '!!!@@@###$$$%%%^^^&&&***';
       const result = service.validatePrompt(specialChars);
       expect(result.isValid).toBe(false);
-      expect(result.errors.some(e => e.includes('special characters'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('special characters'))).toBe(true);
     });
   });
 
@@ -65,7 +65,7 @@ describe('ValidationService', () => {
     it('should reject invalid protocol', () => {
       const result = service.validateImageUrl('ftp://example.com/image.jpg');
       expect(result.isValid).toBe(false);
-      expect(result.errors.some(e => e.includes('protocol'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('protocol'))).toBe(true);
     });
 
     it('should reject malformed URL', () => {
@@ -114,7 +114,7 @@ describe('ValidationService', () => {
     it('should reject zero dimensions', () => {
       const result = service.validateDimensions(0, 1080);
       expect(result.isValid).toBe(false);
-      expect(result.errors.some(e => e.includes('positive'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('positive'))).toBe(true);
     });
 
     it('should reject negative dimensions', () => {
@@ -125,13 +125,13 @@ describe('ValidationService', () => {
     it('should reject too large dimensions', () => {
       const result = service.validateDimensions(10000, 10000);
       expect(result.isValid).toBe(false);
-      expect(result.errors.some(e => e.includes('too large'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('too large'))).toBe(true);
     });
 
     it('should reject too small dimensions', () => {
       const result = service.validateDimensions(32, 32);
       expect(result.isValid).toBe(false);
-      expect(result.errors.some(e => e.includes('too small'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('too small'))).toBe(true);
     });
   });
 
@@ -180,13 +180,13 @@ describe('ValidationService', () => {
     it('should reject too short key', () => {
       const result = service.validateApiKey('short');
       expect(result.isValid).toBe(false);
-      expect(result.errors.some(e => e.includes('too short'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('too short'))).toBe(true);
     });
 
     it('should reject invalid characters', () => {
       const result = service.validateApiKey('invalid key with spaces!!!');
       expect(result.isValid).toBe(false);
-      expect(result.errors.some(e => e.includes('invalid characters'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('invalid characters'))).toBe(true);
     });
   });
 });
