@@ -438,7 +438,7 @@ private static readonly allowedRelTokens: ReadonlySet<string> = new Set([
         return false;
       }
 
-      return trimmed.startsWith('/') || trimmed.startsWith('./') || trimmed.startsWith('../') || trimmed.startsWith('#');
+      return true;
     }
 
     const scheme = trimmed.slice(0, colonIndex).toLowerCase();
