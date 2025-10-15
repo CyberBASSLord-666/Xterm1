@@ -120,8 +120,12 @@ describe('SettingsService', () => {
     
     localStorage.setItem('polliwall_settings', JSON.stringify(testSettings));
     
-    // Create a new service instance to trigger the load
-    const newService = new SettingsService();
+    // Create a new service instance using TestBed to have injection context
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [SettingsService]
+    });
+    const newService = TestBed.inject(SettingsService);
     
     expect(newService.referrer()).toBe('stored-referrer');
     expect(newService.nologo()).toBe(false);
@@ -134,7 +138,13 @@ describe('SettingsService', () => {
     localStorage.setItem('polliwall_settings', 'invalid json');
     
     const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-    const newService = new SettingsService();
+    
+    // Create a new service instance using TestBed to have injection context
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [SettingsService]
+    });
+    const newService = TestBed.inject(SettingsService);
     
     expect(newService).toBeTruthy();
     expect(newService.nologo()).toBe(true); // Should load defaults

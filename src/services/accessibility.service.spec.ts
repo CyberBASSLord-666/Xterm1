@@ -271,7 +271,7 @@ describe('AccessibilityService', () => {
 
       const container = document.querySelector('.skip-links-container');
       expect(container).toBeDefined();
-      expect(container?.getAttribute('aria-label')).toBe('Skip links');
+      expect(container?.getAttribute('aria-labelledby')).toBe('skip-links-heading');
       
       // Should have multiple skip links
       const skipLinks = container?.querySelectorAll('a.skip-link');

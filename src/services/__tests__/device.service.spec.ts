@@ -5,6 +5,25 @@ describe('DeviceService', () => {
   let service: DeviceService;
 
   beforeEach(() => {
+    // Setup mock window properties
+    Object.defineProperty(window, 'innerWidth', {
+      writable: true,
+      configurable: true,
+      value: 1024
+    });
+    
+    Object.defineProperty(window, 'innerHeight', {
+      writable: true,
+      configurable: true,
+      value: 768
+    });
+    
+    Object.defineProperty(window, 'devicePixelRatio', {
+      writable: true,
+      configurable: true,
+      value: 1
+    });
+    
     TestBed.configureTestingModule({
       providers: [DeviceService]
     });
@@ -16,6 +35,22 @@ describe('DeviceService', () => {
   });
 
   it('should return device info with width, height, and dpr', () => {
+    // Re-set mocks to be sure
+    Object.defineProperty(window, 'screen', {
+      writable: true,
+      configurable: true,
+      value: {
+        width: 1920,
+        height: 1080
+      }
+    });
+    
+    Object.defineProperty(window, 'devicePixelRatio', {
+      writable: true,
+      configurable: true,
+      value: 2
+    });
+    
     const info = service.getInfo();
     
     expect(info).toBeDefined();
