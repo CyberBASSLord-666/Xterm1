@@ -76,11 +76,7 @@ export class PerformanceMonitorService {
    * @param metadata Optional metadata
    * @returns The result of the operation
    */
-  async measureAsync<T>(
-    name: string,
-    operation: () => Promise<T>,
-    metadata?: any
-  ): Promise<T> {
+  async measureAsync<T>(name: string, operation: () => Promise<T>, metadata?: any): Promise<T> {
     const id = this.startMeasure(name, metadata);
     try {
       return await operation();
@@ -96,11 +92,7 @@ export class PerformanceMonitorService {
    * @param metadata Optional metadata
    * @returns The result of the operation
    */
-  measureSync<T>(
-    name: string,
-    operation: () => T,
-    metadata?: any
-  ): T {
+  measureSync<T>(name: string, operation: () => T, metadata?: any): T {
     const id = this.startMeasure(name, metadata);
     try {
       return operation();
@@ -118,12 +110,12 @@ export class PerformanceMonitorService {
     max: number;
     avg: number;
   } | null {
-    const metrics = this.completedMetrics.filter(m => m.name === name);
+    const metrics = this.completedMetrics.filter((m) => m.name === name);
     if (metrics.length === 0) {
       return null;
     }
 
-    const durations = metrics.map(m => m.duration || 0);
+    const durations = metrics.map((m) => m.duration || 0);
     return {
       count: metrics.length,
       min: Math.min(...durations),
@@ -170,7 +162,7 @@ export class PerformanceMonitorService {
 
         // First Contentful Paint
         const paint = performance.getEntriesByType('paint');
-        const fcp = paint.find(entry => entry.name === 'first-contentful-paint');
+        const fcp = paint.find((entry) => entry.name === 'first-contentful-paint');
         if (fcp) {
           vitals.fcp = fcp.startTime;
         }
@@ -189,7 +181,6 @@ export class PerformanceMonitorService {
         this.observeCLS((value) => {
           vitals.cls = value;
         });
-
       } catch (error) {
         this.logger.error('Failed to get Web Vitals', error, 'PerformanceMonitor');
       }
@@ -277,9 +268,17 @@ export class PerformanceMonitorService {
   /**
    * Get Web Vitals rating based on WCAG thresholds.
    */
-  getWebVitalsRating(): Array<{ metric: string; value: number; rating: 'good' | 'needs-improvement' | 'poor' }> {
+  getWebVitalsRating(): Array<{
+    metric: string;
+    value: number;
+    rating: 'good' | 'needs-improvement' | 'poor';
+  }> {
     const vitals = this.getWebVitals();
-    const ratings: Array<{ metric: string; value: number; rating: 'good' | 'needs-improvement' | 'poor' }> = [];
+    const ratings: Array<{
+      metric: string;
+      value: number;
+      rating: 'good' | 'needs-improvement' | 'poor';
+    }> = [];
 
     // LCP thresholds
     if (vitals.lcp !== undefined) {
@@ -326,7 +325,7 @@ export class PerformanceMonitorService {
 
     // Get stats for common operations
     const commonOps = ['ImageGeneration', 'ThumbnailCreation', 'DatabaseQuery'];
-    commonOps.forEach(op => {
+    commonOps.forEach((op) => {
       const stats = this.getStats(op);
       if (stats) {
         summary[op] = stats;

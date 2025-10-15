@@ -29,7 +29,11 @@ export class AppInitializerService {
         // Set log level based on environment
         const logLevel = environment.production ? LogLevel.WARN : LogLevel.DEBUG;
         this.logger.setLogLevel(logLevel);
-        this.logger.info('Application initializing...', { environment: environment.production ? 'production' : 'development' }, 'AppInitializer');
+        this.logger.info(
+          'Application initializing...',
+          { environment: environment.production ? 'production' : 'development' },
+          'AppInitializer'
+        );
 
         // Start cache cleanup
         this.requestCache.startPeriodicCleanup(60000); // Every minute
@@ -40,7 +44,11 @@ export class AppInitializerService {
           initializeGeminiClient(apiKey);
           this.logger.info('Gemini API client initialized', undefined, 'AppInitializer');
         } else {
-          this.logger.warn('No Gemini API key found. AI features will be limited.', undefined, 'AppInitializer');
+          this.logger.warn(
+            'No Gemini API key found. AI features will be limited.',
+            undefined,
+            'AppInitializer'
+          );
         }
 
         // Setup default keyboard shortcuts

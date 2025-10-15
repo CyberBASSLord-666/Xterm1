@@ -1,11 +1,11 @@
 import { Injectable, signal, effect } from '@angular/core';
 
 export interface AppSettings {
-    referrer: string;
-    nologo: boolean;
-    private: boolean;
-    safe: boolean;
-    themeDark: boolean;
+  referrer: string;
+  nologo: boolean;
+  private: boolean;
+  safe: boolean;
+  themeDark: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -21,7 +21,7 @@ export class SettingsService {
 
   constructor() {
     this.load();
-    
+
     // This effect will run whenever any setting signal changes, saving the entire state.
     effect(() => {
       this.save();
@@ -43,7 +43,7 @@ export class SettingsService {
         this.loadDefaults();
       }
     } else {
-        this.loadDefaults();
+      this.loadDefaults();
     }
   }
 
@@ -61,18 +61,18 @@ export class SettingsService {
       nologo: this.nologo(),
       private: this.private(),
       safe: this.safe(),
-      themeDark: this.themeDark()
+      themeDark: this.themeDark(),
     };
     localStorage.setItem(this.settingsKey, JSON.stringify(settings));
   }
-  
+
   // Kept for backward compatibility with wizard component's usage.
   getGenerationOptions(): Omit<AppSettings, 'themeDark'> {
-      return {
-          referrer: this.referrer(),
-          nologo: this.nologo(),
-          private: this.private(),
-          safe: this.safe()
-      };
+    return {
+      referrer: this.referrer(),
+      nologo: this.nologo(),
+      private: this.private(),
+      safe: this.safe(),
+    };
   }
 }

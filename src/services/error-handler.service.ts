@@ -38,9 +38,7 @@ export class ErrorHandlerService {
 
     // Show user notification if requested
     if (showToast) {
-      const userMessage = isUserFriendly 
-        ? errorMessage 
-        : this.getUserFriendlyMessage(error);
+      const userMessage = isUserFriendly ? errorMessage : this.getUserFriendlyMessage(error);
       this.toast.show(userMessage);
     }
   }

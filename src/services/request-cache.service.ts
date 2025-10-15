@@ -136,7 +136,11 @@ export class RequestCacheService {
         count++;
       }
     }
-    this.logger.debug(`Cache invalidated by pattern: ${pattern} (${count} entries)`, undefined, 'RequestCache');
+    this.logger.debug(
+      `Cache invalidated by pattern: ${pattern} (${count} entries)`,
+      undefined,
+      'RequestCache'
+    );
   }
 
   /**
@@ -161,7 +165,11 @@ export class RequestCacheService {
       }
     }
     if (removed > 0) {
-      this.logger.debug(`Cache cleanup: ${removed} expired entries removed`, undefined, 'RequestCache');
+      this.logger.debug(
+        `Cache cleanup: ${removed} expired entries removed`,
+        undefined,
+        'RequestCache'
+      );
     }
   }
 

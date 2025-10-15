@@ -14,11 +14,7 @@ describe('AppComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [AppComponent],
-      providers: [
-        provideRouter(routes),
-        SettingsService,
-        ToastService
-      ]
+      providers: [provideRouter(routes), SettingsService, ToastService],
     }).compileComponents();
 
     fixture = TestBed.createComponent(AppComponent);
@@ -43,19 +39,19 @@ describe('AppComponent', () => {
   it('should toggle theme and show toast', () => {
     const toastSpy = jest.spyOn(toastService, 'show');
     const initialTheme = settingsService.themeDark();
-    
+
     component.toggleTheme();
-    
+
     expect(settingsService.themeDark()).toBe(!initialTheme);
     expect(toastSpy).toHaveBeenCalledWith(expect.stringContaining('theme enabled'));
   });
 
   it('should toggle mobile menu', () => {
     expect(component.isMobileMenuOpen()).toBe(false);
-    
+
     component.toggleMobileMenu();
     expect(component.isMobileMenuOpen()).toBe(true);
-    
+
     component.toggleMobileMenu();
     expect(component.isMobileMenuOpen()).toBe(false);
   });
@@ -63,7 +59,7 @@ describe('AppComponent', () => {
   it('should close mobile menu', () => {
     component.isMobileMenuOpen.set(true);
     expect(component.isMobileMenuOpen()).toBe(true);
-    
+
     component.closeMobileMenu();
     expect(component.isMobileMenuOpen()).toBe(false);
   });
@@ -71,7 +67,7 @@ describe('AppComponent', () => {
   it('should apply dark class to document when dark theme is enabled', () => {
     settingsService.themeDark.set(true);
     fixture.detectChanges();
-    
+
     // Note: Effect may need time to process, but for testing we can check the service state
     expect(settingsService.themeDark()).toBe(true);
   });
@@ -79,7 +75,7 @@ describe('AppComponent', () => {
   it('should remove dark class from document when dark theme is disabled', () => {
     settingsService.themeDark.set(false);
     fixture.detectChanges();
-    
+
     expect(settingsService.themeDark()).toBe(false);
   });
 });

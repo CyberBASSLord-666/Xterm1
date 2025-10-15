@@ -12,14 +12,9 @@ describe('GenerationService', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [
-        GenerationService,
-        GalleryService,
-        ToastService,
-        ImageUtilService
-      ]
+      providers: [GenerationService, GalleryService, ToastService, ImageUtilService],
     });
-    
+
     service = TestBed.inject(GenerationService);
     galleryService = TestBed.inject(GalleryService);
     toastService = TestBed.inject(ToastService);
@@ -58,10 +53,10 @@ describe('GenerationService', () => {
     // Set a non-idle status
     service.status.set('generating');
     expect(service.status()).toBe('generating');
-    
+
     // Reset
     service.reset();
-    
+
     // Should be back to idle
     expect(service.status()).toBe('idle');
   });
@@ -72,22 +67,25 @@ describe('GenerationService', () => {
       galleryItem: {
         id: 'test',
         prompt: 'test',
-        imageUrl: 'test',
-        thumbnailUrl: 'test',
+        blob: new Blob(['test'], { type: 'image/png' }),
+        thumb: new Blob(['thumb'], { type: 'image/png' }),
         createdAt: new Date().toISOString(),
         isFavorite: false,
         width: 1920,
         height: 1080,
-        collectionIds: []
+        aspect: '16:9',
+        mode: 'exact' as const,
+        model: 'flux',
+        collectionId: null,
       },
-      blobUrl: 'blob:test'
+      blobUrl: 'blob:test',
     });
-    
+
     expect(service.currentGenerationResult()).not.toBeNull();
-    
+
     // Reset
     service.reset();
-    
+
     // Should be cleared
     expect(service.currentGenerationResult()).toBeNull();
   });
