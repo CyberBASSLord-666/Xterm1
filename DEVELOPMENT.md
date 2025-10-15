@@ -251,7 +251,7 @@ export class MyComponent {
 
 3. **Use Lazy Loading Directive**
    ```html
-   <img lazyImage [src]="imageUrl" [lazySrc]="placeholder">
+   <img [appLazyImage]="imageUrl" [lazySrc]="placeholder">
    ```
 
 4. **Optimize Images**

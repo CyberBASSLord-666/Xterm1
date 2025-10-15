@@ -60,10 +60,20 @@ PolliWall is a cutting-edge web application that leverages AI to generate stunni
 ### Building for Production
 
 ```bash
+# Production build
 npm run build
+
+# Or use the full pre-deployment check (recommended)
+npm run pre-deploy
 ```
 
-The build artifacts will be stored in the `dist/` directory.
+The `pre-deploy` script runs:
+1. Linting checks
+2. Unit tests with coverage
+3. Production build
+4. Security validation
+
+Build artifacts will be stored in the `dist/` directory.
 
 ## 📚 Documentation
 
@@ -130,11 +140,31 @@ The build artifacts will be stored in the `dist/` directory.
 
 ## 🔒 Security Features
 
-- **Input Validation**: All user inputs validated and sanitized
-- **XSS Prevention**: HTML sanitization and Angular's built-in protection
-- **API Key Security**: Secure storage and never logged
-- **Rate Limiting**: Client-side rate limiting to prevent abuse
-- **Content Security Policy**: Ready for implementation
+### Production-Grade Security
+- **Input Validation**: Comprehensive validation for all user inputs
+- **XSS Prevention**: Multi-layer HTML sanitization and Angular's built-in protection
+- **API Key Security**: Secure storage, environment-based configuration, never logged
+- **Rate Limiting**: Client-side rate limiting to prevent API abuse
+- **Content Security Policy**: Configured with appropriate directives
+- **Security Headers**: HSTS, X-Frame-Options, X-Content-Type-Options, etc.
+- **HTTPS Enforcement**: Automatic redirect to HTTPS in production
+- **Environment Validation**: Startup validation of all configuration
+
+### Security Validation
+Run comprehensive security checks before deployment:
+```bash
+npm run security:check
+```
+
+### Deployment Security
+- **[DEPLOYMENT_SECURITY.md](./DEPLOYMENT_SECURITY.md)** - Comprehensive security guide
+- **[PRODUCTION_DEPLOYMENT_CHECKLIST.md](./PRODUCTION_DEPLOYMENT_CHECKLIST.md)** - Pre-deployment checklist
+
+### Platform-Specific Security Configuration
+- `_headers` - Netlify/Cloudflare Pages security headers
+- `vercel.json` - Vercel security configuration
+- `nginx.conf.example` - Nginx configuration template
+- `.htaccess` - Apache configuration
 
 ## 🤝 Contributing
 

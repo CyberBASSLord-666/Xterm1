@@ -9,9 +9,6 @@
         "project": ["tsconfig.json"],
         "createDefaultProgram": true
       },
-
-
- main
       "extends": [
         "eslint:recommended",
         "plugin:@typescript-eslint/recommended",
@@ -23,7 +20,6 @@
           "error",
           {
             "type": "attribute",
-            "prefix": ["app", "lazyImage"],
             "prefix": "app",
             "style": "camelCase"
           }
@@ -32,7 +28,6 @@
           "error",
           {
             "type": "element",
- copilot/fix-cb260cd0-e9f5-43c9-819f-ea0ef53a3483
             "prefix": ["app", "pw"],
             "style": "kebab-case"
           }
@@ -41,17 +36,14 @@
         "@typescript-eslint/no-explicit-any": "warn",
         "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
         "no-console": ["warn", { "allow": ["warn", "error"] }]
- main
       }
     },
     {
       "files": ["*.html"],
- copilot/fix-cb260cd0-e9f5-43c9-819f-ea0ef53a3483
       "extends": ["plugin:@angular-eslint/template/recommended"],
       "rules": {
         "@angular-eslint/template/no-negated-async": "error"
       }
- main
     }
   ]
 }

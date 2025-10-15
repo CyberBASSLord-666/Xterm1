@@ -1,11 +1,34 @@
-import 'jest-preset-angular/setup-jest';
+import { setupZoneTestEnv } from 'jest-preset-angular/setup-env/zone';
+import { webcrypto } from 'crypto';
 
- copilot/fix-cb260cd0-e9f5-43c9-819f-ea0ef53a3483
+setupZoneTestEnv();
+
+// Provide a deterministic crypto implementation for tests so services relying on
+// randomUUID behave consistently during coverage runs.
+const cryptoInstance = webcrypto as unknown as Crypto;
+const uuidBase = '00000000-0000-4000-8000-';
+let uuidCounter = 0;
+const nextUuid = (): `${string}-${string}-${string}-${string}-${string}` => {
+  const suffix = uuidCounter.toString(16).padStart(12, '0');
+  uuidCounter = (uuidCounter + 1) % 0x100000000000;
+  return `${uuidBase}${suffix}`;
+};
+
+if (typeof cryptoInstance.randomUUID === 'function') {
+  jest.spyOn(cryptoInstance, 'randomUUID').mockImplementation(nextUuid);
+} else {
+  (cryptoInstance as any).randomUUID = jest.fn(nextUuid);
+}
+
+Object.defineProperty(globalThis, 'crypto', {
+  configurable: true,
+  value: cryptoInstance,
+});
+
 // Mock matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: jest.fn().mockImplementation((query) => ({
- main
     matches: false,
     media: query,
     onchange: null,
@@ -35,7 +58,6 @@ global.ResizeObserver = class ResizeObserver {
   observe() {}
   unobserve() {}
 } as any;
- copilot/fix-cb260cd0-e9f5-43c9-819f-ea0ef53a3483
 
 // Mock createImageBitmap
 global.createImageBitmap = jest.fn().mockImplementation(() =>
@@ -49,4 +71,31 @@ global.createImageBitmap = jest.fn().mockImplementation(() =>
 // Mock URL.createObjectURL and revokeObjectURL
 global.URL.createObjectURL = jest.fn(() => 'blob:mock-url');
 global.URL.revokeObjectURL = jest.fn();
- main
+
+// Mock window.screen and window.innerWidth/innerHeight for DeviceService
+Object.defineProperty(window, 'screen', {
+  writable: true,
+  configurable: true,
+  value: {
+    width: 1920,
+    height: 1080,
+  },
+});
+
+Object.defineProperty(window, 'innerWidth', {
+  writable: true,
+  configurable: true,
+  value: 1024,
+});
+
+Object.defineProperty(window, 'innerHeight', {
+  writable: true,
+  configurable: true,
+  value: 768,
+});
+
+Object.defineProperty(window, 'devicePixelRatio', {
+  writable: true,
+  configurable: true,
+  value: 1,
+});

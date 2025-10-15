@@ -345,7 +345,18 @@ Remove potentially dangerous characters.
 
 ##### `sanitizeHtml(html: string): string`
 
-Sanitize HTML to prevent XSS.
+Escapes and sanitizes user-provided markup using a curated allowlist of inline formatting tags (for example, `p`, `strong`, `em`, `span`, and anchors). The sanitizer removes script/style content, normalises CSS classes to safe characters, strips unsafe attributes and protocols, and automatically enforces `rel="noopener noreferrer"` on links that open in a new tab.
+
+##### `sanitizeHtmlAdvanced(html: string, allowedTags?: string[], allowedAttributes?: Record<string, string[]>, options?: SanitizeHtmlOptions): string`
+
+Performs DOM-based sanitisation with a caller-supplied allowlist. The optional `options` argument accepts:
+
+- `allowedUriSchemes`: string[] — additional URI schemes to allow (defaults to `http`, `https`, and `blob`).
+- `allowRelativeUris`: boolean — enable or disable relative URLs (defaults to `true`).
+- `enforceNoopener`: boolean — when `true`, `_blank` links must include `rel` support; otherwise the `target` attribute is removed.
+- `blockedTags`: string[] — extra element names to disallow beyond the built-in set (`script`, `style`, `iframe`, etc.).
+
+Returns a sanitised HTML string that is safe to render via Angular bindings such as `[innerHTML]`.
 
 ##### `validateApiKey(key: string): ValidationResult`
 
@@ -650,8 +661,7 @@ Lazy load images using Intersection Observer.
 **Usage**:
 ```html
 <img 
-  lazyImage 
-  [src]="imageUrl" 
+  [appLazyImage]="imageUrl"
   [lazySrc]="placeholderUrl"
   [lazyThreshold]="0.1"
   alt="Description"

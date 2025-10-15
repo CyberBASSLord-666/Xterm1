@@ -271,7 +271,12 @@ describe('AccessibilityService', () => {
 
       const container = document.querySelector('.skip-links-container');
       expect(container).toBeDefined();
-      expect(container?.getAttribute('aria-label')).toBe('Skip links');
+      expect(container?.getAttribute('aria-labelledby')).toBe('skip-links-heading');
+      
+      // Should have the heading element
+      const heading = document.getElementById('skip-links-heading');
+      expect(heading).toBeDefined();
+      expect(heading?.textContent).toBe('Skip navigation links');
       
       // Should have multiple skip links
       const skipLinks = container?.querySelectorAll('a.skip-link');

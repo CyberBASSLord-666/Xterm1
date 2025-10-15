@@ -1,5 +1,15 @@
 // Default environment configuration (development)
 export const environment = {
   production: false,
-  geminiApiKey: '', // Set via environment variable or configuration
+  defaults: {
+    geminiApiKey: '',
+    analyticsMeasurementId: '',
+  },
+  bootstrapConfig: {
+    meta: {
+      geminiApiKey: 'gemini-api-key',
+      analyticsMeasurementId: 'analytics-measurement-id',
+    },
+    failOnMissingGeminiKey: false,
+  },
 };
