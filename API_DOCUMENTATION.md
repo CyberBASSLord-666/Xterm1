@@ -661,8 +661,7 @@ Lazy load images using Intersection Observer.
 **Usage**:
 ```html
 <img 
-  appLazyImage
-  [src]="imageUrl" 
+  [appLazyImage]="imageUrl"
   [lazySrc]="placeholderUrl"
   [lazyThreshold]="0.1"
   alt="Description"
