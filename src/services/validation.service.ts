@@ -156,8 +156,11 @@ export class ValidationService {
     } while (sanitized !== prevSanitized);
     
     // Remove event handlers (onclick, onerror, etc.)
-    sanitized = sanitized.replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, '');
-    sanitized = sanitized.replace(/\s*on\w+\s*=\s*[^\s>]*/gi, '');
+    do {
+      prevSanitized = sanitized;
+      sanitized = sanitized.replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, '');
+      sanitized = sanitized.replace(/\s*on\w+\s*=\s*[^\s>]*/gi, '');
+    } while (sanitized !== prevSanitized);
     
     // Remove javascript: protocol
     sanitized = sanitized.replace(/javascript:/gi, '');
