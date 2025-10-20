@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import sanitizeHtml from 'sanitize-html';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -173,39 +174,11 @@ export class ValidationService {
     // This prevents ALL XSS attacks including attribute-based attacks
 copilot/full-repository-analysis
 
-    // Multi-pass sanitization to handle encoded and nested attacks
-    // Remove script tags with comprehensive pattern matching until gone
-    let oldSanitized;
-    do {
-      oldSanitized = sanitized;
-      sanitized = sanitized.replace(/<script[\s\S]*?<\/script>/gi, '');
-      sanitized = sanitized.replace(/<script[\s\S]*?>/gi, '');
-    } while (sanitized !== oldSanitized);
-
-    // Remove iframe tags until gone
-    do {
-      oldSanitized = sanitized;
-      sanitized = sanitized.replace(/<iframe[\s\S]*?<\/iframe>/gi, '');
-      sanitized = sanitized.replace(/<iframe[\s\S]*?>/gi, '');
-    } while (sanitized !== oldSanitized);
-
-    // Remove object tags until gone
-    do {
-      oldSanitized = sanitized;
-      sanitized = sanitized.replace(/<object[\s\S]*?<\/object>/gi, '');
-    } while (sanitized !== oldSanitized);
-
-    // Remove embed tags until gone
-    do {
-      oldSanitized = sanitized;
-      sanitized = sanitized.replace(/<embed[\s\S]*?>/gi, '');
-    } while (sanitized !== oldSanitized);
-
-    // Remove form tags until gone
-    do {
-      oldSanitized = sanitized;
-      sanitized = sanitized.replace(/<form[\s\S]*?<\/form>/gi, '');
-    } while (sanitized !== oldSanitized);
+    // Sanitize HTML using well-tested library
+    sanitized = sanitizeHtml(sanitized, {
+      allowedTags: [], // Remove all tags for maximum safety
+      allowedAttributes: {}, // Remove all attributes
+    });
 
     // Remove ALL event handlers with comprehensive patterns
     // Match on*, ON*, oN*, etc. with various attribute formats
