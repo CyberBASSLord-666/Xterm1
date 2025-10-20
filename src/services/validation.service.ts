@@ -174,28 +174,38 @@ export class ValidationService {
 copilot/full-repository-analysis
 
     // Multi-pass sanitization to handle encoded and nested attacks
-    for (let i = 0; i < 5; i++) {
-      const prevSanitized = sanitized;
-
-      // Remove script tags with comprehensive pattern matching
-      // Match any variation including case, whitespace, and encoded characters
+    // Remove script tags with comprehensive pattern matching until gone
+    let oldSanitized;
+    do {
+      oldSanitized = sanitized;
       sanitized = sanitized.replace(/<script[\s\S]*?<\/script>/gi, '');
       sanitized = sanitized.replace(/<script[\s\S]*?>/gi, '');
+    } while (sanitized !== oldSanitized);
 
-      // Remove iframe tags (can load malicious content)
+    // Remove iframe tags until gone
+    do {
+      oldSanitized = sanitized;
       sanitized = sanitized.replace(/<iframe[\s\S]*?<\/iframe>/gi, '');
       sanitized = sanitized.replace(/<iframe[\s\S]*?>/gi, '');
+    } while (sanitized !== oldSanitized);
 
-      // Remove object and embed tags
+    // Remove object tags until gone
+    do {
+      oldSanitized = sanitized;
       sanitized = sanitized.replace(/<object[\s\S]*?<\/object>/gi, '');
+    } while (sanitized !== oldSanitized);
+
+    // Remove embed tags until gone
+    do {
+      oldSanitized = sanitized;
       sanitized = sanitized.replace(/<embed[\s\S]*?>/gi, '');
+    } while (sanitized !== oldSanitized);
 
-      // Remove form tags
+    // Remove form tags until gone
+    do {
+      oldSanitized = sanitized;
       sanitized = sanitized.replace(/<form[\s\S]*?<\/form>/gi, '');
-
-      // Stop if no changes were made
-      if (sanitized === prevSanitized) break;
-    }
+    } while (sanitized !== oldSanitized);
 
     // Remove ALL event handlers with comprehensive patterns
     // Match on*, ON*, oN*, etc. with various attribute formats
