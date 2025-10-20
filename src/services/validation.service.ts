@@ -171,6 +171,7 @@ export class ValidationService {
 
     // For most use cases, we want plain text with HTML escaped
     // This prevents ALL XSS attacks including attribute-based attacks
+copilot/full-repository-analysis
 
     // Multi-pass sanitization to handle encoded and nested attacks
     for (let i = 0; i < 5; i++) {
@@ -245,7 +246,8 @@ export class ValidationService {
 
     // Remove base tag that could hijack relative URLs
     sanitized = sanitized.replace(/<base[\s\S]*?>/gi, '');
-
+    
+    main
     return sanitized;
   }
 
