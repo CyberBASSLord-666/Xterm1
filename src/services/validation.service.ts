@@ -11,6 +11,19 @@ export interface ValidationResult {
  */
 @Injectable({ providedIn: 'root' })
 export class ValidationService {
+
+  /**
+   * Helper to repeatedly remove matches for a pattern until the string stabilizes.
+   */
+  private replaceRepeatedly(input: string, regex: RegExp, replacement: string): string {
+    let previous: string;
+    do {
+      previous = input;
+      input = input.replace(regex, replacement);
+    } while (input !== previous);
+    return input;
+  }
+
   /**
    * Validate a prompt string.
    */
@@ -182,10 +195,10 @@ copilot/full-repository-analysis
 
     // Remove ALL event handlers with comprehensive patterns
     // Match on*, ON*, oN*, etc. with various attribute formats
-    sanitized = sanitized.replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, '');
-    sanitized = sanitized.replace(/\s*on\w+\s*=\s*[^\s>]*/gi, '');
-    sanitized = sanitized.replace(/\s*ON\w+\s*=\s*["'][^"']*["']/gi, '');
-    sanitized = sanitized.replace(/\s*ON\w+\s*=\s*[^\s>]*/gi, '');
+    sanitized = this.replaceRepeatedly(sanitized, /\s*on\w+\s*=\s*["'][^"']*["']/gi, '');
+    sanitized = this.replaceRepeatedly(sanitized, /\s*on\w+\s*=\s*[^\s>]*/gi, '');
+    sanitized = this.replaceRepeatedly(sanitized, /\s*ON\w+\s*=\s*["'][^"']*["']/gi, '');
+    sanitized = this.replaceRepeatedly(sanitized, /\s*ON\w+\s*=\s*[^\s>]*/gi, '');
 
     // Remove dangerous protocols with comprehensive pattern matching
     // Include URL-encoded variations and HTML entity encodings
