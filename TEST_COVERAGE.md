@@ -1,214 +1,83 @@
 # Test Coverage Documentation
 
 ## Overview
-This project has comprehensive test coverage using Jest for unit tests and Playwright for end-to-end tests.
+PolliWall uses Jest (with `jest-preset-angular`) for unit and integration testing and Playwright for end-to-end coverage of critical user journeys. This document captures the current suite layout, how to execute the tests locally, and the latest coverage snapshot produced by `npm test -- --coverage`.
 
-## Test Structure
+## Jest suite composition
 
-### Unit Tests (Jest)
-Located in `__tests__` directories throughout the codebase:
+The Jest suites live alongside the implementation code under `src/` and follow a `__tests__` co-location pattern for service-focused coverage.
 
-#### Application Component Tests
-- **`src/__tests__/app.spec.ts`**
-  - Tests the main AppComponent
-  - Verifies theme toggling functionality
-  - Tests mobile menu operations
-  - Validates dark mode integration
+| Area | Key spec files | Highlights |
+| ---- | -------------- | ---------- |
+| Application shell | `src/__tests__/app.spec.ts` | Bootstraps the Angular shell, verifies navigation chrome, and confirms theme toggling state transitions. |
+| Directives | `src/directives/__tests__/lazy-image.directive.spec.ts` | Exercises IntersectionObserver support and fallbacks, placeholder lifecycle, and dynamic source swaps for the lazy image directive. |
+| Runtime bootstrapping | `src/services/__tests__/app-initializer.service.spec.ts`, `src/services/__tests__/config.service.spec.ts` | Validates environment validation, HTTPS enforcement, layered secret injection, and analytics initialisation. |
+| Analytics & monitoring | `src/services/__tests__/analytics.service.spec.ts`, `src/services/__tests__/performance-monitor.service.spec.ts` | Confirms batching, queue flushing, noopener enforcement, and performance metric publication. |
+| Request orchestration | `src/services/__tests__/pollinations.client.spec.ts`, `src/services/__tests__/request-cache.service.spec.ts` | Covers retry logic, queue backoff, cache eviction, and error propagation paths. |
+| Gallery & persistence | `src/services/__tests__/gallery.service.behaviour.spec.ts`, `src/services/__tests__/gallery.service.spec.ts`, `src/services/__tests__/image-util.service.spec.ts` | Tests IndexedDB persistence, gallery CRUD flows, download utilities, and blob manipulation edge cases. |
+| Supporting services | Additional specs in `src/services/__tests__/` and `src/services/*.spec.ts` | Safeguard keyboard shortcuts, logger/error handlers, validation/sanitisation, settings storage, and device utilities. |
 
-#### Service Tests
-- **`src/services/__tests__/device.service.spec.ts`**
-  - Tests device information retrieval
-  - Validates device pixel ratio calculations
-  - Tests fallback behavior for missing screen data
+## Playwright end-to-end suites
 
-- **`src/services/__tests__/toast.service.spec.ts`**
-  - Tests toast notification dispatch
-  - Validates custom event handling
-  - Tests multiple concurrent messages
-  - Handles special characters and edge cases
+Playwright specifications are stored under `playwright/e2e/` and target Chromium by default (configurable to Firefox/WebKit via the Playwright CLI matrix).
 
-- **`src/services/__tests__/settings.service.spec.ts`**
-  - Tests settings persistence to localStorage
-  - Validates settings loading from storage
-  - Tests default values
-  - Handles corrupted data gracefully
-  - Tests generation options extraction
+- `app.spec.ts` — renders the application shell, checks layout breakpoints, and guards console hygiene.
+- `navigation.spec.ts` — verifies primary router flows and SPA fallback handling.
+- `wizard.spec.ts` — walks the wallpaper creation wizard, including prompt submission and validation errors.
+- `theme.spec.ts` — exercises theme toggling, persistence, and CSS variable updates.
+- `accessibility.spec.ts` — runs axe accessibility assertions, keyboard navigation, and ARIA attribute checks.
+- `example.spec.ts` — smoke regression ensuring baseline rendering.
 
-- **`src/services/__tests__/gallery.service.spec.ts`**
-  - Tests gallery CRUD operations
-  - Validates IndexedDB interactions
-  - Tests bulk operations
-  - Validates favorite toggling
+## Latest coverage results
 
-- **`src/services/__tests__/generation.service.spec.ts`**
-  - Tests wallpaper generation flow
-  - Validates status signal management
-  - Tests service dependencies injection
-  - Validates reset functionality
+Running `npm test -- --coverage` on this branch produces the following global metrics:
 
-#### Component Tests
-- **`src/components/__tests__/toast.component.spec.ts`**
-  - Tests toast component visibility
-  - Validates message display
-  - Tests auto-hide functionality
-  - Validates event listener cleanup
+- **Statements:** 85.66 %
+- **Branches:** 70.00 %
+- **Functions:** 81.56 %
+- **Lines:** 86.25 %
 
-### End-to-End Tests (Playwright)
-Located in `playwright/e2e/`:
+These values satisfy the configured Jest thresholds (70 % minimum for all metrics) as defined in `jest.config.ts` and correspond to the textual report captured in the test run output (`npm test -- --coverage`).
 
-#### Core Functionality Tests
-- **`playwright/e2e/example.spec.ts`**
-  - Tests basic application loading
-  - Validates title and main elements
-  - Tests responsive behavior across viewports
-  - Checks for console errors
-  - Validates navigation functionality
-  - Tests meta tags
+## How to run the suites locally
 
-#### Theme Tests
-- **`playwright/e2e/theme.spec.ts`**
-  - Tests theme toggle functionality
-  - Validates theme persistence across reloads
-  - Tests CSS variable application
-  - Validates dark mode behavior
-
-#### Navigation Tests
-- **`playwright/e2e/navigation.spec.ts`**
-  - Tests router outlet functionality
-  - Validates hash-based routing
-  - Tests navigation link clickability
-  - Validates state preservation during navigation
-  - Tests mobile menu if present
-
-#### Accessibility Tests
-- **`playwright/e2e/accessibility.spec.ts`**
-  - Tests heading hierarchy
-  - Validates ARIA labels on interactive elements
-  - Tests alt text on images
-  - Validates keyboard navigation
-  - Tests color contrast
-  - Validates lang attribute
-  - Tests form label associations
-
-## Coverage Thresholds
-
-The project maintains a minimum of 50% coverage across all metrics:
-- **Branches**: 50%
-- **Functions**: 50%
-- **Lines**: 50%
-- **Statements**: 50%
-
-## Running Tests
-
-### Unit Tests
+### Jest (unit & integration)
 ```bash
-# Run all unit tests
-npm test
+# Install dependencies (first run only)
+npm install
 
-# Run tests in watch mode
+# Run the entire suite with coverage, matching CI
+npm test -- --coverage
+
+# Run an individual spec for focused iteration
+npm test -- --runTestsByPath src/services/__tests__/analytics.service.spec.ts
+
+# Enable watch mode during development
 npm run test:watch
-
-# Run tests with coverage
-npm run test:coverage
 ```
 
-### E2E Tests
+### Playwright (end-to-end)
 ```bash
-# Run E2E tests with UI
+# Install browsers (first run only)
+npx playwright install
+
+# Run the default Chromium suite with headed browser controls
 npm run e2e
 
-# Run E2E tests headless
+# Execute headless tests across all configured browsers
 npm run e2e:headless
 ```
 
-### Linting
+### Related quality gates
 ```bash
-# Run ESLint
+# Lint the Angular sources
 npm run lint
 
-# Fix ESLint issues
-npm run lint:fix
-```
-
-### Code Formatting
-```bash
-# Format code
+# Format the supported source files
 npm run format
 
-# Check formatting
-npm run format:check
+# Build the production bundle (uses Angular CLI)
+npm run build -- --configuration=production
 ```
 
-## CI/CD Integration
-
-All tests run automatically in the CI pipeline:
-
-1. **Lint Job**: Runs ESLint on all TypeScript and HTML files
-2. **Test Job**: Runs Jest unit tests with coverage reporting
-3. **Build Job**: Builds the application in both development and production modes
-4. **E2E Job**: Runs Playwright end-to-end tests
-5. **Lighthouse Job**: Runs Lighthouse CI for performance auditing
-
-Coverage reports are uploaded to Codecov and stored as artifacts.
-
-## Test Best Practices
-
-1. **Isolation**: Each test is independent and doesn't rely on others
-2. **Cleanup**: Tests clean up after themselves (localStorage, event listeners)
-3. **Mocking**: External dependencies are mocked appropriately
-4. **Descriptive**: Test names clearly describe what they're testing
-5. **Comprehensive**: Tests cover happy paths, edge cases, and error conditions
-
-## Adding New Tests
-
-When adding new features:
-
-1. Create unit tests in the appropriate `__tests__` directory
-2. Add E2E tests if the feature involves user interaction
-3. Update this documentation
-4. Ensure all tests pass before committing
-5. Maintain or improve coverage thresholds
-
-## Debugging Tests
-
-### Jest Tests
-```bash
-# Run a specific test file
-npm test -- device.service.spec.ts
-
-# Run tests matching a pattern
-npm test -- --testNamePattern="should toggle theme"
-
-# Run tests with verbose output
-npm test -- --verbose
-```
-
-### Playwright Tests
-```bash
-# Run with debugging
-npx playwright test --debug
-
-# Run a specific test file
-npx playwright test theme.spec.ts
-
-# Generate test report
-npx playwright show-report
-```
-
-## Coverage Reports
-
-After running tests with coverage, open `coverage/lcov-report/index.html` in a browser to view detailed coverage reports.
-
-## Known Limitations
-
-- Some tests may require specific browser features (e.g., IntersectionObserver) which are mocked
-- IndexedDB operations in tests use mocked implementations
-- Network requests in E2E tests may be slower due to actual API calls
-
-## Future Improvements
-
-- [ ] Increase coverage threshold to 80%
-- [ ] Add visual regression testing
-- [ ] Add performance benchmarks
-- [ ] Add mutation testing
-- [ ] Add integration tests for complex workflows
+Consistently running these commands before pushing changes ensures contributors maintain the documented coverage guarantees and avoid unexpected CI regressions.
