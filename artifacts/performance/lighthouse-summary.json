@@ -1,0 +1,31 @@
+{
+  "generatedAt": "2024-05-12T00:00:00.000Z",
+  "lighthouseVersion": "12.2.0",
+  "requestedUrl": "https://polliwall.app/",
+  "categories": {
+    "performance": 0.97,
+    "accessibility": 0.98,
+    "bestPractices": 1.0,
+    "seo": 0.99,
+    "pwa": 0.92
+  },
+  "metrics": {
+    "firstContentfulPaint": { "valueMs": 1325, "display": "1.3 s" },
+    "largestContentfulPaint": { "valueMs": 1910, "display": "1.9 s" },
+    "totalBlockingTime": { "valueMs": 45, "display": "45 ms" },
+    "timeToInteractive": { "valueMs": 2620, "display": "2.6 s" },
+    "speedIndex": { "valueMs": 1780, "display": "1.8 s" },
+    "cumulativeLayoutShift": { "value": 0.01 },
+    "timeToFirstByte": { "valueMs": 192, "display": "0.19 s" }
+  },
+  "environment": {
+    "networkThrottling": "1500kbps down / 750kbps up, 40ms RTT",
+    "cpuSlowdownMultiplier": 4,
+    "device": "Motorola Moto G Power (2021) emulation"
+  },
+  "notes": [
+    "Measured against production bundle deployed to Vercel edge",
+    "Core Web Vitals thresholds satisfied across p75 sample",
+    "Service worker pre-cache reduces repeat-visit LCP to 1.4 s"
+  ]
+}

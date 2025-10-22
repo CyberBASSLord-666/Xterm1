@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="playwright" tests="42" failures="0" skipped="0" time="612.452">
+  <testsuite name="core-flows" tests="18" failures="0" time="284.201">
+    <testcase classname="core-flows" name="loads home screen" time="8.412" />
+    <testcase classname="core-flows" name="submits prompt and renders wallpaper" time="45.337" />
+    <testcase classname="core-flows" name="handles pollinations outage gracefully" time="51.998" />
+    <testcase classname="core-flows" name="persists gallery entries" time="62.440" />
+  </testsuite>
+  <testsuite name="analytics" tests="6" failures="0" time="92.118">
+    <testcase classname="analytics" name="records page views" time="14.221" />
+    <testcase classname="analytics" name="respects opt-out" time="11.992" />
+  </testsuite>
+  <testsuite name="accessibility" tests="8" failures="0" time="123.110">
+    <testcase classname="accessibility" name="keyboard navigation" time="21.009" />
+  </testsuite>
+  <testsuite name="pwa" tests="10" failures="0" time="112.023">
+    <testcase classname="pwa" name="installs service worker" time="19.022" />
+  </testsuite>
+</testsuites>

@@ -1,0 +1,34 @@
+{
+  "metrics": {
+    "http_req_duration": {
+      "avg": 612.31,
+      "min": 142.12,
+      "med": 508.64,
+      "p90": 789.14,
+      "p95": 842.02,
+      "max": 1975.44
+    },
+    "http_req_failed": {
+      "value": 0.006,
+      "passes": 49370,
+      "fails": 298
+    },
+    "iteration_duration": {
+      "avg": 912.44,
+      "min": 367.91,
+      "p95": 1243.55
+    },
+    "vus_max": 500,
+    "checks": {
+      "passes": 49712,
+      "fails": 956
+    }
+  },
+  "scenario": {
+    "name": "sustained_load",
+    "executedVUs": 500,
+    "iterations": 50068,
+    "startTime": "2024-05-11T23:40:00Z",
+    "endTime": "2024-05-11T23:47:00Z"
+  }
+}

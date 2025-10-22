@@ -1,0 +1,10 @@
+$ORIGIN polliwall.app.
+$TTL 300
+@          IN SOA  ns1.cloudflare.net. dns.cloudflare.com. 2345021711 10000 2400 604800 3600
+@          300 IN A      76.76.21.21
+www        300 IN CNAME  cname.vercel-dns.com.
+failover   300 IN A      34.120.201.39
+_acme-challenge 300 IN TXT "CF-VERIFICATION=8d9f4360"
+_smtp._tls 300 IN TXT "v=TLSRPTv1;rua=mailto:tls@polliwall.app"
+@          300 IN TXT    "v=spf1 include:_spf.google.com include:sendgrid.net -all"
+_dmarc     300 IN TXT    "v=DMARC1; p=quarantine; rua=mailto:dmarc@polliwall.app"

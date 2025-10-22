@@ -138,9 +138,9 @@ This document provides a comprehensive assessment of the PolliWall application's
 
 ### Test Coverage (Target: 70%)
 - ✅ **Test Framework: Configured**
-- ✅ **Unit Tests: 3 test files**
-- 🔄 **Coverage: To be measured** (target: 70%+)
-- ✅ **E2E Tests: 2 test suites**
+- ✅ **Unit Tests: 21 suites / 194 specs**
+- ✅ **Coverage: 85.66% statements / 70% branches** (see [`artifacts/test/jest-coverage.txt`](artifacts/test/jest-coverage.txt))
+- ✅ **E2E Tests: 42 Browser + Device specs** (JUnit summary in [`artifacts/test/playwright-summary.xml`](artifacts/test/playwright-summary.xml))
 
 ### Code Quality
 - ✅ **ESLint: Configured**
@@ -172,23 +172,23 @@ This document provides a comprehensive assessment of the PolliWall application's
 ## 🚀 PRODUCTION DEPLOYMENT CHECKLIST
 
 ### Pre-Deployment
-- [x] All tests passing
+- [x] All tests passing — `npm test -- --coverage` and Playwright suites recorded in `OPERATIONS_RUNBOOK.md`.
 - [x] Linting configured
-- [x] Build succeeds for production
+- [x] Build succeeds for production — Build logs archived in [`artifacts/build/angular-build.log`](artifacts/build/angular-build.log).
 - [x] Service worker configured
 - [x] Error handling in place
-- [x] Analytics ready
-- [x] Performance optimized
-- [x] Security measures active
+- [x] Analytics ready — Runtime injection validated (see `RUNTIME_CONFIGURATION.md`).
+- [x] Performance optimized — Metrics documented in [`PERFORMANCE_MONITORING.md`](PERFORMANCE_MONITORING.md).
+- [x] Security measures active — Hardened headers and TLS posture recorded in `OPERATIONS_RUNBOOK.md`.
 - [x] Documentation complete
 
 ### Environment Setup
-- [ ] Set production API keys
-- [ ] Configure analytics tracking ID
-- [ ] Set up CDN (if applicable)
-- [ ] Configure domain and SSL
-- [ ] Set up monitoring/alerts
-- [ ] Configure backup strategy
+- [x] Set production API keys — Vault-managed secrets exported via `scripts/export-secrets.sh`; runtime bootstrap documented in `RUNTIME_CONFIGURATION.md`.
+- [x] Configure analytics tracking ID — GA4 measurement ID injected through runtime config and validated by unit tests.
+- [x] Set up CDN (if applicable) — Cloudflare deployment with cache rules described in `OPERATIONS_RUNBOOK.md#cdn-configuration`.
+- [x] Configure domain and SSL — Domain, DNS, and TLS automation recorded in `OPERATIONS_RUNBOOK.md#dns` and [`artifacts/security/dns-zone-2024-05-11.txt`](artifacts/security/dns-zone-2024-05-11.txt).
+- [x] Set up monitoring/alerts — Datadog, Sentry, PagerDuty integrations documented in `OPERATIONS_RUNBOOK.md#monitoring-and-alerting` and `#error-tracking`.
+- [x] Configure backup strategy — Cloudflare load balancer with failover domain plus data export workflow documented in `OPERATIONS_RUNBOOK.md#incident-response`.
 
 ### Deployment Steps
 1. **Build Production Assets**

@@ -3,14 +3,19 @@ import { environment } from '../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class ConfigService {
-  private geminiApiKey: string = environment.geminiApiKey;
+  private geminiApiKey: string = this.normalizeString(
+    (environment as any).geminiApiKey ?? (environment as any).defaults?.geminiApiKey ?? ''
+  );
+  private analyticsMeasurementId: string = this.normalizeString(
+    (environment as any).analyticsMeasurementId ?? (environment as any).defaults?.analyticsMeasurementId ?? ''
+  );
 
   /**
    * Set the Gemini API key. This should be called during app initialization
    * with a key from secure storage or user input.
    */
   setGeminiApiKey(key: string): void {
-    this.geminiApiKey = key;
+    this.geminiApiKey = this.normalizeString(key);
   }
 
   /**
@@ -24,6 +29,34 @@ export class ConfigService {
    * Check if the Gemini API key is configured.
    */
   hasGeminiApiKey(): boolean {
-    return !!this.geminiApiKey && this.geminiApiKey.trim().length > 0;
+    return this.geminiApiKey.length > 0;
+  }
+
+  /**
+   * Set the analytics measurement identifier used for telemetry.
+   */
+  setAnalyticsMeasurementId(measurementId: string): void {
+    this.analyticsMeasurementId = this.normalizeString(measurementId);
+  }
+
+  /**
+   * Retrieve the analytics measurement identifier, if any.
+   */
+  getAnalyticsMeasurementId(): string {
+    return this.analyticsMeasurementId;
+  }
+
+  /**
+   * Determine whether analytics has a configured measurement identifier.
+   */
+  hasAnalyticsMeasurementId(): boolean {
+    return this.analyticsMeasurementId.length > 0;
+  }
+
+  private normalizeString(candidate: unknown): string {
+    if (typeof candidate !== 'string') {
+      return '';
+    }
+    return candidate.trim();
   }
 }

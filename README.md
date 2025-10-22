@@ -80,6 +80,10 @@ Build artifacts will be stored in the `dist/` directory.
 - **[Architecture Guide](./ARCHITECTURE.md)** - Detailed system architecture and design decisions
 - **[Development Guide](./DEVELOPMENT.md)** - Complete developer setup and workflow guide
 - **[API Documentation](./API_DOCUMENTATION.md)** - Comprehensive API reference
+- **[Runtime Configuration](./RUNTIME_CONFIGURATION.md)** - Secret injection and bootstrap contract
+- **[Operations Runbook](./OPERATIONS_RUNBOOK.md)** - Deployment, CDN, security, and incident procedures
+- **[Performance & Monitoring Report](./PERFORMANCE_MONITORING.md)** - Load testing, Lighthouse, and observability metrics
+- **[Test Coverage Documentation](./TEST_COVERAGE.md)** - Current test portfolio and coverage artefacts
 
 ## 🏗️ Technology Stack
 
