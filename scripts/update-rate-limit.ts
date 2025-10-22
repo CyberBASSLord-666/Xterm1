@@ -4,10 +4,11 @@ import { exit } from 'process';
 const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
 const apiToken = process.env.CLOUDFLARE_API_TOKEN;
 const zoneId = process.env.CLOUDFLARE_ZONE_ID;
+const rateLimitId = process.env.CLOUDFLARE_RATE_LIMIT_ID;
 const limitPerMinute = Number(process.argv[2] ?? '120');
 
-if (!accountId || !apiToken || !zoneId) {
-  console.error('CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN, and CLOUDFLARE_ZONE_ID must be set.');
+if (!accountId || !apiToken || !zoneId || !rateLimitId) {
+  console.error('CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN, CLOUDFLARE_ZONE_ID, and CLOUDFLARE_RATE_LIMIT_ID must be set.');
   exit(1);
 }
 
