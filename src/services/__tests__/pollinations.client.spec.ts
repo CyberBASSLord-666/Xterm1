@@ -1,4 +1,5 @@
 import {
+  __resetGeminiClientStateForTests,
   initializeGeminiClient,
   generateImage,
   generateTextGet,
@@ -31,6 +32,8 @@ const generateContentMock: jest.Mock = __mocks.generateContentMock;
 describe('pollinations.client integration', () => {
   beforeEach(() => {
     generateContentMock.mockReset().mockResolvedValue({ text: 'Generated prompt' });
+    (GoogleGenAI as jest.Mock).mockClear();
+    __resetGeminiClientStateForTests();
     if (!(globalThis.fetch as any)) {
       (globalThis as any).fetch = jest.fn();
     }
@@ -40,10 +43,11 @@ describe('pollinations.client integration', () => {
   afterEach(() => {
     delete (window as any).speechSynthesis;
     delete (window as any).SpeechSynthesisUtterance;
+    __resetGeminiClientStateForTests();
   });
 
   it('initializes the Gemini client and composes prompts', async () => {
-    initializeGeminiClient('api-key');
+    await initializeGeminiClient('api-key');
 
     generateContentMock.mockResolvedValueOnce({ text: 'Device prompt' });
     const devicePrompt = await composePromptForDevice(
@@ -63,7 +67,7 @@ describe('pollinations.client integration', () => {
   });
 
   it('queues image generation requests and returns blobs', async () => {
-    initializeGeminiClient('key');
+    await initializeGeminiClient('key');
     const blob = new Blob(['test']);
     (globalThis.fetch as jest.Mock).mockResolvedValue({
       ok: true,
@@ -182,4 +186,42 @@ describe('pollinations.client integration', () => {
     delete (window as any).speechSynthesis;
     expect(() => textToSpeech('Hi')).toThrow('Text-to-Speech is not supported');
   });
+  it('no-ops when the API key is empty', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await initializeGeminiClient('   ');
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      'Gemini API key is empty. AI features will not be available.'
+    );
+    expect((GoogleGenAI as jest.Mock)).not.toHaveBeenCalled();
+
+    await expect(
+      composePromptForDevice(
+        { width: 1440, height: 3040, dpr: 3 },
+        { styles: ['cinematic'] }
+      )
+    ).rejects.toThrow('Gemini API client is not initialized');
+
+    warnSpy.mockRestore();
+  });
+
+  it('reuses the cached Gemini constructor for subsequent initialization', async () => {
+    await initializeGeminiClient('first-key');
+    await initializeGeminiClient('second-key');
+
+    expect((GoogleGenAI as jest.Mock)).toHaveBeenCalledTimes(2);
+  });
+
+  it('captures an explicit failure when Gemini is not initialised', async () => {
+    await initializeGeminiClient('   ');
+
+    await expect(
+      composePromptForDevice(
+        { width: 1080, height: 2400, dpr: 3 },
+        { styles: ['minimalist'] }
+      )
+    ).rejects.toThrow('Gemini API client is not initialized');
+  });
 });
+

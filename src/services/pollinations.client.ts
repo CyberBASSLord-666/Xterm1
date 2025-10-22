@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import type { GoogleGenAI } from '@google/genai';
 
 export type DeviceInfo = { width: number; height: number; dpr: number; };
 export type ExactFitTarget = { width: number; height: number; aspect: string; mode: 'exact' | 'constrained'; };
@@ -24,25 +24,53 @@ const IMAGE_INTERVAL = 5000; // 1 request per 5 seconds
 const TEXT_INTERVAL = 3000; // 1 request per 3 seconds
 
 // Gemini API Client - initialized lazily with API key
-let ai: GoogleGenAI | null = null;
+type GoogleGenAIConstructor = new (options: { apiKey: string }) => GoogleGenAI;
+type GoogleGenAIInstance = GoogleGenAI;
+
+let ai: GoogleGenAIInstance | null = null;
+let googleGenAiCtorPromise: Promise<GoogleGenAIConstructor> | null = null;
 const geminiModel = 'gemini-2.0-flash-exp';
+
+/**
+ * @internal
+ * Reset Gemini client state. Exposed for test isolation.
+ */
+export function __resetGeminiClientStateForTests(): void {
+    ai = null;
+    googleGenAiCtorPromise = null;
+}
+
+async function loadGoogleGenAiConstructor(): Promise<GoogleGenAIConstructor> {
+  if (!googleGenAiCtorPromise) {
+    googleGenAiCtorPromise = import('@google/genai').then(module => {
+      const ctor = module?.GoogleGenAI as GoogleGenAIConstructor | undefined;
+      if (!ctor) {
+        throw new Error('Failed to load GoogleGenAI constructor from @google/genai.');
+      }
+      return ctor;
+    });
+  }
+  return googleGenAiCtorPromise;
+}
 
 /**
  * Initialize the Gemini AI client with an API key.
  * This must be called before using any Gemini-powered features.
  */
-export function initializeGeminiClient(apiKey: string): void {
+export async function initializeGeminiClient(apiKey: string): Promise<void> {
     if (!apiKey || apiKey.trim().length === 0) {
         console.warn('Gemini API key is empty. AI features will not be available.');
         return;
     }
+
+    const GoogleGenAI = await loadGoogleGenAiConstructor();
     ai = new GoogleGenAI({ apiKey });
 }
 
 /**
  * Check if the Gemini client is initialized.
  */
-function ensureGeminiClient(): GoogleGenAI {
+function ensureGeminiClient(): GoogleGenAIInstance {
     if (!ai) {
         throw new Error('Gemini API client is not initialized. Please configure your API key in settings.');
     }

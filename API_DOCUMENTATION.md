@@ -17,9 +17,9 @@ Main API client for interacting with the Pollinations AI service.
 
 #### Functions
 
-##### `initializeGeminiClient(apiKey: string): void`
+##### `initializeGeminiClient(apiKey: string): Promise<void>`
 
-Initialize the Gemini AI client with an API key.
+Initialize the Gemini AI client with an API key. The underlying Gemini SDK is loaded on demand, so callers must await the returned promise before issuing Gemini-powered requests.
 
 **Parameters**:
 - `apiKey` (string): The Gemini API key
@@ -28,7 +28,7 @@ Initialize the Gemini AI client with an API key.
 ```typescript
 import { initializeGeminiClient } from './services/pollinations.client';
 
-initializeGeminiClient('your-api-key-here');
+await initializeGeminiClient('your-api-key-here');
 ```
 
 ##### `generateImage(prompt: string, width: number, height: number, options?: ImageOptions): Promise<Blob>`
@@ -735,7 +735,7 @@ class WallpaperGenerator {
     
     try {
       // Initialize Gemini
-      initializeGeminiClient('your-api-key');
+      await initializeGeminiClient('your-api-key');
       
       // Compose enhanced prompt
       const prompt = await composePromptForDevice(

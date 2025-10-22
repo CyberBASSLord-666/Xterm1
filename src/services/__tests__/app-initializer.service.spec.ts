@@ -13,6 +13,8 @@ jest.mock('../pollinations.client', () => ({
   initializeGeminiClient: jest.fn(),
 }));
 
+const initializeGeminiClientMock = initializeGeminiClient as jest.MockedFunction<typeof initializeGeminiClient>;
+
 class LoggerServiceStub {
   info = jest.fn();
   warn = jest.fn();
@@ -76,6 +78,7 @@ describe('AppInitializerService', () => {
 
   beforeEach(() => {
     jest.restoreAllMocks();
+    initializeGeminiClientMock.mockResolvedValue(undefined);
     originalLocation = window.location;
     Object.defineProperty(window, 'location', {
       writable: true,
@@ -99,7 +102,7 @@ describe('AppInitializerService', () => {
       meta.remove()
     );
     delete (window as any).__POLLIWALL_RUNTIME_CONFIG__;
-    (initializeGeminiClient as jest.Mock).mockReset();
+    initializeGeminiClientMock.mockReset();
   });
 
   function createService(): AppInitializerService {
