@@ -1,0 +1,40 @@
+name: "CodeQL Configuration"
+
+# Disable default queries and use security-and-quality suite
+disable-default-queries: false
+
+# Use security-extended query suite for comprehensive coverage
+queries:
+  - name: security-extended
+    uses: security-extended
+  - name: security-and-quality
+    uses: security-and-quality
+
+# Paths to analyze (focus on source code)
+paths:
+  - src
+  - index.tsx
+
+# Paths to ignore (exclude test files, generated code, dependencies)
+paths-ignore:
+  - '**/*.spec.ts'
+  - '**/*.test.ts'
+  - '**/__tests__/**'
+  - '**/node_modules/**'
+  - '**/dist/**'
+  - '**/build/**'
+  - '**/cypress/**'
+  - '**/playwright/**'
+  - '**/*.config.ts'
+  - '**/*.config.js'
+
+# Query filters to reduce false positives
+query-filters:
+  - exclude:
+      id: js/unused-local-variable
+  - exclude:
+      id: js/angular/disabling-sce
+
+# Additional packs for enhanced security analysis
+packs:
+  - codeql/javascript-queries
