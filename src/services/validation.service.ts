@@ -185,7 +185,6 @@ export class ValidationService {
 
     // For most use cases, we want plain text with HTML escaped
     // This prevents ALL XSS attacks including attribute-based attacks
-copilot/full-repository-analysis
 
     // Sanitize HTML using well-tested library
     sanitized = sanitizeHtml(sanitized, {
@@ -243,7 +242,6 @@ copilot/full-repository-analysis
     // Remove base tag that could hijack relative URLs
     sanitized = sanitized.replace(/<base[\s\S]*?>/gi, '');
     
-    main
     return sanitized;
   }
 
