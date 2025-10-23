@@ -1,5 +1,4 @@
 import { Injectable } from '@angular/core';
-import sanitizeHtml from 'sanitize-html';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -11,7 +10,6 @@ export interface ValidationResult {
  */
 @Injectable({ providedIn: 'root' })
 export class ValidationService {
-
   /**
    * Helper to repeatedly remove matches for a pattern until the string stabilizes.
    */
@@ -168,7 +166,7 @@ export class ValidationService {
    * Sanitize HTML to prevent XSS attacks.
    * Production-grade implementation with comprehensive tag and attribute filtering.
    * Uses multiple layers of defense to prevent XSS including encoded attacks.
-   * 
+   *
    * This method escapes HTML tags instead of removing them, preserving text content
    * while preventing script execution. It also removes dangerous patterns.
    */
@@ -178,26 +176,26 @@ export class ValidationService {
     const div = document.createElement('div');
     div.textContent = html;
     let sanitized = div.innerHTML;
-    
+
     // Remove dangerous protocols and patterns from the escaped text
     // Even though escaped, we still remove these for extra safety
-    
+
     // Remove javascript: protocol and its encoded variants
     sanitized = sanitized.replace(/javascript\s*:/gi, '');
     sanitized = sanitized.replace(/javascript&amp;#58;/gi, '');
     sanitized = sanitized.replace(/javascript&amp;colon;/gi, '');
-    
+
     // Remove data: protocol and its encoded variants
     sanitized = sanitized.replace(/data\s*:/gi, '');
     sanitized = sanitized.replace(/data&amp;#58;/gi, '');
     sanitized = sanitized.replace(/data&amp;colon;/gi, '');
-    
+
     // Remove vbscript: protocol
     sanitized = sanitized.replace(/vbscript\s*:/gi, '');
-    
+
     // Remove onclick and other event handlers
     sanitized = sanitized.replace(/\s*on\w+\s*=/gi, '');
-    
+
     return sanitized;
   }
 
@@ -408,6 +406,7 @@ export class ValidationService {
     let sanitized = filename.replace(/[/\\]/g, '');
 
     // Remove null bytes
+    // eslint-disable-next-line no-control-regex
     sanitized = sanitized.replace(/\x00/g, '');
 
     // Remove leading dots to prevent hidden files
