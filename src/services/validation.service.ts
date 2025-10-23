@@ -185,7 +185,6 @@ export class ValidationService {
 
     // For most use cases, we want plain text with HTML escaped
     // This prevents ALL XSS attacks including attribute-based attacks
-copilot/full-repository-analysis
 
     // Sanitize HTML using well-tested library
     sanitized = sanitizeHtml(sanitized, {
@@ -243,7 +242,6 @@ copilot/full-repository-analysis
     // Remove base tag that could hijack relative URLs
     sanitized = sanitized.replace(/<base[\s\S]*?>/gi, '');
     
-    main
     return sanitized;
   }
 
@@ -428,13 +426,11 @@ copilot/full-repository-analysis
     } catch (e) {
       // If it's a relative URL, check it doesn't contain dangerous patterns
       if (url.startsWith('/') || url.startsWith('./') || url.startsWith('../')) {
-        // Check for dangerous patterns in relative URLs
-        if (
-          normalized.includes('javascript:') ||
-          normalized.includes('data:') ||
-          normalized.includes('vbscript:')
-        ) {
-          return '';
+        // Check for dangerous patterns anywhere in the URL
+        for (const protocol of dangerousProtocols) {
+          if (normalized.includes(protocol)) {
+            return '';
+          }
         }
         return url;
       }
@@ -446,12 +442,15 @@ copilot/full-repository-analysis
    * Validate and sanitize a filename to prevent directory traversal and other attacks.
    */
   sanitizeFilename(filename: string): string {
-    if (!filename) return '';
+    if (!filename || filename.trim() === '') {
+      return 'file';
+    }
 
     // Remove path separators to prevent directory traversal
     let sanitized = filename.replace(/[/\\]/g, '');
 
     // Remove null bytes
+    // eslint-disable-next-line no-control-regex
     sanitized = sanitized.replace(/\x00/g, '');
 
     // Remove leading dots to prevent hidden files

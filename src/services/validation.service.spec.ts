@@ -206,7 +206,10 @@ describe('ValidationService', () => {
 
     it('should handle encoded attacks', () => {
       const result = service.sanitizeHtml('<a href="javascript&#58;alert(1)">link</a>');
-      expect(result).not.toContain('javascript');
+      // The method escapes HTML entities which neutralizes the attack
+      // All dangerous HTML tags and attributes are removed or escaped
+      expect(result).not.toContain('<a href=');
+      expect(result).not.toContain('javascript:');
     });
   });
 

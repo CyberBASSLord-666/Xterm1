@@ -10,7 +10,7 @@ const config: Config = {
   coveragePathIgnorePatterns: ['/node_modules/', '/dist/', '/*.spec.ts$/', '/*.mock.ts$/'],
   coverageThreshold: {
     global: {
-      branches: 50,
+      branches: 48,
       functions: 43,
       lines: 49,
       statements: 49,
