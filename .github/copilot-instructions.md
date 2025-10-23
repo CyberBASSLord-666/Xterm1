@@ -216,7 +216,7 @@ export class StateService {
 
 Use `SkeletonComponent` for content loading:
 ```typescript
-<app-skeleton *ngIf="isLoading()" [type]="'card'" />
+<app-skeleton *ngIf="isLoading()" [type]="'card'"></app-skeleton>
 <div *ngIf="!isLoading()">Content</div>
 ```
 
