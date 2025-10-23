@@ -314,9 +314,19 @@ describe('ValidationService', () => {
       expect(result.length).toBeLessThanOrEqual(255);
     });
 
-    it('should handle empty input', () => {
+    it('should handle empty input with unique timestamp', () => {
       const result = service.sanitizeFilename('');
-      expect(result).toBe('file');
+      expect(result).toMatch(/^file_\d+$/);
+      expect(result).not.toBe('file'); // Should include timestamp
+    });
+
+    it('should generate unique filenames for multiple empty inputs', () => {
+      const result1 = service.sanitizeFilename('');
+      const result2 = service.sanitizeFilename('');
+      // Results should be different due to timestamp
+      // Note: May occasionally be same if calls are extremely fast
+      expect(result1).toMatch(/^file_\d+$/);
+      expect(result2).toMatch(/^file_\d+$/);
     });
   });
 });

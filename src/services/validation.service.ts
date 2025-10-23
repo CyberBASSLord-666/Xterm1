@@ -440,10 +440,12 @@ export class ValidationService {
 
   /**
    * Validate and sanitize a filename to prevent directory traversal and other attacks.
+   * Returns a unique timestamped filename if input is empty or becomes empty after sanitization.
    */
   sanitizeFilename(filename: string): string {
     if (!filename || filename.trim() === '') {
-      return 'file';
+      // Return unique filename with timestamp to avoid collisions
+      return `file_${Date.now()}`;
     }
 
     // Remove path separators to prevent directory traversal
@@ -460,8 +462,9 @@ export class ValidationService {
     sanitized = sanitized.replace(/[^a-zA-Z0-9._-]/g, '_');
 
     // Ensure filename is not empty after sanitization
+    // Use timestamp to ensure uniqueness
     if (sanitized.length === 0) {
-      sanitized = 'file';
+      sanitized = `file_${Date.now()}`;
     }
 
     // Limit filename length
