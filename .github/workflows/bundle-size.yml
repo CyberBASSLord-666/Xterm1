@@ -1,0 +1,115 @@
+name: Bundle Size Check
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  check-bundle-size:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build production bundle
+        run: npm run build
+      
+      - name: Analyze bundle size
+        run: |
+          echo "## Bundle Size Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Get bundle sizes
+          cd dist/app
+          
+          # Find main bundle
+          MAIN_BUNDLE=$(ls main-*.js | head -1)
+          MAIN_SIZE=$(wc -c < "$MAIN_BUNDLE" | awk '{print int($1/1024)"KB"}')
+          
+          # Calculate total initial size
+          TOTAL_SIZE=$(find . -name "*.js" -not -path "*/chunk-*" -exec wc -c {} \; | awk '{total+=$1} END {print int(total/1024)"KB"}')
+          
+          # Budget check
+          BUDGET_KB=500
+          ACTUAL_KB=$(find . -name "*.js" -not -path "*/chunk-*" -exec wc -c {} \; | awk '{total+=$1} END {print int(total/1024)}')
+          
+          echo "| Metric | Size | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Main Bundle | $MAIN_SIZE | ℹ️ |" >> $GITHUB_STEP_SUMMARY
+          echo "| Total Initial | $TOTAL_SIZE | $([ $ACTUAL_KB -gt $BUDGET_KB ] && echo '⚠️ Exceeds budget' || echo '✅ Within budget') |" >> $GITHUB_STEP_SUMMARY
+          echo "| Budget | ${BUDGET_KB}KB | Target |" >> $GITHUB_STEP_SUMMARY
+          
+          # List lazy chunks
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Lazy Loaded Chunks" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Chunk | Size |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|------|" >> $GITHUB_STEP_SUMMARY
+          
+          for chunk in chunk-*.js; do
+            if [ -f "$chunk" ]; then
+              SIZE=$(wc -c < "$chunk" | awk '{print int($1/1024)"KB"}')
+              echo "| $chunk | $SIZE |" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+          
+          # Warning if over budget
+          if [ $ACTUAL_KB -gt $BUDGET_KB ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ **Warning**: Bundle size exceeds target budget by $((ACTUAL_KB - BUDGET_KB))KB" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Consider:" >> $GITHUB_STEP_SUMMARY
+            echo "- Adding more lazy loading" >> $GITHUB_STEP_SUMMARY
+            echo "- Optimizing large dependencies" >> $GITHUB_STEP_SUMMARY
+            echo "- Using dynamic imports" >> $GITHUB_STEP_SUMMARY
+          fi
+      
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request'
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            // Read bundle info
+            const distPath = path.join(process.cwd(), 'dist', 'app');
+            const files = fs.readdirSync(distPath);
+            
+            const mainBundle = files.find(f => f.startsWith('main-') && f.endsWith('.js'));
+            const mainSize = mainBundle ? fs.statSync(path.join(distPath, mainBundle)).size : 0;
+            const mainSizeKB = Math.round(mainSize / 1024);
+            
+            const chunks = files.filter(f => f.startsWith('chunk-') && f.endsWith('.js'));
+            const lazyCount = chunks.length;
+            
+            const comment = `## 📦 Bundle Size Report
+            
+            **Main Bundle**: ${mainSizeKB}KB
+            **Lazy Chunks**: ${lazyCount} files
+            
+            <details>
+            <summary>View Details</summary>
+            
+            ### All Chunks
+            ${chunks.map(chunk => {
+              const size = fs.statSync(path.join(distPath, chunk)).size;
+              return \`- \${chunk}: \${Math.round(size / 1024)}KB\`;
+            }).join('\\n')}
+            
+            </details>
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
