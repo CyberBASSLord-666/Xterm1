@@ -45,12 +45,12 @@ echo "📋 Checking for Security Issues..."
 echo ""
 
 # 1. Check for hardcoded secrets
-echo "1. Checking for hardcoded secrets..."
-if ! grep -r "AIzaSy[A-Za-z0-9_-]\{33\}" --include="*.ts" --include="*.js" "$PROJECT_DIR/src" > /dev/null 2>&1; then
-    pass "No hardcoded Google API keys"
-else
-    fail "Found hardcoded Google API keys"
-fi
+  echo "1. Checking for hardcoded secrets..."
+  if grep -r "AIzaSy[A-Za-z0-9_-]\{33\}" --include="*.ts" --include="*.js" "$PROJECT_DIR/src" > /dev/null 2>&1; then
+      fail "Found hardcoded Google API keys"
+  else
+      pass "No hardcoded Google API keys"
+  fi
 
 if ! grep -r "sk-[A-Za-z0-9]\{48\}" --include="*.ts" --include="*.js" "$PROJECT_DIR/src" > /dev/null 2>&1; then
     pass "No hardcoded OpenAI API keys"
