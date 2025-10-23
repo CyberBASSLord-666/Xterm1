@@ -1,11 +1,11 @@
-import 'jest-preset-angular/setup-jest';
+import { setupZoneTestEnv } from 'jest-preset-angular/setup-env/zone';
 
- copilot/fix-cb260cd0-e9f5-43c9-819f-ea0ef53a3483
+setupZoneTestEnv();
+
 // Mock matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: jest.fn().mockImplementation((query) => ({
- main
     matches: false,
     media: query,
     onchange: null,
@@ -35,7 +35,6 @@ global.ResizeObserver = class ResizeObserver {
   observe() {}
   unobserve() {}
 } as any;
- copilot/fix-cb260cd0-e9f5-43c9-819f-ea0ef53a3483
 
 // Mock createImageBitmap
 global.createImageBitmap = jest.fn().mockImplementation(() =>
@@ -49,4 +48,3 @@ global.createImageBitmap = jest.fn().mockImplementation(() =>
 // Mock URL.createObjectURL and revokeObjectURL
 global.URL.createObjectURL = jest.fn(() => 'blob:mock-url');
 global.URL.revokeObjectURL = jest.fn();
- main

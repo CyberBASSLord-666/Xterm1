@@ -7,9 +7,9 @@ describe('SettingsService', () => {
   beforeEach(() => {
     // Clear localStorage before each test
     localStorage.clear();
-    
+
     TestBed.configureTestingModule({
-      providers: [SettingsService]
+      providers: [SettingsService],
     });
     service = TestBed.inject(SettingsService);
   });
@@ -62,7 +62,7 @@ describe('SettingsService', () => {
   it('should update nologo setting', () => {
     service.nologo.set(true);
     expect(service.nologo()).toBe(true);
-    
+
     service.nologo.set(false);
     expect(service.nologo()).toBe(false);
   });
@@ -70,7 +70,7 @@ describe('SettingsService', () => {
   it('should update private setting', () => {
     service.private.set(true);
     expect(service.private()).toBe(true);
-    
+
     service.private.set(false);
     expect(service.private()).toBe(false);
   });
@@ -78,7 +78,7 @@ describe('SettingsService', () => {
   it('should update safe setting', () => {
     service.safe.set(true);
     expect(service.safe()).toBe(true);
-    
+
     service.safe.set(false);
     expect(service.safe()).toBe(false);
   });
@@ -93,12 +93,12 @@ describe('SettingsService', () => {
     service.themeDark.set(true);
     service.nologo.set(false);
     service.referrer.set('custom-referrer');
-    
+
     // Wait a bit for the effect to run
     setTimeout(() => {
       const saved = localStorage.getItem('polliwall_settings');
       expect(saved).toBeTruthy();
-      
+
       if (saved) {
         const settings = JSON.parse(saved);
         expect(settings.themeDark).toBe(true);
@@ -115,14 +115,18 @@ describe('SettingsService', () => {
       nologo: false,
       private: false,
       safe: false,
-      themeDark: true
+      themeDark: true,
     };
-    
+
     localStorage.setItem('polliwall_settings', JSON.stringify(testSettings));
-    
-    // Create a new service instance to trigger the load
-    const newService = new SettingsService();
-    
+
+    // Create a new service instance using TestBed to have injection context
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [SettingsService],
+    });
+    const newService = TestBed.inject(SettingsService);
+
     expect(newService.referrer()).toBe('stored-referrer');
     expect(newService.nologo()).toBe(false);
     expect(newService.private()).toBe(false);
@@ -132,14 +136,20 @@ describe('SettingsService', () => {
 
   it('should handle corrupted localStorage data gracefully', () => {
     localStorage.setItem('polliwall_settings', 'invalid json');
-    
+
     const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-    const newService = new SettingsService();
-    
+
+    // Create a new service instance using TestBed to have injection context
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [SettingsService],
+    });
+    const newService = TestBed.inject(SettingsService);
+
     expect(newService).toBeTruthy();
     expect(newService.nologo()).toBe(true); // Should load defaults
     expect(consoleSpy).toHaveBeenCalled();
-    
+
     consoleSpy.mockRestore();
   });
 
@@ -148,9 +158,9 @@ describe('SettingsService', () => {
     service.nologo.set(false);
     service.private.set(true);
     service.safe.set(false);
-    
+
     const options = service.getGenerationOptions();
-    
+
     expect(options.referrer).toBe('test-ref');
     expect(options.nologo).toBe(false);
     expect(options.private).toBe(true);

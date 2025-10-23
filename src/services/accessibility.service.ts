@@ -34,7 +34,11 @@ export class AccessibilityService {
     this.checkAriaLabels();
 
     if (this.issues.length > 0) {
-      this.logger.warn(`Found ${this.issues.length} accessibility issues`, this.issues, 'Accessibility');
+      this.logger.warn(
+        `Found ${this.issues.length} accessibility issues`,
+        this.issues,
+        'Accessibility'
+      );
     } else {
       this.logger.info('No accessibility issues found', undefined, 'Accessibility');
     }
@@ -176,34 +180,38 @@ export class AccessibilityService {
    */
   private checkColorContrast(): void {
     // Check text elements for contrast
-    const textElements = document.querySelectorAll('p, span, div, a, button, h1, h2, h3, h4, h5, h6, label, li');
-    
+    const textElements = document.querySelectorAll(
+      'p, span, div, a, button, h1, h2, h3, h4, h5, h6, label, li'
+    );
+
     textElements.forEach((element) => {
       const htmlElement = element as HTMLElement;
-      
+
       // Skip if element has no text or is not visible
       if (!htmlElement.textContent?.trim() || htmlElement.offsetParent === null) {
         return;
       }
-      
+
       const computedStyle = window.getComputedStyle(htmlElement);
       const foreground = computedStyle.color;
       const background = this.getBackgroundColor(htmlElement);
-      
+
       if (!foreground || !background) {
         return;
       }
-      
+
       const contrastRatio = this.calculateContrastRatio(foreground, background);
-      
+
       // WCAG AA requires 4.5:1 for normal text, 3:1 for large text
       // Large text is 18pt (24px) or 14pt (18.66px) bold
       const fontSize = parseFloat(computedStyle.fontSize);
       const fontWeight = computedStyle.fontWeight;
-      const isLargeText = fontSize >= 24 || (fontSize >= 18.66 && (fontWeight === 'bold' || parseInt(fontWeight) >= 700));
-      
+      const isLargeText =
+        fontSize >= 24 ||
+        (fontSize >= 18.66 && (fontWeight === 'bold' || parseInt(fontWeight) >= 700));
+
       const requiredRatio = isLargeText ? 3 : 4.5;
-      
+
       if (contrastRatio < requiredRatio) {
         this.issues.push({
           type: 'error',
@@ -221,18 +229,18 @@ export class AccessibilityService {
    */
   private getBackgroundColor(element: HTMLElement): string | null {
     let current: HTMLElement | null = element;
-    
+
     while (current) {
       const bg = window.getComputedStyle(current).backgroundColor;
-      
+
       // If background is not transparent, use it
       if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
         return bg;
       }
-      
+
       current = current.parentElement;
     }
-    
+
     // Default to white if no background found
     return 'rgb(255, 255, 255)';
   }
@@ -244,10 +252,10 @@ export class AccessibilityService {
   private calculateContrastRatio(foreground: string, background: string): number {
     const fgLuminance = this.getRelativeLuminance(foreground);
     const bgLuminance = this.getRelativeLuminance(background);
-    
+
     const lighter = Math.max(fgLuminance, bgLuminance);
     const darker = Math.min(fgLuminance, bgLuminance);
-    
+
     return (lighter + 0.05) / (darker + 0.05);
   }
 
@@ -257,13 +265,13 @@ export class AccessibilityService {
   private getRelativeLuminance(color: string): number {
     const rgb = this.parseColor(color);
     if (!rgb) return 0;
-    
+
     // Convert to relative luminance
     const [r, g, b] = rgb.map((val) => {
       const sRGB = val / 255;
       return sRGB <= 0.03928 ? sRGB / 12.92 : Math.pow((sRGB + 0.055) / 1.055, 2.4);
     });
-    
+
     return 0.2126 * r + 0.7152 * g + 0.0722 * b;
   }
 
@@ -276,20 +284,20 @@ export class AccessibilityService {
     if (rgbMatch) {
       return [parseInt(rgbMatch[1]), parseInt(rgbMatch[2]), parseInt(rgbMatch[3])];
     }
-    
+
     // Handle hex format
     const hexMatch = color.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
     if (hexMatch) {
       return [parseInt(hexMatch[1], 16), parseInt(hexMatch[2], 16), parseInt(hexMatch[3], 16)];
     }
-    
+
     // Handle named colors by creating a temporary element
     const temp = document.createElement('div');
     temp.style.color = color;
     document.body.appendChild(temp);
     const computed = window.getComputedStyle(temp).color;
     document.body.removeChild(temp);
-    
+
     return this.parseColor(computed);
   }
 
@@ -297,7 +305,9 @@ export class AccessibilityService {
    * Check for proper ARIA usage.
    */
   private checkAriaLabels(): void {
-    const elementsWithAria = document.querySelectorAll('[role], [aria-label], [aria-labelledby], [aria-describedby]');
+    const elementsWithAria = document.querySelectorAll(
+      '[role], [aria-label], [aria-labelledby], [aria-describedby]'
+    );
     elementsWithAria.forEach((element) => {
       // Check for empty aria-label
       const ariaLabel = element.getAttribute('aria-label');
@@ -404,16 +414,16 @@ export class AccessibilityService {
         text-decoration: underline;
         padding: 0.5rem 0;
       `;
-      
+
       skipLink.addEventListener('focus', () => {
         container.style.left = '1rem';
         container.style.top = '1rem';
       });
-      
+
       skipLink.addEventListener('blur', () => {
         container.style.left = '-9999px';
       });
-      
+
       skipLink.addEventListener('click', (e) => {
         e.preventDefault();
         const target = document.querySelector(linkData.href);
@@ -427,7 +437,7 @@ export class AccessibilityService {
     });
 
     document.body.insertBefore(container, document.body.firstChild);
-    
+
     // Ensure main content has proper id
     const mainContent = document.querySelector('main, [role="main"]');
     if (mainContent && !mainContent.id) {

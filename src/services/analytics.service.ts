@@ -43,7 +43,7 @@ export class AnalyticsService {
 
     if (trackingId) {
       this.logger.info('Analytics initialized', { trackingId }, 'Analytics');
-      
+
       // Initialize Google Analytics 4 (gtag.js)
       this.loadGoogleAnalytics(trackingId);
     }
@@ -70,7 +70,7 @@ export class AnalyticsService {
 
     // Initialize gtag
     (window as any).dataLayer = (window as any).dataLayer || [];
-    (window as any).gtag = function(...args: any[]) {
+    (window as any).gtag = function (...args: any[]) {
       (window as any).dataLayer.push(args);
     };
     (window as any).gtag('js', new Date());
@@ -115,12 +115,12 @@ export class AnalyticsService {
       this.logger.warn('Invalid event name', event, 'Analytics');
       return;
     }
-    
+
     if (!event.category || typeof event.category !== 'string') {
       this.logger.warn('Invalid event category', event, 'Analytics');
       return;
     }
-    
+
     if (!event.action || typeof event.action !== 'string') {
       this.logger.warn('Invalid event action', event, 'Analytics');
       return;
@@ -146,15 +146,15 @@ export class AnalyticsService {
           event_label: event.label,
           non_interaction: false,
         };
-        
+
         if (typeof event.value === 'number') {
           eventParams.value = event.value;
         }
-        
+
         if (event.metadata) {
           Object.assign(eventParams, event.metadata);
         }
-        
+
         (window as any).gtag('event', event.action, eventParams);
       } catch (error) {
         this.logger.error('Failed to send event to GA', error, 'Analytics');

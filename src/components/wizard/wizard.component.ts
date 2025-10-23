@@ -1,10 +1,27 @@
-import { Component, ChangeDetectionStrategy, signal, inject, computed, OnInit, effect, ViewChild, ElementRef } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  signal,
+  inject,
+  computed,
+  OnInit,
+  effect,
+  ViewChild,
+  ElementRef,
+} from '@angular/core';
 import { DeviceService } from '../../services/device.service';
 import { ToastService } from '../../services/toast.service';
 import { GalleryService } from '../../services/gallery.service';
 import { SettingsService } from '../../services/settings.service';
 import { GenerationService } from '../../services/generation.service';
-import { composePromptForDevice, computeExactFitTarget, DeviceInfo, ExactFitTarget, listImageModels, ImageOptions } from '../../services/pollinations.client';
+import {
+  composePromptForDevice,
+  computeExactFitTarget,
+  DeviceInfo,
+  ExactFitTarget,
+  listImageModels,
+  ImageOptions,
+} from '../../services/pollinations.client';
 import { FormsModule } from '@angular/forms';
 
 interface StylePreset {
@@ -48,12 +65,13 @@ export class WizardComponent implements OnInit {
   selectedModel = signal('flux');
   seed = signal<number | undefined>(undefined);
   enhancePrompt = signal(true);
-  
+
   // --- Computed State from Service & Local ---
-  loading = computed(() => 
-    this.process() === 'compose' || 
-    this.generationService.status() === 'generating' || 
-    this.generationService.status() === 'saving'
+  loading = computed(
+    () =>
+      this.process() === 'compose' ||
+      this.generationService.status() === 'generating' ||
+      this.generationService.status() === 'saving'
   );
 
   status = computed(() => {
@@ -67,87 +85,120 @@ export class WizardComponent implements OnInit {
     return '';
   });
 
-  generatedImageUrl = computed(() => this.generationService.currentGenerationResult()?.blobUrl ?? null);
+  generatedImageUrl = computed(
+    () => this.generationService.currentGenerationResult()?.blobUrl ?? null
+  );
 
-  readonly baseQualityStyles = ['ultra-high quality', 'hyperrealistic photography', '8K resolution', 'insane detail'];
+  readonly baseQualityStyles = [
+    'ultra-high quality',
+    'hyperrealistic photography',
+    '8K resolution',
+    'insane detail',
+  ];
 
   presets: StylePreset[] = [
-    { 
-      name: 'Vivid & Vibrant', 
+    {
+      name: 'Vivid & Vibrant',
       styles: ['Vibrant colors', 'Dynamic lighting', 'Crisp focus', 'Rich textures'],
       suggestions: [
         'A sun-drenched tropical beach with crystal-clear turquoise water and lush palm trees, hyperrealistic.',
         'Close-up of a brilliantly colored exotic bird, its feathers showing iridescent detail.',
-        'A bustling city street at night, illuminated by a symphony of vibrant neon signs and reflections on wet pavement.'
-      ]
+        'A bustling city street at night, illuminated by a symphony of vibrant neon signs and reflections on wet pavement.',
+      ],
     },
-    { 
-      name: 'Dark & Moody', 
-      styles: ['Deep shadows', 'Dramatic contrast', 'Cinematic low-key lighting', 'Muted color palette'],
+    {
+      name: 'Dark & Moody',
+      styles: [
+        'Deep shadows',
+        'Dramatic contrast',
+        'Cinematic low-key lighting',
+        'Muted color palette',
+      ],
       suggestions: [
         'A lone figure standing on a foggy, moonlit cliff overlooking a stormy sea.',
         'An ancient, moss-covered stone staircase descending into a dark, mysterious forest.',
-        'A dimly lit, vintage library with towering bookshelves and a single leather armchair under a warm reading lamp.'
-      ]
+        'A dimly lit, vintage library with towering bookshelves and a single leather armchair under a warm reading lamp.',
+      ],
     },
-    { 
-      name: 'Minimalist & Clean', 
-      styles: ['Clean composition', 'Soft natural light', 'Minimalist aesthetic', 'Smooth textures'],
+    {
+      name: 'Minimalist & Clean',
+      styles: [
+        'Clean composition',
+        'Soft natural light',
+        'Minimalist aesthetic',
+        'Smooth textures',
+      ],
       suggestions: [
         'A single, perfect white orchid in a minimalist ceramic vase against a soft grey background.',
         'Sunlight creating long, soft shadows across an empty, serene concrete interior space.',
-        'The clean, flowing lines of a modern architectural facade, shot from a low angle against a clear blue sky.'
-      ]
+        'The clean, flowing lines of a modern architectural facade, shot from a low angle against a clear blue sky.',
+      ],
     },
-    { 
-      name: 'Dreamy & Ethereal', 
+    {
+      name: 'Dreamy & Ethereal',
       styles: ['Soft focus', 'Ethereal glow', 'Pastel color palette', 'Dream-like atmosphere'],
       suggestions: [
         'A misty forest path at dawn, with sunbeams filtering through the canopy creating a magical, ethereal glow.',
         'Bioluminescent jellyfish floating gracefully in the deep, dark ocean, emitting a soft, otherworldly light.',
-        'A field of glowing lavender under a starry night sky with a hazy, dream-like aurora borealis.'
-      ]
+        'A field of glowing lavender under a starry night sky with a hazy, dream-like aurora borealis.',
+      ],
     },
-    { 
-      name: 'Hyper-Detailed Nature', 
+    {
+      name: 'Hyper-Detailed Nature',
       styles: ['Macro photography', 'Intricate details', 'Natural textures', 'Lush greenery'],
       suggestions: [
-        'Extreme close-up of a dragonfly\'s iridescent wing, showing the intricate, vein-like patterns.',
+        "Extreme close-up of a dragonfly's iridescent wing, showing the intricate, vein-like patterns.",
         'The complex, fractal-like patterns of frost crystals forming on a dark window pane.',
-        'A hyper-detailed macro shot of a dewdrop on a blade of grass, reflecting the surrounding landscape.'
-      ]
+        'A hyper-detailed macro shot of a dewdrop on a blade of grass, reflecting the surrounding landscape.',
+      ],
     },
-    { 
-      name: 'Architectural Realism', 
-      styles: ['Crisp architectural lines', 'Realistic materials (concrete, glass, steel)', 'Natural daylight illumination', 'Detailed textures'],
+    {
+      name: 'Architectural Realism',
+      styles: [
+        'Crisp architectural lines',
+        'Realistic materials (concrete, glass, steel)',
+        'Natural daylight illumination',
+        'Detailed textures',
+      ],
       suggestions: [
         'The sun setting over a modern brutalist concrete building, casting long, dramatic shadows.',
         'Interior of a light-filled Scandinavian-style living room with minimalist furniture and natural wood textures.',
-        'A detailed shot of a historic stone cathedral\'s facade, capturing the intricate carvings and weathered textures.'
-      ]
+        "A detailed shot of a historic stone cathedral's facade, capturing the intricate carvings and weathered textures.",
+      ],
     },
-    { 
-      name: 'Sci-Fi Hyperdetail', 
-      styles: ['Intricate mechanical details', 'Greebling and paneling', 'Complex machinery', 'Cinematic sci-fi lighting', 'Polished metallic surfaces'],
+    {
+      name: 'Sci-Fi Hyperdetail',
+      styles: [
+        'Intricate mechanical details',
+        'Greebling and paneling',
+        'Complex machinery',
+        'Cinematic sci-fi lighting',
+        'Polished metallic surfaces',
+      ],
       suggestions: [
         'The cockpit of a futuristic starship, filled with glowing holographic displays and complex control panels.',
         'A massive, intricately detailed robotic arm assembling a microchip in a sterile, high-tech factory.',
-        'Close-up on the weathered, battle-damaged helmet of a futuristic soldier, reflecting a desolate alien landscape.'
-      ]
+        'Close-up on the weathered, battle-damaged helmet of a futuristic soldier, reflecting a desolate alien landscape.',
+      ],
     },
-    { 
-      name: 'Photorealistic Portrait', 
-      styles: ['Shallow depth of field', 'Detailed skin texture', 'Expressive catchlights in eyes', 'Soft, natural lighting'],
+    {
+      name: 'Photorealistic Portrait',
+      styles: [
+        'Shallow depth of field',
+        'Detailed skin texture',
+        'Expressive catchlights in eyes',
+        'Soft, natural lighting',
+      ],
       suggestions: [
         'An elderly man with deep wrinkles and kind eyes, his face telling a story, lit by a soft window light.',
         'A candid portrait of a woman laughing, with a shallow depth of field blurring the background city lights.',
-        'A dramatic, high-contrast black and white portrait of an athlete, with sweat beading on their determined face.'
-      ]
+        'A dramatic, high-contrast black and white portrait of an athlete, with sweat beading on their determined face.',
+      ],
     },
   ];
 
   selectedPreset = signal<StylePreset>(this.presets[0]);
-  
+
   currentStyles = computed(() => [...this.selectedPreset().styles, ...this.baseQualityStyles]);
 
   private readonly historyKey = 'polliwall.promptHistory';
@@ -156,12 +207,26 @@ export class WizardComponent implements OnInit {
   isHistoryOpen = signal(false);
 
   supported: Record<string, Array<{ w: number; h: number }>> = {
-    '9:19.5': [{w:1170,h:2532},{w:1284,h:2778}],
-    '9:19': [{ w: 1080, h: 2280 }, { w: 1440, h: 3040 }, { w: 1440, h: 3120 }],
-    '9:16': [{ w: 1080, h: 1920 }, { w: 1440, h: 2560 }, { w: 2160, h: 3840 }],
-    '3:4': [{ w: 1536, h: 2048 }, { w: 2048, h: 2732 }],
+    '9:19.5': [
+      { w: 1170, h: 2532 },
+      { w: 1284, h: 2778 },
+    ],
+    '9:19': [
+      { w: 1080, h: 2280 },
+      { w: 1440, h: 3040 },
+      { w: 1440, h: 3120 },
+    ],
+    '9:16': [
+      { w: 1080, h: 1920 },
+      { w: 1440, h: 2560 },
+      { w: 2160, h: 3840 },
+    ],
+    '3:4': [
+      { w: 1536, h: 2048 },
+      { w: 2048, h: 2732 },
+    ],
     '16:10': [{ w: 2560, h: 1600 }],
-    '16:9': [{ w: 3840, h: 2160 }]
+    '16:9': [{ w: 3840, h: 2160 }],
   };
 
   constructor() {
@@ -182,11 +247,11 @@ export class WizardComponent implements OnInit {
       return;
     }
     const target = event.target as Node;
-    
+
     if (this.historyButton?.nativeElement.contains(target)) {
       return;
     }
-    
+
     if (this.historyDropdown && !this.historyDropdown.nativeElement.contains(target)) {
       this.isHistoryOpen.set(false);
     }
@@ -210,13 +275,13 @@ export class WizardComponent implements OnInit {
   onModelChange(event: Event) {
     this.selectedModel.set((event.target as HTMLSelectElement).value);
   }
-  
+
   onPrivateChange(event: Event) {
-      this.settingsService.private.set((event.target as HTMLInputElement).checked);
+    this.settingsService.private.set((event.target as HTMLInputElement).checked);
   }
-  
+
   onSafeChange(event: Event) {
-      this.settingsService.safe.set((event.target as HTMLInputElement).checked);
+    this.settingsService.safe.set((event.target as HTMLInputElement).checked);
   }
   // --- End of type-safe event handlers ---
 
@@ -240,32 +305,32 @@ export class WizardComponent implements OnInit {
       }
     }
   }
-  
+
   private saveWizardSettings() {
     const settings = {
       selectedModel: this.selectedModel(),
       enhancePrompt: this.enhancePrompt(),
-      seed: this.seed()
+      seed: this.seed(),
     };
     localStorage.setItem(this.wizardSettingsKey, JSON.stringify(settings));
   }
 
   async loadModels() {
     try {
-        const models = await listImageModels();
-        this.availableModels.set(models);
-        if (!models.includes(this.selectedModel())) {
-            this.selectedModel.set(models.includes('flux') ? 'flux' : models[0] || '');
-        }
+      const models = await listImageModels();
+      this.availableModels.set(models);
+      if (!models.includes(this.selectedModel())) {
+        this.selectedModel.set(models.includes('flux') ? 'flux' : models[0] || '');
+      }
     } catch (e) {
-        this.toastService.show('Could not load image models.');
-        console.error(e);
+      this.toastService.show('Could not load image models.');
+      console.error(e);
     }
   }
-  
+
   generateRandomSeed() {
-      this.seed.set(Math.floor(Math.random() * 1000000000));
-      this.toastService.show('New random seed generated.');
+    this.seed.set(Math.floor(Math.random() * 1000000000));
+    this.toastService.show('New random seed generated.');
   }
 
   private loadHistory() {
@@ -281,7 +346,7 @@ export class WizardComponent implements OnInit {
 
   private updateHistory(newPrompt: string) {
     if (!newPrompt) return;
-    const currentHistory = this.promptHistory().filter(p => p !== newPrompt);
+    const currentHistory = this.promptHistory().filter((p) => p !== newPrompt);
     const updatedHistory = [newPrompt, ...currentHistory].slice(0, 10);
     this.promptHistory.set(updatedHistory);
     localStorage.setItem(this.historyKey, JSON.stringify(updatedHistory));
@@ -299,7 +364,7 @@ export class WizardComponent implements OnInit {
     this.isHistoryOpen.set(false);
     this.toastService.show('Prompt history cleared.');
   }
-  
+
   useSuggestion(suggestion: string) {
     this.prompt.set(suggestion);
   }
@@ -354,7 +419,7 @@ export class WizardComponent implements OnInit {
 
   async compose() {
     this.process.set('compose');
-    
+
     // Reset any previous generation result when starting a new composition.
     const genStatus = this.generationService.status();
     if (genStatus === 'success' || genStatus === 'error' || genStatus === 'idle') {
@@ -365,10 +430,14 @@ export class WizardComponent implements OnInit {
     try {
       const info = this.deviceService.getInfo();
       const currentPrompt = this.prompt().trim();
-      const text = await composePromptForDevice(info, {
-        styles: this.currentStyles(),
-        basePrompt: currentPrompt
-      }, { referrer: this.settingsService.referrer(), private: this.settingsService.private() });
+      const text = await composePromptForDevice(
+        info,
+        {
+          styles: this.currentStyles(),
+          basePrompt: currentPrompt,
+        },
+        { referrer: this.settingsService.referrer(), private: this.settingsService.private() }
+      );
       this.prompt.set(text);
       this.updateHistory(text);
       const target = computeExactFitTarget(info, this.supported);
@@ -395,18 +464,18 @@ export class WizardComponent implements OnInit {
     this.updateHistory(text);
     const info: DeviceInfo = this.deviceService.getInfo();
     const isImg2Img = !!this.sourceImageUrl();
-    
-    const options: ImageOptions = { 
-          referrer: this.settingsService.referrer(),
-          nologo: this.settingsService.nologo(),
-          private: this.settingsService.private(),
-          safe: this.settingsService.safe(),
-          model: isImg2Img ? 'kontext' : this.selectedModel(),
-          seed: this.seed(),
-          image: this.sourceImageUrl() ?? undefined,
-          enhance: !isImg2Img && this.enhancePrompt()
+
+    const options: ImageOptions = {
+      referrer: this.settingsService.referrer(),
+      nologo: this.settingsService.nologo(),
+      private: this.settingsService.private(),
+      safe: this.settingsService.safe(),
+      model: isImg2Img ? 'kontext' : this.selectedModel(),
+      seed: this.seed(),
+      image: this.sourceImageUrl() ?? undefined,
+      enhance: !isImg2Img && this.enhancePrompt(),
     };
-    
+
     await this.generationService.generateWallpaper(
       text,
       options,
