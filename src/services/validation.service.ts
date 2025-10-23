@@ -168,79 +168,35 @@ export class ValidationService {
    * Sanitize HTML to prevent XSS attacks.
    * Production-grade implementation with comprehensive tag and attribute filtering.
    * Uses multiple layers of defense to prevent XSS including encoded attacks.
+   * 
+   * This method escapes HTML tags instead of removing them, preserving text content
+   * while preventing script execution. It also removes dangerous patterns.
    */
   sanitizeHtml(html: string): string {
-    // First escape all HTML
+    // Escape the HTML by converting tags to HTML entities
+    // This prevents any script execution while preserving text content
     const div = document.createElement('div');
     div.textContent = html;
     let sanitized = div.innerHTML;
-
-    // Define allowed tags and attributes for rich text (if needed)
-    // Reserved for future whitelist-based filtering
-    const _allowedTags = ['b', 'i', 'em', 'strong', 'u', 'p', 'br', 'span'];
-    const _allowedAttributes: Record<string, string[]> = {
-      span: ['class'],
-      a: ['href', 'title'], // Only if links are needed
-    };
-
-    // For most use cases, we want plain text with HTML escaped
-    // This prevents ALL XSS attacks including attribute-based attacks
-
-    // Sanitize HTML using well-tested library
-    sanitized = sanitizeHtml(sanitized, {
-      allowedTags: [], // Remove all tags for maximum safety
-      allowedAttributes: {}, // Remove all attributes
-    });
-
-    // Remove ALL event handlers with comprehensive patterns
-    // Match on*, ON*, oN*, etc. with various attribute formats
-    sanitized = this.replaceRepeatedly(sanitized, /\s*on\w+\s*=\s*["'][^"']*["']/gi, '');
-    sanitized = this.replaceRepeatedly(sanitized, /\s*on\w+\s*=\s*[^\s>]*/gi, '');
-    sanitized = this.replaceRepeatedly(sanitized, /\s*ON\w+\s*=\s*["'][^"']*["']/gi, '');
-    sanitized = this.replaceRepeatedly(sanitized, /\s*ON\w+\s*=\s*[^\s>]*/gi, '');
-
-    // Remove dangerous protocols with comprehensive pattern matching
-    // Include URL-encoded variations and HTML entity encodings
-    const dangerousProtocols = [
-      'javascript:',
-      'javascript&colon;',
-      'javascript&#58;',
-      'javascript&#x3a;',
-      'data:',
-      'data&colon;',
-      'data&#58;',
-      'data&#x3a;',
-      'vbscript:',
-      'vbscript&colon;',
-      'vbscript&#58;',
-      'vbscript&#x3a;',
-      'file:',
-      'about:',
-    ];
-
-    for (const protocol of dangerousProtocols) {
-      const regex = new RegExp(protocol.replace(':', '\\s*:\\s*'), 'gi');
-      sanitized = sanitized.replace(regex, '');
-    }
-
-    // Remove any suspicious attribute patterns including encoded forms
-    sanitized = sanitized.replace(
-      /\s*style\s*=\s*["'][^"']*(expression|behavior|binding|import|@import)[^"']*["']/gi,
-      ''
-    );
-
-    // Remove CSS url() with dangerous protocols
-    sanitized = sanitized.replace(
-      /url\s*\(\s*['"]?\s*(?:javascript:|data:|vbscript:)[^)]*['"]?\s*\)/gi,
-      ''
-    );
-
-    // Remove meta and link tags that could refresh or redirect
-    sanitized = sanitized.replace(/<meta[\s\S]*?>/gi, '');
-    sanitized = sanitized.replace(/<link[\s\S]*?>/gi, '');
-
-    // Remove base tag that could hijack relative URLs
-    sanitized = sanitized.replace(/<base[\s\S]*?>/gi, '');
+    
+    // Remove dangerous protocols and patterns from the escaped text
+    // Even though escaped, we still remove these for extra safety
+    
+    // Remove javascript: protocol and its encoded variants
+    sanitized = sanitized.replace(/javascript\s*:/gi, '');
+    sanitized = sanitized.replace(/javascript&amp;#58;/gi, '');
+    sanitized = sanitized.replace(/javascript&amp;colon;/gi, '');
+    
+    // Remove data: protocol and its encoded variants
+    sanitized = sanitized.replace(/data\s*:/gi, '');
+    sanitized = sanitized.replace(/data&amp;#58;/gi, '');
+    sanitized = sanitized.replace(/data&amp;colon;/gi, '');
+    
+    // Remove vbscript: protocol
+    sanitized = sanitized.replace(/vbscript\s*:/gi, '');
+    
+    // Remove onclick and other event handlers
+    sanitized = sanitized.replace(/\s*on\w+\s*=/gi, '');
     
     return sanitized;
   }
@@ -444,7 +400,9 @@ export class ValidationService {
    * Validate and sanitize a filename to prevent directory traversal and other attacks.
    */
   sanitizeFilename(filename: string): string {
-    if (!filename) return '';
+    if (!filename || filename.trim().length === 0) {
+      return 'file';
+    }
 
     // Remove path separators to prevent directory traversal
     let sanitized = filename.replace(/[/\\]/g, '');
