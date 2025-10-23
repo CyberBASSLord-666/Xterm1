@@ -10,12 +10,13 @@ queries:
   - name: security-and-quality
     uses: security-and-quality
 
-# Paths to analyze (focus on source code)
+# Paths to analyze (focus on source code including Angular templates)
 paths:
   - src
   - index.tsx
+  - '**/*.html'
 
-# Paths to ignore (exclude test files, generated code, dependencies)
+# Paths to ignore (exclude test files, generated code, dependencies, IDE configs)
 paths-ignore:
   - '**/*.spec.ts'
   - '**/*.test.ts'
@@ -27,6 +28,11 @@ paths-ignore:
   - '**/playwright/**'
   - '**/*.config.ts'
   - '**/*.config.js'
+  - '**/.angular/**'
+  - '**/.vscode/**'
+  - '**/.idea/**'
+  - '**/coverage/**'
+  - '**/.nyc_output/**'
 
 # Query filters to reduce false positives
 query-filters:
