@@ -17,10 +17,6 @@ echo "Exporting secrets from ${MOUNT_PATH}"
 
 printf '%s\n' "${secrets_json}" | jq '.data.data' > "${OUTPUT_DIR}/runtime-config.json"
 
-cat > "${OUTPUT_DIR}/vercel.env" <<CONFIG
-GEMINI_API_KEY=$(jq -r '.data.data.GEMINI_API_KEY' <<<"${secrets_json}")
-GA4_MEASUREMENT_ID=$(jq -r '.data.data.GA4_MEASUREMENT_ID' <<<"${secrets_json}")
-SENTRY_DSN=$(jq -r '.data.data.SENTRY_DSN' <<<"${secrets_json}")
-CONFIG
+printf '%s' "${secrets_json}" | jq -r '.data.data | "GEMINI_API_KEY=\(.GEMINI_API_KEY)\nGA4_MEASUREMENT_ID=\(.GA4_MEASUREMENT_ID)\nSENTRY_DSN=\(.SENTRY_DSN)"' > "${OUTPUT_DIR}/vercel.env"
 
 echo "Secrets exported to ${OUTPUT_DIR}" 
