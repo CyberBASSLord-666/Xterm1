@@ -237,7 +237,7 @@ export class WizardComponent implements OnInit {
     });
   }
 
-  ngOnInit() {
+  ngOnInit(): void {
     this.loadHistory();
     this.loadModels();
   }
@@ -258,34 +258,34 @@ export class WizardComponent implements OnInit {
   }
 
   // --- Type-safe event handlers ---
-  onPromptInput(event: Event) {
+  onPromptInput(event: Event): void {
     this.prompt.set((event.target as HTMLTextAreaElement).value);
   }
 
-  onSeedInput(event: Event) {
+  onSeedInput(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
     const num = parseInt(value, 10);
     this.seed.set(isNaN(num) ? undefined : num);
   }
 
-  onEnhancePromptChange(event: Event) {
+  onEnhancePromptChange(event: Event): void {
     this.enhancePrompt.set((event.target as HTMLInputElement).checked);
   }
 
-  onModelChange(event: Event) {
+  onModelChange(event: Event): void {
     this.selectedModel.set((event.target as HTMLSelectElement).value);
   }
 
-  onPrivateChange(event: Event) {
+  onPrivateChange(event: Event): void {
     this.settingsService.private.set((event.target as HTMLInputElement).checked);
   }
 
-  onSafeChange(event: Event) {
+  onSafeChange(event: Event): void {
     this.settingsService.safe.set((event.target as HTMLInputElement).checked);
   }
   // --- End of type-safe event handlers ---
 
-  private loadWizardSettings() {
+  private loadWizardSettings(): void {
     const saved = localStorage.getItem(this.wizardSettingsKey);
     if (saved) {
       try {
@@ -306,7 +306,7 @@ export class WizardComponent implements OnInit {
     }
   }
 
-  private saveWizardSettings() {
+  private saveWizardSettings(): void {
     const settings = {
       selectedModel: this.selectedModel(),
       enhancePrompt: this.enhancePrompt(),
@@ -315,7 +315,7 @@ export class WizardComponent implements OnInit {
     localStorage.setItem(this.wizardSettingsKey, JSON.stringify(settings));
   }
 
-  async loadModels() {
+  async loadModels(): Promise<void> {
     try {
       const models = await listImageModels();
       this.availableModels.set(models);
@@ -328,12 +328,12 @@ export class WizardComponent implements OnInit {
     }
   }
 
-  generateRandomSeed() {
+  generateRandomSeed(): void {
     this.seed.set(Math.floor(Math.random() * 1000000000));
     this.toastService.show('New random seed generated.');
   }
 
-  private loadHistory() {
+  private loadHistory(): void {
     const saved = localStorage.getItem(this.historyKey);
     if (saved) {
       try {
@@ -344,7 +344,7 @@ export class WizardComponent implements OnInit {
     }
   }
 
-  private updateHistory(newPrompt: string) {
+  private updateHistory(newPrompt: string): void {
     if (!newPrompt) return;
     const currentHistory = this.promptHistory().filter((p) => p !== newPrompt);
     const updatedHistory = [newPrompt, ...currentHistory].slice(0, 10);
@@ -352,24 +352,24 @@ export class WizardComponent implements OnInit {
     localStorage.setItem(this.historyKey, JSON.stringify(updatedHistory));
   }
 
-  useHistoryPrompt(p: string) {
+  useHistoryPrompt(p: string): void {
     this.prompt.set(p);
     this.isHistoryOpen.set(false);
     this.toastService.show('Loaded prompt from history.');
   }
 
-  clearHistory() {
+  clearHistory(): void {
     this.promptHistory.set([]);
     localStorage.removeItem(this.historyKey);
     this.isHistoryOpen.set(false);
     this.toastService.show('Prompt history cleared.');
   }
 
-  useSuggestion(suggestion: string) {
+  useSuggestion(suggestion: string): void {
     this.prompt.set(suggestion);
   }
 
-  clearSourceImage() {
+  clearSourceImage(): void {
     const currentUrl = this.sourceImageUrl();
     if (currentUrl) {
       URL.revokeObjectURL(currentUrl);
@@ -380,7 +380,7 @@ export class WizardComponent implements OnInit {
     }
   }
 
-  private handleImageFile(file: File) {
+  private handleImageFile(file: File): void {
     if (!file.type.startsWith('image/')) {
       this.toastService.show('Please select an image file.');
       return;
@@ -391,17 +391,17 @@ export class WizardComponent implements OnInit {
     this.toastService.show('Image loaded for inspiration.');
   }
 
-  onDragOver(event: DragEvent) {
+  onDragOver(event: DragEvent): void {
     event.preventDefault();
     this.dragging.set(true);
   }
 
-  onDragLeave(event: DragEvent) {
+  onDragLeave(event: DragEvent): void {
     event.preventDefault();
     this.dragging.set(false);
   }
 
-  onDrop(event: DragEvent) {
+  onDrop(event: DragEvent): void {
     event.preventDefault();
     this.dragging.set(false);
     const file = event.dataTransfer?.files[0];
@@ -410,14 +410,14 @@ export class WizardComponent implements OnInit {
     }
   }
 
-  onFileInputChange(event: Event) {
+  onFileInputChange(event: Event): void {
     const file = (event.target as HTMLInputElement)?.files?.[0];
     if (file) {
       this.handleImageFile(file);
     }
   }
 
-  async compose() {
+  async compose(): Promise<void> {
     this.process.set('compose');
 
     // Reset any previous generation result when starting a new composition.
