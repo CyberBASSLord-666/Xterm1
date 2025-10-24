@@ -1,4 +1,4 @@
-import { Injectable, inject, OnDestroy } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { LoggerService } from './logger.service';
 
 export interface ShortcutConfig {
@@ -17,11 +17,10 @@ export interface ShortcutConfig {
  * Provides a centralized way to register and handle keyboard events.
  */
 @Injectable({ providedIn: 'root' })
-export class KeyboardShortcutsService implements OnDestroy {
+export class KeyboardShortcutsService {
   private logger = inject(LoggerService);
   private shortcuts = new Map<string, ShortcutConfig>();
   private enabled = true;
-  private readonly keydownListener = (event: KeyboardEvent): void => this.handleKeydown(event);
 
   constructor() {
     this.setupGlobalListener();
@@ -57,7 +56,11 @@ export class KeyboardShortcutsService implements OnDestroy {
    */
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
-    this.logger.debug(`Keyboard shortcuts ${enabled ? 'enabled' : 'disabled'}`, undefined, 'KeyboardShortcuts');
+    this.logger.debug(
+      `Keyboard shortcuts ${enabled ? 'enabled' : 'disabled'}`,
+      undefined,
+      'KeyboardShortcuts'
+    );
   }
 
   /**
@@ -67,52 +70,44 @@ export class KeyboardShortcutsService implements OnDestroy {
     return Array.from(this.shortcuts.entries()).map(([id, config]) => ({ id, config }));
   }
 
-  ngOnDestroy(): void {
-    document.removeEventListener('keydown', this.keydownListener);
-    this.shortcuts.clear();
-    this.logger.debug('Keyboard shortcuts service destroyed', undefined, 'KeyboardShortcuts');
-  }
-
   /**
    * Setup global keyboard event listener.
    */
   private setupGlobalListener(): void {
-    document.addEventListener('keydown', this.keydownListener);
-  }
+    document.addEventListener('keydown', (event) => {
+      if (!this.enabled) {
+        return;
+      }
 
-  private handleKeydown(event: KeyboardEvent): void {
-    if (!this.enabled) {
-      return;
-    }
-
-    const target = event.target as HTMLElement;
-    if (target?.tagName) {
-      const tagName = target.tagName.toUpperCase();
-      if (tagName === 'INPUT' || tagName === 'TEXTAREA' || target.isContentEditable) {
+      // Don't trigger shortcuts when typing in input fields
+      const target = event.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        // Exception: Allow Escape key in input fields
         if (event.key !== 'Escape') {
           return;
         }
       }
-    }
 
-    for (const [id, config] of this.shortcuts.entries()) {
-      if (this.matchesShortcut(event, config)) {
-        this.logger.debug(`Triggered shortcut: ${id}`, undefined, 'KeyboardShortcuts');
+      // Find matching shortcut
+      for (const [id, config] of this.shortcuts.entries()) {
+        if (this.matchesShortcut(event, config)) {
+          this.logger.debug(`Triggered shortcut: ${id}`, undefined, 'KeyboardShortcuts');
 
-        if (config.preventDefault) {
-          event.preventDefault();
-          event.stopPropagation();
+          if (config.preventDefault) {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+
+          try {
+            config.handler();
+          } catch (error) {
+            this.logger.error(`Error executing shortcut ${id}`, error, 'KeyboardShortcuts');
+          }
+
+          break;
         }
-
-        try {
-          config.handler();
-        } catch (error) {
-          this.logger.error(`Error executing shortcut ${id}`, error, 'KeyboardShortcuts');
-        }
-
-        break;
       }
-    }
+    });
   }
 
   /**

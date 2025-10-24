@@ -1,576 +1,398 @@
-import { Injectable } from '@angular/core';
+/**
+ * Validation & Sanitization Service (Angular)
+ * - Defense-in-depth against XSS, protocol smuggling, Unicode obfuscation
+ * - SSR-safe (no DOM usage on server path); deterministic & testable
+ * - Strict URL, filename, and input validators
+ */
+
+import { Injectable, inject } from '@angular/core';
+import { DomSanitizer, SecurityContext } from '@angular/platform-browser';
+// CJS/ESM interop shim for sanitize-html across build configs.
+import * as sanitizeHtmlLib from 'sanitize-html';
+
+type SanitizeHtmlFn = (html: string, options: any) => string;
+// @ts-expect-error – runtime interop between CJS/ESM
+const sanitizeHtmlFn: SanitizeHtmlFn = (sanitizeHtmlLib as any).default ?? (sanitizeHtmlLib as any);
+
+/** Single source of truth for base URL in URL parsing across CSR/SSR. */
+const DEFAULT_BASE_URL = 'http://localhost';
+
+/** Allowlisted URL protocols (with colon). Use these for URL API protocol checks. */
+const ALLOWED_URL_PROTOCOLS = ['http:', 'https:', 'mailto:', 'blob:'];
+
+/** Same allowlist, scheme names without colon for sanitize-html config. */
+const ALLOWED_SCHEMES_NO_COLON = ['http', 'https', 'mailto', 'blob'];
+
+/** Strings that indicate dangerous protocols, including common encoded variants. */
+const DANGEROUS_PROTOCOL_MARKERS = [
+  'javascript:', 'javascript&colon;', 'javascript&#58;', 'javascript&#x3a;', 'javascript&#x003a;',
+  'data:', 'data&colon;', 'data&#58;', 'data&#x3a;',
+  'vbscript:', 'vbscript&colon;', 'vbscript&#58;', 'vbscript&#x3a;',
+  'file:', 'file&colon;',
+  'about:', 'about&colon;',
+];
 
 export interface ValidationResult {
   isValid: boolean;
   errors: string[];
 }
 
-export interface SanitizeHtmlOptions {
-  allowedUriSchemes?: string[];
-  allowRelativeUris?: boolean;
-  enforceNoopener?: boolean;
-  blockedTags?: string[];
-}
-
-/**
- * Service for input validation and sanitization.
- */
 @Injectable({ providedIn: 'root' })
 export class ValidationService {
-  /**
-   * Validate a prompt string.
-   */
-  validatePrompt(prompt: string): ValidationResult {
-    const errors: string[] = [];
+  private readonly domSanitizer = inject(DomSanitizer);
 
-    if (!prompt || prompt.trim().length === 0) {
-      errors.push('Prompt cannot be empty');
-    }
-
-    if (prompt && prompt.length > 2000) {
-      errors.push('Prompt is too long (maximum 2000 characters)');
-    }
-
-    // Check for excessive special characters that might cause issues
-    const specialCharRatio = (prompt.match(/[^a-zA-Z0-9\s,.!?-]/g) || []).length / prompt.length;
-    if (specialCharRatio > 0.3) {
-      errors.push('Prompt contains too many special characters');
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-    };
+  /** Replace matches repeatedly until input stabilizes (fixed point). */
+  private replaceRepeatedly(input: string, regex: RegExp, replacement: string): string {
+    let prev: string;
+    do {
+      prev = input;
+      input = input.replace(regex, replacement);
+    } while (input !== prev);
+    return input;
   }
 
-  /**
-   * Validate an image URL.
-   */
+  /** Validate a free-form prompt. */
+  validatePrompt(prompt: string): ValidationResult {
+    const errors: string[] = [];
+    const value = (prompt ?? '').trim();
+
+    if (value.length === 0) errors.push('Prompt cannot be empty');
+    if (value.length > 2000) errors.push('Prompt is too long (maximum 2000 characters)');
+
+    if (value.length > 0) {
+      const specials = (value.match(/[^a-zA-Z0-9\s,.!?-]/g) || []).length;
+      const ratio = specials / value.length;
+      if (ratio > 0.3) errors.push('Prompt contains too many special characters');
+    }
+    return { isValid: errors.length === 0, errors };
+  }
+
+  /** Validate an image URL (http/https/blob) structurally. */
   validateImageUrl(url: string): ValidationResult {
     const errors: string[] = [];
+    const value = (url ?? '').trim();
 
-    if (!url || url.trim().length === 0) {
+    if (value.length === 0) {
       errors.push('URL cannot be empty');
+      return { isValid: false, errors };
+    }
+    if (value.startsWith('//')) {
+      errors.push('Protocol-relative URLs are not allowed');
+      return { isValid: false, errors };
     }
 
-    // Check if it's a valid URL (either http/https or blob)
     try {
-      const parsed = new URL(url);
+      const parsed = new URL(value);
       if (!['http:', 'https:', 'blob:'].includes(parsed.protocol)) {
         errors.push('URL must use http, https, or blob protocol');
       }
-    } catch (e) {
+    } catch {
       errors.push('Invalid URL format');
     }
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-    };
+    return { isValid: errors.length === 0, errors };
   }
 
-  /**
-   * Validate a seed number.
-   */
+  /** Validate optional integer seed. */
   validateSeed(seed: number | undefined): ValidationResult {
     const errors: string[] = [];
-
     if (seed !== undefined) {
-      if (!Number.isInteger(seed)) {
-        errors.push('Seed must be an integer');
-      }
-
-      if (seed < 0) {
-        errors.push('Seed must be a positive number');
-      }
-
-      if (seed > Number.MAX_SAFE_INTEGER) {
-        errors.push('Seed is too large');
-      }
+      if (!Number.isInteger(seed)) errors.push('Seed must be an integer');
+      if (typeof seed === 'number' && seed < 0) errors.push('Seed must be a positive number');
+      if (typeof seed === 'number' && seed > Number.MAX_SAFE_INTEGER) errors.push('Seed is too large');
     }
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-    };
+    return { isValid: errors.length === 0, errors };
   }
 
-  /**
-   * Validate image dimensions.
-   */
+  /** Validate image dimensions within safe bounds. */
   validateDimensions(width: number, height: number): ValidationResult {
     const errors: string[] = [];
-
-    if (width <= 0 || height <= 0) {
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
       errors.push('Dimensions must be positive numbers');
+    } else {
+      if (width > 8192 || height > 8192) errors.push('Dimensions are too large (maximum 8192px)');
+      if (width < 64 || height < 64) errors.push('Dimensions are too small (minimum 64px)');
+    }
+    return { isValid: errors.length === 0, errors };
+  }
+
+  /** Lightweight API key validator (format heuristic). */
+  validateApiKey(key: string): ValidationResult {
+    const errors: string[] = [];
+    const value = (key ?? '').trim();
+
+    if (value.length === 0) errors.push('API key cannot be empty');
+    if (value.length > 0 && value.length < 20) errors.push('API key appears to be too short');
+    if (value.length > 0 && !/^[A-Za-z0-9._-]+$/.test(value)) {
+      errors.push('API key contains invalid characters');
     }
 
-    if (width > 8192 || height > 8192) {
-      errors.push('Dimensions are too large (maximum 8192px)');
-    }
-
-    if (width < 64 || height < 64) {
-      errors.push('Dimensions are too small (minimum 64px)');
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-    };
+    return { isValid: errors.length === 0, errors };
   }
 
   /**
-   * Sanitize a string by removing potentially dangerous characters.
-   * Removes control characters including null bytes according to OWASP guidelines.
+   * Unicode hygiene & control character stripping.
+   * NFC normalization + removal of control/zero-width/bidi/invisible chars.
    */
   sanitizeString(input: string): string {
-    const sanitized = ValidationService.stripControlCharacters(input);
-    return sanitized.trim();
-  }
-
-  // Numeric ranges for C0 and C1 control characters as defined by the Unicode standard.
-  private static readonly controlCharacterRanges: ReadonlyArray<readonly [number, number]> = [
-    [0x00, 0x1f],
-    [0x7f, 0x9f]
-  ];
-
-  private static readonly defaultAllowedTags: ReadonlySet<string> = new Set([
-    'a',
-    'b',
-    'strong',
-    'i',
-    'em',
-    'u',
-    'p',
-    'br',
-    'span',
-    'ul',
-    'ol',
-    'li',
-    'code',
-    'pre',
-    'blockquote'
-  ]);
-
-  private static readonly blockedTags: ReadonlySet<string> = new Set([
-    'script',
-    'style',
-    'iframe',
-    'object',
-    'embed',
-    'template',
-    'link',
-    'meta',
-    'base'
-  ]);
-
-  private static readonly uriAttributes: ReadonlySet<string> = new Set(['href', 'src', 'xlink:href']);
-
-  private static readonly defaultAllowedUriSchemes: ReadonlySet<string> = new Set(['http', 'https', 'blob']);
-
-  private static readonly allowedTargetValues: ReadonlySet<string> = new Set(['_self', '_blank', '_parent', '_top']);
-
-private static readonly allowedRelTokens: ReadonlySet<string> = new Set([
-    'alternate',
-    'author',
-    'external',
-    'help',
-    'license',
-    'next',
-    'nofollow',
-    'noopener',
-    'noreferrer',
-    'prev',
-    'ugc'
-  ]);
-
-  private static readonly safeClassPattern = /^[a-z0-9_-]+$/;
-
-  private static isControlCharacter(codePoint: number): boolean {
-    return ValidationService.controlCharacterRanges.some(([start, end]) => codePoint >= start && codePoint <= end);
-  }
-
-  private static stripControlCharacters(input: string): string {
-    let sanitized = '';
-
-    for (const char of input) {
-      const codePoint = char.codePointAt(0) ?? 0;
-      if (ValidationService.isControlCharacter(codePoint)) {
-        continue;
-      }
-      sanitized += char;
-    }
-
-    return sanitized;
+    let s = (input ?? '').normalize('NFC');
+    // eslint-disable-next-line no-control-regex
+    s = s.replace(/[\x00-\x1F\x7F-\x9F]/g, '');                    // C0/C1 + nulls
+    s = s.replace(/[\u200B-\u200F\uFEFF]/g, '');                   // ZWSP/ZWJ/ZWNJ/LRM/RLM/BOM
+    s = s.replace(/[\u202A-\u202E\u2060-\u2069]/g, '');            // bidi overrides/isolates
+    s = s.replace(/[\u2028\u2029]/g, '');                          // line/para sep
+    s = s.trim().replace(/\s+/g, ' ');                             // collapse whitespace
+    return s;
   }
 
   /**
-   * Sanitize HTML to prevent XSS attacks.
-   * Production-grade implementation with comprehensive tag and attribute filtering.
+   * Strict HTML → plain text sanitizer.
+   * 1) sanitize-html strips all tags/attrs
+   * 2) scrub residual protocol strings / url() patterns
    */
   sanitizeHtml(html: string): string {
-    const allowedAttributes: Record<string, string[]> = {
-      '*': [],
-      'a': ['href', 'title', 'target', 'rel'],
-      'span': ['class'],
-      'code': ['class'],
-      'pre': ['class'],
-    };
+    const raw = (html ?? '').trim();
+    if (!raw) return '';
 
-    return this.sanitizeHtmlAdvanced(
-      html,
-      Array.from(ValidationService.defaultAllowedTags),
-      allowedAttributes
-    );
+    let out = sanitizeHtmlFn(raw, {
+      allowedTags: [],
+      allowedAttributes: {},
+      disallowedTagsMode: 'discard',
+      allowedSchemes: [...ALLOWED_SCHEMES_NO_COLON],
+      allowedSchemesByTag: {},
+      allowedSchemesAppliedToAttributes: ['href', 'src', 'cite'],
+      allowProtocolRelative: false,
+    });
+
+    // Event handler patterns (defensive; moot when no tags remain)
+    out = this.replaceRepeatedly(out, /\s*on\w+\s*=\s*["'][^"']*["']/gi, '');
+    out = this.replaceRepeatedly(out, /\s*on\w+\s*=\s*[^\s>]*/gi, '');
+
+    // Dangerous protocol strings (encoded/whitespace-tolerant for literal ':' variants)
+    for (const proto of DANGEROUS_PROTOCOL_MARKERS) {
+      const pattern = proto.includes(':') ? proto.replace(':', '\\s*:\\s*') : proto;
+      out = this.replaceRepeatedly(out, new RegExp(pattern, 'gi'), '');
+    }
+
+    // CSS url() with bad schemes (if any residual text contains it)
+    out = out.replace(/url\s*\(\s*['"]?\s*(?:javascript:|data:|vbscript:)[^)]*['"]?\s*\)/gi, '');
+    return out;
+  }
+
+  /** Use for [innerHTML]; still passes Angular’s security checks. */
+  sanitizeHtmlForAngular(html: string): string {
+    const textOnly = this.sanitizeHtml(html);
+    return this.domSanitizer.sanitize(SecurityContext.HTML, textOnly) ?? '';
   }
 
   /**
-   * Advanced HTML sanitization with whitelist approach.
-   * Only allows specific safe tags and attributes.
+   * Whitelist sanitizer that preserves select markup.
+   * Browser: DOMParser traversal; SSR: sanitize-html fallback with an equivalent allowlist.
+   * Never allows inline event handlers (on*), inline style, or srcdoc.
    */
   sanitizeHtmlAdvanced(
     html: string,
     allowedTags: string[] = [],
-    allowedAttributes: Record<string, string[]> = {},
-    options: SanitizeHtmlOptions = {}
+    allowedAttributes: Record<string, string[]> = {}
   ): string {
-    const allowTagSet = new Set(allowedTags.map(tag => tag.toLowerCase()));
-    const allowedAttributesMap = ValidationService.buildAttributeAllowMap(allowedAttributes);
+    const raw = (html ?? '').trim();
+    if (!raw) return '';
+    if (allowedTags.length === 0) return this.sanitizeHtml(raw);
 
-    const sanitizationOptions: SanitizationOptions = {
-      allowedUriSchemes: new Set(
-        (options.allowedUriSchemes ?? Array.from(ValidationService.defaultAllowedUriSchemes)).map(scheme => scheme.toLowerCase())
-      ),
-      allowRelativeUris: options.allowRelativeUris ?? true,
-      enforceNoopener: options.enforceNoopener ?? true,
-      blockedTags: new Set([
-        ...Array.from(ValidationService.blockedTags),
-        ...((options.blockedTags ?? []).map(tag => tag.toLowerCase()))
-      ])
-    };
+    // Normalize allowlist: drop style/srcdoc/on* regardless of caller config.
+    const normalizedAllowedAttrs: Record<string, string[]> = {};
+    const dropAttr = (name: string) =>
+      name.toLowerCase() === 'style' || name.toLowerCase() === 'srcdoc' || name.toLowerCase().startsWith('on');
 
-    return this.performDomSanitization(html, allowTagSet, allowedAttributesMap, sanitizationOptions);
-  }
-
-  private static buildAttributeAllowMap(record: Record<string, string[]>): AttributeAllowMap {
-    const map = new Map<string, ReadonlySet<string>>();
-
-    for (const [tag, attrs] of Object.entries(record)) {
-      map.set(tag.toLowerCase(), new Set(attrs.map(attr => attr.toLowerCase())));
+    for (const [tag, attrs] of Object.entries(allowedAttributes)) {
+      normalizedAllowedAttrs[tag.toLowerCase()] = (attrs || [])
+        .filter(a => !dropAttr(a))
+        .map(a => a.toLowerCase());
+    }
+    if (normalizedAllowedAttrs['*']) {
+      normalizedAllowedAttrs['*'] = normalizedAllowedAttrs['*'].filter(a => !dropAttr(a));
     }
 
-    return map;
-  }
+    const hasDom =
+      typeof window !== 'undefined' &&
+      typeof (window as any).DOMParser !== 'undefined' &&
+      typeof document !== 'undefined';
 
-  private static mergeAllowedAttributesForTag(
-    allowedAttributes: AttributeAllowMap,
-    tagName: string
-  ): ReadonlySet<string> {
-    const merged = new Set<string>();
-    const globalAttrs = allowedAttributes.get('*');
-    if (globalAttrs) {
-      globalAttrs.forEach(attr => merged.add(attr));
+    if (!hasDom) {
+      // SSR-safe fallback using sanitize-html with equivalent allowlist.
+      return sanitizeHtmlFn(raw, {
+        allowedTags,
+        allowedAttributes: normalizedAllowedAttrs,
+        allowedSchemes: [...ALLOWED_SCHEMES_NO_COLON],
+        allowedSchemesByTag: {},
+        allowedSchemesAppliedToAttributes: ['href', 'src', 'cite'],
+        allowProtocolRelative: false,
+        transformTags: {
+          '*': (tagName: string, attribs: Record<string, string>) => {
+            const { style, srcdoc, ...rest } = attribs || {};
+            for (const k of Object.keys(rest)) {
+              if (k.toLowerCase().startsWith('on')) delete (rest as any)[k];
+            }
+            return { tagName, attribs: rest };
+          },
+        },
+      });
     }
-    const tagAttrs = allowedAttributes.get(tagName);
-    if (tagAttrs) {
-      tagAttrs.forEach(attr => merged.add(attr));
-    }
-    return merged;
-  }
 
-  private performDomSanitization(
-    html: string,
-    allowedTags: ReadonlySet<string>,
-    allowedAttributes: AttributeAllowMap,
-    options: SanitizationOptions
-  ): string {
+    // Browser path: DOM traversal & selective attribute copy.
     const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
-    const fragment = document.createDocumentFragment();
+    const doc = parser.parseFromString(raw, 'text/html');
 
-    for (const child of Array.from(doc.body.childNodes)) {
-      const sanitizedChild = this.sanitizeNode(child, allowedTags, allowedAttributes, options);
-      if (sanitizedChild) {
-        fragment.appendChild(sanitizedChild);
-      }
-    }
+    const outContainer = document.createElement('div');
+    const allowedTagSet = new Set(allowedTags.map(t => t.toLowerCase()));
+    const globalAllowed = new Set((normalizedAllowedAttrs['*'] ?? []).map(a => a.toLowerCase()));
+    const perTagAllowed = new Map<string, Set<string>>(
+      Object.entries(normalizedAllowedAttrs)
+        .filter(([k]) => k !== '*')
+        .map(([k, v]) => [k.toLowerCase(), new Set(v.map(x => x.toLowerCase()))])
+    );
 
-    const container = document.createElement('div');
-    container.appendChild(fragment);
-    return container.innerHTML;
-  }
+    const isSafeHrefOrSrc = (value: string): boolean => {
+      const v = (value ?? '').trim();
+      if (v.startsWith('//')) return false;                       // protocol-relative
+      if (v.startsWith('#')) return true;                         // fragment-only
+      if (v.startsWith('/') || v.startsWith('./') || v.startsWith('../')) return true; // relative
 
-  private sanitizeNode(
-    node: Node,
-    allowedTags: ReadonlySet<string>,
-    allowedAttributes: AttributeAllowMap,
-    options: SanitizationOptions
-  ): Node | null {
-    if (node.nodeType === Node.TEXT_NODE) {
-      const sanitizedText = ValidationService.stripControlCharacters(node.textContent ?? '');
-      return document.createTextNode(sanitizedText);
-    }
-
-    if (node.nodeType === Node.COMMENT_NODE) {
-      return null;
-    }
-
-    if (node.nodeType === Node.ELEMENT_NODE) {
-      const element = node as Element;
-      const tagName = element.tagName.toLowerCase();
-
-      if (options.blockedTags.has(tagName)) {
-        return null;
-      }
-
-      if (!allowedTags.has(tagName)) {
-        return this.sanitizeChildNodes(element, allowedTags, allowedAttributes, options);
-      }
-
-      const sanitizedElement = document.createElement(tagName);
-      const allowedAttrNames = ValidationService.mergeAllowedAttributesForTag(allowedAttributes, tagName);
-
-      for (const attr of Array.from(element.attributes)) {
-        const attrName = attr.name.toLowerCase();
-        if (!allowedAttrNames.has(attrName)) {
-          continue;
-        }
-
-        const attrValue = ValidationService.stripControlCharacters(attr.value.trim());
-
-        if (ValidationService.uriAttributes.has(attrName)) {
-          if (!this.isAllowedUri(attrValue, options)) {
-            continue;
-          }
-          sanitizedElement.setAttribute(attrName, attrValue);
-          continue;
-        }
-
-        if (attrName === 'class') {
-          const sanitizedClass = this.sanitizeClassAttribute(attrValue);
-          if (sanitizedClass) {
-            sanitizedElement.setAttribute('class', sanitizedClass);
-          }
-          continue;
-        }
-
-        if (attrName === 'target') {
-          const sanitizedTarget = this.sanitizeTargetAttribute(attrValue, allowedAttrNames, options);
-          if (sanitizedTarget) {
-            sanitizedElement.setAttribute('target', sanitizedTarget);
-          }
-          continue;
-        }
-
-        if (attrName === 'rel') {
-          const sanitizedRel = this.sanitizeRelAttribute(attrValue);
-          if (sanitizedRel) {
-            sanitizedElement.setAttribute('rel', sanitizedRel);
-          }
-          continue;
-        }
-
-        if (attrValue.length > 0) {
-          sanitizedElement.setAttribute(attrName, attrValue);
-        }
-      }
-
-      if (sanitizedElement.hasAttribute('target')) {
-        const targetValue = sanitizedElement.getAttribute('target');
-        if (targetValue === '_blank' && options.enforceNoopener) {
-          const enforcedRel = this.ensureRelNoopener(sanitizedElement.getAttribute('rel') ?? '');
-          sanitizedElement.setAttribute('rel', enforcedRel);
-        }
-      }
-
-      const sanitizedChildren = this.sanitizeChildNodes(element, allowedTags, allowedAttributes, options);
-      if (sanitizedChildren) {
-        sanitizedElement.appendChild(sanitizedChildren);
-      }
-
-      return sanitizedElement;
-    }
-
-    return null;
-  }
-
-  private sanitizeChildNodes(
-    element: Element,
-    allowedTags: ReadonlySet<string>,
-    allowedAttributes: AttributeAllowMap,
-    options: SanitizationOptions
-  ): DocumentFragment | null {
-    const fragment = document.createDocumentFragment();
-
-    for (const child of Array.from(element.childNodes)) {
-      const sanitizedChild = this.sanitizeNode(child, allowedTags, allowedAttributes, options);
-      if (sanitizedChild) {
-        fragment.appendChild(sanitizedChild);
-      }
-    }
-
-    return fragment.childNodes.length > 0 ? fragment : null;
-  }
-
-  private isAllowedUri(value: string, options: SanitizationOptions): boolean {
-    if (!value) {
-      return false;
-    }
-
-    const trimmed = value.trim();
-    if (!trimmed) {
-      return false;
-    }
-
-    const colonIndex = trimmed.indexOf(':');
-    if (colonIndex === -1) {
-      if (!options.allowRelativeUris) {
+      try {
+        const u = new URL(v, DEFAULT_BASE_URL);
+        return ALLOWED_URL_PROTOCOLS.includes(u.protocol);
+      } catch {
         return false;
       }
+    };
 
-      return true;
-    }
-
-    const scheme = trimmed.slice(0, colonIndex).toLowerCase();
-    if (!options.allowedUriSchemes.has(scheme)) {
-      return false;
-    }
-
-    if (scheme === 'data') {
-      return false;
-    }
-
-    return true;
-  }
-
-  private sanitizeClassAttribute(value: string): string | null {
-    const classes = value.split(/\s+/).filter(Boolean);
-    if (classes.length === 0) {
-      return null;
-    }
-
-    const sanitizedClasses: string[] = [];
-    const seen = new Set<string>();
-
-    for (const cls of classes) {
-      if (!ValidationService.safeClassPattern.test(cls)) {
-        continue;
+    const appendChildrenUnwrapped = (src: Node, dest: Node) => {
+      for (const child of Array.from(src.childNodes)) {
+        const n = sanitizeNode(child);
+        if (n) dest.appendChild(n);
       }
+    };
 
-      const lower = cls.toLowerCase();
-      if (seen.has(lower)) {
-        continue;
+    const sanitizeNode = (node: Node): Node | null => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const text = this.sanitizeString(node.textContent ?? '');
+        return document.createTextNode(text);
       }
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const el = node as Element;
+        const tag = el.tagName.toLowerCase();
 
-      seen.add(lower);
-      sanitizedClasses.push(cls);
-    }
+        if (!allowedTagSet.has(tag)) {
+          const frag = document.createDocumentFragment();
+          appendChildrenUnwrapped(el, frag);
+          return frag;
+        }
 
-    return sanitizedClasses.length > 0 ? sanitizedClasses.join(' ') : null;
-  }
+        const outEl = document.createElement(tag);
+        const allowed = new Set([
+          ...globalAllowed,
+          ...(perTagAllowed.get(tag) ?? new Set<string>()),
+        ]);
 
-  private sanitizeTargetAttribute(
-    value: string,
-    allowedAttrNames: ReadonlySet<string>,
-    options: SanitizationOptions
-  ): string | null {
-    const normalized = value.trim().toLowerCase();
+        for (const attr of Array.from(el.attributes)) {
+          const name = attr.name.toLowerCase();
+          if (name === 'style' || name === 'srcdoc' || name.startsWith('on')) continue; // hard bans
+          if (!allowed.has(name)) continue;
 
-    if (!ValidationService.allowedTargetValues.has(normalized)) {
-      return null;
-    }
+          const val = attr.value;
+          if (name === 'href' || name === 'src' || name === 'cite') {
+            if (isSafeHrefOrSrc(val)) {
+              outEl.setAttribute(name, val);
+            }
+            continue;
+          }
+          outEl.setAttribute(name, val);
+        }
 
-    if (normalized === '_blank' && options.enforceNoopener && !allowedAttrNames.has('rel')) {
-      return null;
-    }
-
-    return normalized;
-  }
-
-  private sanitizeRelAttribute(value: string): string | null {
-    const tokens = value.split(/\s+/).filter(Boolean).map(token => token.toLowerCase());
-    if (tokens.length === 0) {
-      return null;
-    }
-
-    const filtered: string[] = [];
-    const seen = new Set<string>();
-
-    for (const token of tokens) {
-      if (!ValidationService.allowedRelTokens.has(token)) {
-        continue;
+        appendChildrenUnwrapped(el, outEl);
+        return outEl;
       }
+      return null; // drop comments/others
+    };
 
-      if (!seen.has(token)) {
-        seen.add(token);
-        filtered.push(token);
-      }
-    }
-
-    return filtered.length > 0 ? filtered.join(' ') : null;
-  }
-
-  private ensureRelNoopener(value: string): string {
-    const tokens = value.split(/\s+/).filter(Boolean).map(token => token.toLowerCase());
-    tokens.push('noopener', 'noreferrer');
-
-    const filtered: string[] = [];
-    const seen = new Set<string>();
-
-    for (const token of tokens) {
-      if (!ValidationService.allowedRelTokens.has(token)) {
-        continue;
-      }
-
-      if (!seen.has(token)) {
-        seen.add(token);
-        filtered.push(token);
-      }
-    }
-
-    if (!seen.has('noopener')) {
-      filtered.push('noopener');
-    }
-
-    if (!seen.has('noreferrer')) {
-      filtered.push('noreferrer');
-    }
-
-    return filtered.join(' ');
+    appendChildrenUnwrapped(doc.body, outContainer);
+    return outContainer.innerHTML;
   }
 
   /**
-   * Validate an API key format.
-
+   * URL sanitizer: allowlist protocols; reject smuggling, control chars, and protocol-relative.
+   * Returns '' for unsafe/invalid URLs.
    */
-  validateApiKey(key: string): ValidationResult {
-    const errors: string[] = [];
+  sanitizeUrl(url: string): string {
+    if (!url) return '';
+    const normalized = url.trim();
+    const lower = normalized.toLowerCase();
 
-    if (!key || key.trim().length === 0) {
-      errors.push('API key cannot be empty');
+    if (lower.startsWith('//')) return ''; // protocol-relative denied
+
+    // Fast deny for obvious bad schemes (including HTML entity encodings)
+    for (const proto of DANGEROUS_PROTOCOL_MARKERS) {
+      if (lower.includes(proto)) return '';
     }
 
-    if (key && key.length < 20) {
-      errors.push('API key appears to be too short');
+    // Decode once: refuse if decoding introduces control chars or bad schemes.
+    try {
+      const decoded = decodeURIComponent(normalized);
+      // eslint-disable-next-line no-control-regex
+      if (/[\x00-\x1F\x7F]/.test(decoded)) return '';
+      const decLower = decoded.toLowerCase();
+      for (const proto of DANGEROUS_PROTOCOL_MARKERS) {
+        if (decLower.includes(proto)) return '';
+      }
+    } catch {
+      return ''; // malformed encoding
     }
 
-    // Basic check for common patterns (this is very basic)
-    if (key && !/^[A-Za-z0-9_-]+$/.test(key)) {
-      errors.push('API key contains invalid characters');
-    }
+    // Absolute vs relative
+    try {
+      const parsed = new URL(normalized, DEFAULT_BASE_URL); // unified base for relative parsing
+      const isAbsolute = parsed.origin !== new URL(DEFAULT_BASE_URL).origin;
 
-    return {
-      isValid: errors.length === 0,
-      errors,
-    };
+      if (isAbsolute) {
+        return ALLOWED_URL_PROTOCOLS.includes(parsed.protocol) ? normalized : '';
+      }
+
+      // Relative: permit rooted/relative paths and fragments only
+      if (
+        normalized.startsWith('/') ||
+        normalized.startsWith('./') ||
+        normalized.startsWith('../') ||
+        normalized.startsWith('#')
+      ) {
+        return normalized;
+      }
+      return '';
+    } catch {
+      return '';
+    }
+  }
+
+  /** Filename hardening across platforms. */
+  sanitizeFilename(filename: string): string {
+    let s = filename ?? '';
+
+    s = s.replace(/[/\\]/g, '');                 // separators
+    // eslint-disable-next-line no-control-regex
+    s = s.replace(/\x00/g, '');                  // nulls
+    s = s.replace(/^\.+/, '');                   // leading dots (hidden)
+    s = s.replace(/[^a-zA-Z0-9._-]/g, '_');      // portable charset
+    s = s.replace(/[.\s]+$/g, '');               // trailing dots/spaces (Windows)
+    if (s.length === 0) s = 'file';
+
+    // Avoid Windows reserved device names (case-insensitive)
+    const base = s.split('.')[0]?.toUpperCase();
+    const reserved = new Set([
+      'CON','PRN','AUX','NUL',
+      'COM1','COM2','COM3','COM4','COM5','COM6','COM7','COM8','COM9',
+      'LPT1','LPT2','LPT3','LPT4','LPT5','LPT6','LPT7','LPT8','LPT9',
+    ]);
+    if (base && reserved.has(base)) s = `_${s}`;
+
+    if (s.length > 255) s = s.slice(0, 255);
+    return s;
   }
 }
-
-interface SanitizationOptions {
-  allowedUriSchemes: Set<string>;
-  allowRelativeUris: boolean;
-  enforceNoopener: boolean;
-  blockedTags: Set<string>;
-}
-
-type AttributeAllowMap = ReadonlyMap<string, ReadonlySet<string>>;

@@ -7,7 +7,7 @@ describe('ToastComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ToastComponent]
+      imports: [ToastComponent],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ToastComponent);
@@ -20,16 +20,16 @@ describe('ToastComponent', () => {
   });
 
   it('should initialize with no visible toast', () => {
-    expect(component.message()).toBe(null);
+    expect(component.message()).toBeNull();
   });
 
   it('should show toast message when custom event is dispatched', (done) => {
     const testMessage = 'Test toast message';
-    
+
     // Dispatch custom toast event
     const event = new CustomEvent('toast', { detail: testMessage });
     window.dispatchEvent(event);
-    
+
     // Give Angular time to process the event
     setTimeout(() => {
       expect(component.message()).toBe(testMessage);
@@ -39,17 +39,17 @@ describe('ToastComponent', () => {
 
   it('should hide toast after timeout', (done) => {
     const testMessage = 'Test toast';
-    
+
     // Show toast
     const event = new CustomEvent('toast', { detail: testMessage });
     window.dispatchEvent(event);
-    
+
     setTimeout(() => {
       expect(component.message()).toBe(testMessage);
-      
-      // Wait for auto-hide (4000ms based on component implementation)
+
+      // Wait for auto-hide (4000ms based on component code)
       setTimeout(() => {
-        expect(component.message()).toBe(null);
+        expect(component.message()).toBeNull();
         done();
       }, 4100);
     }, 100);
@@ -57,12 +57,12 @@ describe('ToastComponent', () => {
 
   it('should handle multiple consecutive toast messages', (done) => {
     window.dispatchEvent(new CustomEvent('toast', { detail: 'Message 1' }));
-    
+
     setTimeout(() => {
       expect(component.message()).toBe('Message 1');
-      
+
       window.dispatchEvent(new CustomEvent('toast', { detail: 'Message 2' }));
-      
+
       setTimeout(() => {
         expect(component.message()).toBe('Message 2');
         done();

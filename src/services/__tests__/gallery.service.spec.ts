@@ -7,7 +7,7 @@ describe('GalleryService', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [GalleryService]
+      providers: [GalleryService],
     });
     service = TestBed.inject(GalleryService);
   });
@@ -55,16 +55,16 @@ describe('GalleryService', () => {
     const mockItem: GalleryItem = {
       id: 'test-id',
       prompt: 'test prompt',
-      blob: new Blob(['image data'], { type: 'image/png' }),
-      thumb: new Blob(['thumb data'], { type: 'image/png' }),
+      blob: new Blob(['test'], { type: 'image/png' }),
+      thumb: new Blob(['thumb'], { type: 'image/png' }),
       createdAt: new Date().toISOString(),
       isFavorite: false,
       width: 1920,
       height: 1080,
       aspect: '16:9',
-      mode: 'exact',
-      model: 'test-model',
-      collectionId: null
+      mode: 'exact' as const,
+      model: 'flux',
+      collectionId: null,
     };
 
     expect(mockItem.id).toBe('test-id');

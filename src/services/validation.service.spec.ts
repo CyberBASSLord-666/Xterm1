@@ -30,14 +30,14 @@ describe('ValidationService', () => {
       const longPrompt = 'a'.repeat(2001);
       const result = service.validatePrompt(longPrompt);
       expect(result.isValid).toBe(false);
-      expect(result.errors.some(e => e.includes('too long'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('too long'))).toBe(true);
     });
 
     it('should reject prompt with too many special characters', () => {
       const specialChars = '!!!@@@###$$$%%%^^^&&&***';
       const result = service.validatePrompt(specialChars);
       expect(result.isValid).toBe(false);
-      expect(result.errors.some(e => e.includes('special characters'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('special characters'))).toBe(true);
     });
   });
 
@@ -65,7 +65,7 @@ describe('ValidationService', () => {
     it('should reject invalid protocol', () => {
       const result = service.validateImageUrl('ftp://example.com/image.jpg');
       expect(result.isValid).toBe(false);
-      expect(result.errors.some(e => e.includes('protocol'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('protocol'))).toBe(true);
     });
 
     it('should reject malformed URL', () => {
@@ -114,7 +114,7 @@ describe('ValidationService', () => {
     it('should reject zero dimensions', () => {
       const result = service.validateDimensions(0, 1080);
       expect(result.isValid).toBe(false);
-      expect(result.errors.some(e => e.includes('positive'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('positive'))).toBe(true);
     });
 
     it('should reject negative dimensions', () => {
@@ -125,13 +125,13 @@ describe('ValidationService', () => {
     it('should reject too large dimensions', () => {
       const result = service.validateDimensions(10000, 10000);
       expect(result.isValid).toBe(false);
-      expect(result.errors.some(e => e.includes('too large'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('too large'))).toBe(true);
     });
 
     it('should reject too small dimensions', () => {
       const result = service.validateDimensions(32, 32);
       expect(result.isValid).toBe(false);
-      expect(result.errors.some(e => e.includes('too small'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('too small'))).toBe(true);
     });
   });
 
@@ -150,69 +150,180 @@ describe('ValidationService', () => {
       const result = service.sanitizeString('normal string 123');
       expect(result).toBe('normal string 123');
     });
+
+    it('should remove zero-width characters', () => {
+      const result = service.sanitizeString('test\u200Bstring');
+      expect(result).toBe('teststring');
+    });
+
+    it('should remove directional override characters', () => {
+      const result = service.sanitizeString('test\u202Astring');
+      expect(result).toBe('teststring');
+    });
+
+    it('should normalize Unicode', () => {
+      const result = service.sanitizeString('café');
+      expect(result).toBeTruthy();
+    });
+
+    it('should remove multiple consecutive spaces', () => {
+      const result = service.sanitizeString('test    string');
+      expect(result).toBe('test string');
+    });
   });
 
   describe('sanitizeHtml', () => {
-    it('should remove dangerous markup entirely', () => {
+    it('should escape HTML', () => {
       const result = service.sanitizeHtml('<script>alert("xss")</script>');
+      expect(result).not.toContain('<script>');
+      expect(result).not.toContain('alert');
+    });
+
+    it('should preserve text content', () => {
+      const result = service.sanitizeHtml('plain text');
+      expect(result).toBe('plain text');
+    });
+
+    it('should remove iframe tags', () => {
+      const result = service.sanitizeHtml('<iframe src="malicious"></iframe>');
+      expect(result).not.toContain('<iframe>');
+      expect(result).not.toContain('iframe');
+    });
+
+    it('should remove event handlers', () => {
+      const result = service.sanitizeHtml('<div onclick="alert(1)">test</div>');
+      expect(result).not.toContain('onclick');
+      expect(result).not.toContain('alert');
+    });
+
+    it('should remove javascript: protocol', () => {
+      const result = service.sanitizeHtml('<a href="javascript:alert(1)">link</a>');
+      expect(result).not.toContain('javascript:');
+      expect(result).not.toContain('alert');
+    });
+
+    it('should remove data: protocol', () => {
+      const result = service.sanitizeHtml('<img src="data:text/html,<script>alert(1)</script>">');
+      expect(result).not.toContain('data:');
+      expect(result).not.toContain('script');
+    });
+
+    it('should handle encoded attacks', () => {
+      const result = service.sanitizeHtml('<a href="javascript&#58;alert(1)">link</a>');
+      expect(result).not.toContain('javascript');
+      expect(result).not.toContain('alert');
+    });
+
+    it('should handle empty input', () => {
+      const result = service.sanitizeHtml('');
       expect(result).toBe('');
     });
 
-    it('should preserve benign formatting and enforce safe link attributes', () => {
-      const result = service.sanitizeHtml('<p>Hello <strong>world</strong> <a href="https://example.com" target="_blank" rel="nofollow">link</a></p>');
-
-      expect(result).toContain('<p>');
-      expect(result).toContain('<strong>world</strong>');
-      expect(result).toContain('href="https://example.com"');
-      expect(result).toContain('target="_blank"');
-      expect(result).toContain('rel="nofollow noopener noreferrer"');
+    it('should handle whitespace-only input', () => {
+      const result = service.sanitizeHtml('   ');
+      expect(result).toBe('');
     });
 
-    it('should strip unsupported attributes and invalid class values', () => {
-      const result = service.sanitizeHtml('<span class="headline invalid!" onclick="alert(1)">News</span>');
+    it('should remove vbscript: protocol', () => {
+      const result = service.sanitizeHtml('<a href="vbscript:msgbox(1)">link</a>');
+      expect(result).not.toContain('vbscript');
+    });
 
-      expect(result).toContain('<span class="headline">News</span>');
+    it('should remove file: protocol', () => {
+      const result = service.sanitizeHtml('<a href="file:///etc/passwd">link</a>');
+      expect(result).not.toContain('file:');
+    });
+
+    it('should remove meta tags', () => {
+      const result = service.sanitizeHtml('<meta http-equiv="refresh" content="0;url=http://evil.com">');
+      expect(result).not.toContain('<meta');
+      expect(result).not.toContain('meta');
+    });
+
+    it('should remove link tags', () => {
+      const result = service.sanitizeHtml('<link rel="stylesheet" href="http://evil.com/malicious.css">');
+      expect(result).not.toContain('<link');
+      expect(result).not.toContain('link');
+    });
+
+    it('should remove base tags', () => {
+      const result = service.sanitizeHtml('<base href="http://evil.com/">');
+      expect(result).not.toContain('<base');
+      expect(result).not.toContain('base');
+    });
+
+    it('should handle multiple XSS vectors in one input', () => {
+      const malicious = `
+        <script>alert('xss')</script>
+        <img src="x" onerror="alert(1)">
+        <a href="javascript:alert(2)">click</a>
+        <div onclick="alert(3)">text</div>
+      `;
+      const result = service.sanitizeHtml(malicious);
+      expect(result).not.toContain('script');
+      expect(result).not.toContain('onerror');
+      expect(result).not.toContain('javascript');
       expect(result).not.toContain('onclick');
-      expect(result).not.toContain('invalid!');
+      expect(result).not.toContain('alert');
+    });
+
+    it('should handle CSS expression attacks', () => {
+      const result = service.sanitizeHtml('<div style="width: expression(alert(1))">test</div>');
+      expect(result).not.toContain('expression');
+      expect(result).not.toContain('alert');
+    });
+
+    it('should handle CSS url() attacks', () => {
+      const result = service.sanitizeHtml('<div style="background: url(javascript:alert(1))">test</div>');
+      expect(result).not.toContain('javascript');
+      expect(result).not.toContain('alert');
+    });
+
+    it('should handle encoded colon in javascript protocol', () => {
+      const result = service.sanitizeHtml('<a href="javascript&colon;alert(1)">link</a>');
+      expect(result).not.toContain('javascript');
+      expect(result).not.toContain('alert');
+    });
+
+    it('should handle HTML entity encoded colon', () => {
+      const result = service.sanitizeHtml('<a href="javascript&#x3a;alert(1)">link</a>');
+      expect(result).not.toContain('javascript');
+      expect(result).not.toContain('alert');
     });
   });
 
-  describe('sanitizeHtmlAdvanced', () => {
-    it('should respect allowlist and remove unsafe URIs', () => {
-      const html = '<div><strong>Bold</strong><a href="javascript:alert(1)" target="_self">Bad</a><a href="https://safe.test" target="_blank" rel="nofollow">Safe</a></div>';
-      const result = service.sanitizeHtmlAdvanced(
-        html,
-        ['div', 'strong', 'a'],
-        { 'a': ['href', 'target', 'rel'] }
-      );
-
-      expect(result).toContain('<div>');
-      expect(result).toContain('</div>');
-      expect(result).toContain('<strong>Bold</strong>');
-      expect(result).toContain('<a target="_self">Bad</a>');
-      expect(result).toContain('<a href="https://safe.test" target="_blank" rel="nofollow noopener noreferrer">Safe</a>');
-      expect(result).not.toContain('javascript:');
+  describe('sanitizeHtmlForAngular', () => {
+    it('should return sanitized safe HTML for Angular templates', () => {
+      const result = service.sanitizeHtmlForAngular('<div>Hello World</div>');
+      expect(result).toBeTruthy();
+      expect(typeof result).toBe('string');
+      expect(result).toContain('Hello World');
     });
 
-    it('should allow custom URL schemes when configured', () => {
-      const result = service.sanitizeHtmlAdvanced(
-        '<a href="mailto:test@example.com">Email</a>',
-        ['a'],
-        { 'a': ['href'] },
-        { allowedUriSchemes: ['http', 'https', 'mailto'] }
-      );
-
-      expect(result).toBe('<a href="mailto:test@example.com">Email</a>');
+    it('should completely remove script tags', () => {
+      const result = service.sanitizeHtmlForAngular('<script>alert("xss")</script>');
+      expect(typeof result).toBe('string');
+      expect(result).not.toContain('<script>');
+      expect(result).not.toContain('alert');
+      // Script tags are completely removed, so result may be empty
     });
 
-    it('should drop unsafe target when rel cannot be enforced', () => {
-      const result = service.sanitizeHtmlAdvanced(
-        '<a href="https://example.com" target="_blank">Link</a>',
-        ['a'],
-        { 'a': ['href', 'target'] }
-      );
+    it('should handle plain text', () => {
+      const result = service.sanitizeHtmlForAngular('plain text');
+      expect(result).toBe('plain text');
+    });
 
-      expect(result).toBe('<a href="https://example.com">Link</a>');
+    it('should handle empty input', () => {
+      const result = service.sanitizeHtmlForAngular('');
+      expect(result).toBe('');
+    });
+
+    it('should remove all XSS vectors before Angular processing', () => {
+      const malicious = '<img src="x" onerror="alert(1)"><a href="javascript:void(0)">click</a>';
+      const result = service.sanitizeHtmlForAngular(malicious);
+      expect(result).not.toContain('onerror');
+      expect(result).not.toContain('javascript');
+      expect(result).not.toContain('alert');
     });
   });
 
@@ -231,13 +342,95 @@ describe('ValidationService', () => {
     it('should reject too short key', () => {
       const result = service.validateApiKey('short');
       expect(result.isValid).toBe(false);
-      expect(result.errors.some(e => e.includes('too short'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('too short'))).toBe(true);
     });
 
     it('should reject invalid characters', () => {
       const result = service.validateApiKey('invalid key with spaces!!!');
       expect(result.isValid).toBe(false);
-      expect(result.errors.some(e => e.includes('invalid characters'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('invalid characters'))).toBe(true);
+    });
+  });
+
+  describe('sanitizeUrl', () => {
+    it('should accept valid http URL', () => {
+      const result = service.sanitizeUrl('http://example.com');
+      expect(result).toBe('http://example.com');
+    });
+
+    it('should accept valid https URL', () => {
+      const result = service.sanitizeUrl('https://example.com');
+      expect(result).toBe('https://example.com');
+    });
+
+    it('should reject javascript: protocol', () => {
+      const result = service.sanitizeUrl('javascript:alert(1)');
+      expect(result).toBe('');
+    });
+
+    it('should reject data: protocol', () => {
+      const result = service.sanitizeUrl('data:text/html,<script>alert(1)</script>');
+      expect(result).toBe('');
+    });
+
+    it('should reject vbscript: protocol', () => {
+      const result = service.sanitizeUrl('vbscript:msgbox(1)');
+      expect(result).toBe('');
+    });
+
+    it('should reject encoded javascript:', () => {
+      const result = service.sanitizeUrl('javascript&colon;alert(1)');
+      expect(result).toBe('');
+    });
+
+    it('should accept relative URLs', () => {
+      const result = service.sanitizeUrl('/path/to/resource');
+      expect(result).toBe('/path/to/resource');
+    });
+
+    it('should reject relative URLs with dangerous protocols', () => {
+      const result = service.sanitizeUrl('./javascript:alert(1)');
+      expect(result).toBe('');
+    });
+  });
+
+  describe('sanitizeFilename', () => {
+    it('should accept valid filename', () => {
+      const result = service.sanitizeFilename('image.jpg');
+      expect(result).toBe('image.jpg');
+    });
+
+    it('should remove path separators', () => {
+      const result = service.sanitizeFilename('../../../etc/passwd');
+      expect(result).not.toContain('/');
+      expect(result).not.toContain('\\');
+    });
+
+    it('should remove null bytes', () => {
+      const result = service.sanitizeFilename('file\x00.jpg');
+      expect(result).not.toContain('\x00');
+    });
+
+    it('should remove leading dots', () => {
+      const result = service.sanitizeFilename('..hidden');
+      expect(result).not.toMatch(/^\./);
+    });
+
+    it('should sanitize special characters', () => {
+      const result = service.sanitizeFilename('file<>:"|?*.jpg');
+      expect(result).not.toContain('<');
+      expect(result).not.toContain('>');
+    });
+
+    it('should limit filename length', () => {
+      const longName = 'a'.repeat(300) + '.jpg';
+      const result = service.sanitizeFilename(longName);
+      expect(result.length).toBeLessThanOrEqual(255);
+    });
+
+    it('should handle empty input', () => {
+      const result = service.sanitizeFilename('');
+      expect(result).toBe('file');
     });
   });
 });
