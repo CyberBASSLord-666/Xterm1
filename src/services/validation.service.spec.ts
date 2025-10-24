@@ -176,7 +176,7 @@ describe('ValidationService', () => {
     it('should escape HTML', () => {
       const result = service.sanitizeHtml('<script>alert("xss")</script>');
       expect(result).not.toContain('<script>');
-      expect(result).toContain('&lt;script&gt;');
+      expect(result).not.toContain('alert');
     });
 
     it('should preserve text content', () => {
@@ -187,26 +187,143 @@ describe('ValidationService', () => {
     it('should remove iframe tags', () => {
       const result = service.sanitizeHtml('<iframe src="malicious"></iframe>');
       expect(result).not.toContain('<iframe>');
+      expect(result).not.toContain('iframe');
     });
 
     it('should remove event handlers', () => {
       const result = service.sanitizeHtml('<div onclick="alert(1)">test</div>');
       expect(result).not.toContain('onclick');
+      expect(result).not.toContain('alert');
     });
 
     it('should remove javascript: protocol', () => {
       const result = service.sanitizeHtml('<a href="javascript:alert(1)">link</a>');
       expect(result).not.toContain('javascript:');
+      expect(result).not.toContain('alert');
     });
 
     it('should remove data: protocol', () => {
       const result = service.sanitizeHtml('<img src="data:text/html,<script>alert(1)</script>">');
       expect(result).not.toContain('data:');
+      expect(result).not.toContain('script');
     });
 
     it('should handle encoded attacks', () => {
       const result = service.sanitizeHtml('<a href="javascript&#58;alert(1)">link</a>');
       expect(result).not.toContain('javascript');
+      expect(result).not.toContain('alert');
+    });
+
+    it('should handle empty input', () => {
+      const result = service.sanitizeHtml('');
+      expect(result).toBe('');
+    });
+
+    it('should handle whitespace-only input', () => {
+      const result = service.sanitizeHtml('   ');
+      expect(result).toBe('');
+    });
+
+    it('should remove vbscript: protocol', () => {
+      const result = service.sanitizeHtml('<a href="vbscript:msgbox(1)">link</a>');
+      expect(result).not.toContain('vbscript');
+    });
+
+    it('should remove file: protocol', () => {
+      const result = service.sanitizeHtml('<a href="file:///etc/passwd">link</a>');
+      expect(result).not.toContain('file:');
+    });
+
+    it('should remove meta tags', () => {
+      const result = service.sanitizeHtml('<meta http-equiv="refresh" content="0;url=http://evil.com">');
+      expect(result).not.toContain('<meta');
+      expect(result).not.toContain('meta');
+    });
+
+    it('should remove link tags', () => {
+      const result = service.sanitizeHtml('<link rel="stylesheet" href="http://evil.com/malicious.css">');
+      expect(result).not.toContain('<link');
+      expect(result).not.toContain('link');
+    });
+
+    it('should remove base tags', () => {
+      const result = service.sanitizeHtml('<base href="http://evil.com/">');
+      expect(result).not.toContain('<base');
+      expect(result).not.toContain('base');
+    });
+
+    it('should handle multiple XSS vectors in one input', () => {
+      const malicious = `
+        <script>alert('xss')</script>
+        <img src="x" onerror="alert(1)">
+        <a href="javascript:alert(2)">click</a>
+        <div onclick="alert(3)">text</div>
+      `;
+      const result = service.sanitizeHtml(malicious);
+      expect(result).not.toContain('script');
+      expect(result).not.toContain('onerror');
+      expect(result).not.toContain('javascript');
+      expect(result).not.toContain('onclick');
+      expect(result).not.toContain('alert');
+    });
+
+    it('should handle CSS expression attacks', () => {
+      const result = service.sanitizeHtml('<div style="width: expression(alert(1))">test</div>');
+      expect(result).not.toContain('expression');
+      expect(result).not.toContain('alert');
+    });
+
+    it('should handle CSS url() attacks', () => {
+      const result = service.sanitizeHtml('<div style="background: url(javascript:alert(1))">test</div>');
+      expect(result).not.toContain('javascript');
+      expect(result).not.toContain('alert');
+    });
+
+    it('should handle encoded colon in javascript protocol', () => {
+      const result = service.sanitizeHtml('<a href="javascript&colon;alert(1)">link</a>');
+      expect(result).not.toContain('javascript');
+      expect(result).not.toContain('alert');
+    });
+
+    it('should handle HTML entity encoded colon', () => {
+      const result = service.sanitizeHtml('<a href="javascript&#x3a;alert(1)">link</a>');
+      expect(result).not.toContain('javascript');
+      expect(result).not.toContain('alert');
+    });
+  });
+
+  describe('sanitizeHtmlForAngular', () => {
+    it('should return sanitized safe HTML for Angular templates', () => {
+      const result = service.sanitizeHtmlForAngular('<div>Hello World</div>');
+      expect(result).toBeTruthy();
+      expect(typeof result).toBe('string');
+      expect(result).toContain('Hello World');
+    });
+
+    it('should completely remove script tags', () => {
+      const result = service.sanitizeHtmlForAngular('<script>alert("xss")</script>');
+      expect(typeof result).toBe('string');
+      expect(result).not.toContain('<script>');
+      expect(result).not.toContain('alert');
+      // Script tags are completely removed, so result may be empty
+    });
+
+    it('should handle plain text', () => {
+      const result = service.sanitizeHtmlForAngular('plain text');
+      expect(result).toBe('plain text');
+    });
+
+    it('should handle empty input', () => {
+      const result = service.sanitizeHtmlForAngular('');
+      expect(result).toBe('');
+    });
+
+    it('should remove all XSS vectors before Angular processing', () => {
+      const malicious = '<img src="x" onerror="alert(1)"><a href="javascript:void(0)">click</a>';
+      const result = service.sanitizeHtmlForAngular(malicious);
+      expect(result).not.toContain('onerror');
+      expect(result).not.toContain('javascript');
+      expect(result).not.toContain('alert');
     });
   });
 

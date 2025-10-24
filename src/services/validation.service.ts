@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { DomSanitizer } from '@angular/platform-browser';
 import sanitizeHtml from 'sanitize-html';
 
 export interface ValidationResult {
@@ -11,6 +12,7 @@ export interface ValidationResult {
  */
 @Injectable({ providedIn: 'root' })
 export class ValidationService {
+  private readonly domSanitizer = inject(DomSanitizer);
 
   /**
    * Helper to repeatedly remove matches for a pattern until the string stabilizes.
@@ -166,47 +168,46 @@ export class ValidationService {
 
   /**
    * Sanitize HTML to prevent XSS attacks.
-   * Production-grade implementation with comprehensive tag and attribute filtering.
-   * Uses multiple layers of defense to prevent XSS including encoded attacks.
+   * Production-grade implementation using Angular's DomSanitizer with defense-in-depth.
+   * 
+   * This method uses a layered security approach:
+   * 1. First pass through sanitize-html library to strip dangerous tags/attributes
+   * 2. Additional pattern-based removal of event handlers and dangerous protocols
+   * 3. Can be further processed through Angular's DomSanitizer when rendering
+   * 
+   * @param html - The HTML string to sanitize
+   * @returns Sanitized HTML string safe for display
    */
   sanitizeHtml(html: string): string {
-    // First escape all HTML
-    const div = document.createElement('div');
-    div.textContent = html;
-    let sanitized = div.innerHTML;
+    if (!html || html.trim().length === 0) {
+      return '';
+    }
 
-    // Define allowed tags and attributes for rich text (if needed)
-    // Reserved for future whitelist-based filtering
-    const _allowedTags = ['b', 'i', 'em', 'strong', 'u', 'p', 'br', 'span'];
-    const _allowedAttributes: Record<string, string[]> = {
-      span: ['class'],
-      a: ['href', 'title'], // Only if links are needed
-    };
-
-    // For most use cases, we want plain text with HTML escaped
-    // This prevents ALL XSS attacks including attribute-based attacks
-copilot/full-repository-analysis
-
-    // Sanitize HTML using well-tested library
-    sanitized = sanitizeHtml(sanitized, {
-      allowedTags: [], // Remove all tags for maximum safety
+    // Layer 1: Use well-tested sanitize-html library with strict configuration
+    // This removes dangerous tags, attributes, and scripts BEFORE they can be encoded
+    let sanitized = sanitizeHtml(html, {
+      allowedTags: [], // Remove all tags for maximum safety (plain text output)
       allowedAttributes: {}, // Remove all attributes
+      disallowedTagsMode: 'discard', // Completely remove disallowed tags
+      allowedSchemes: ['http', 'https', 'mailto'], // Only allow safe URL schemes
+      allowedSchemesByTag: {},
+      allowedSchemesAppliedToAttributes: ['href', 'src', 'cite'],
+      allowProtocolRelative: false,
     });
 
-    // Remove ALL event handlers with comprehensive patterns
+    // Layer 2: Remove ALL event handlers with comprehensive patterns
+    // This catches any encoded event handlers that might have slipped through
     // Match on*, ON*, oN*, etc. with various attribute formats
     sanitized = this.replaceRepeatedly(sanitized, /\s*on\w+\s*=\s*["'][^"']*["']/gi, '');
     sanitized = this.replaceRepeatedly(sanitized, /\s*on\w+\s*=\s*[^\s>]*/gi, '');
-    sanitized = this.replaceRepeatedly(sanitized, /\s*ON\w+\s*=\s*["'][^"']*["']/gi, '');
-    sanitized = this.replaceRepeatedly(sanitized, /\s*ON\w+\s*=\s*[^\s>]*/gi, '');
-
-    // Remove dangerous protocols with comprehensive pattern matching
-    // Include URL-encoded variations and HTML entity encodings
+    
+    // Layer 3: Remove dangerous protocols including encoded variations
     const dangerousProtocols = [
       'javascript:',
       'javascript&colon;',
       'javascript&#58;',
       'javascript&#x3a;',
+      'javascript&#x003a;',
       'data:',
       'data&colon;',
       'data&#58;',
@@ -220,11 +221,13 @@ copilot/full-repository-analysis
     ];
 
     for (const protocol of dangerousProtocols) {
-      const regex = new RegExp(protocol.replace(':', '\\s*:\\s*'), 'gi');
-      sanitized = sanitized.replace(regex, '');
+      // Create pattern that matches protocol with optional whitespace around colon
+      const pattern = protocol.replace(':', '\\s*:\\s*');
+      const regex = new RegExp(pattern, 'gi');
+      sanitized = this.replaceRepeatedly(sanitized, regex, '');
     }
 
-    // Remove any suspicious attribute patterns including encoded forms
+    // Layer 4: Remove suspicious CSS patterns
     sanitized = sanitized.replace(
       /\s*style\s*=\s*["'][^"']*(expression|behavior|binding|import|@import)[^"']*["']/gi,
       ''
@@ -236,15 +239,30 @@ copilot/full-repository-analysis
       ''
     );
 
-    // Remove meta and link tags that could refresh or redirect
+    // Layer 5: Remove meta, link, and base tags that could cause navigation/redirection
     sanitized = sanitized.replace(/<meta[\s\S]*?>/gi, '');
     sanitized = sanitized.replace(/<link[\s\S]*?>/gi, '');
-
-    // Remove base tag that could hijack relative URLs
     sanitized = sanitized.replace(/<base[\s\S]*?>/gi, '');
-    
-    main
+
     return sanitized;
+  }
+
+  /**
+   * Sanitize HTML and prepare it for safe rendering in Angular templates.
+   * This method combines sanitize-html with Angular's DomSanitizer for maximum security.
+   * 
+   * Use this when you need to bind sanitized HTML to Angular templates using [innerHTML].
+   * 
+   * @param html - The HTML string to sanitize
+   * @returns Sanitized string that has been processed through Angular's security layer
+   */
+  sanitizeHtmlForAngular(html: string): string {
+    // First sanitize through our multi-layer approach
+    const sanitized = this.sanitizeHtml(html);
+    
+    // Then process through Angular's DomSanitizer for additional security context
+    // Note: sanitize() method applies Angular's XSS protection and returns a string
+    return this.domSanitizer.sanitize(1, sanitized) || ''; // SecurityContext.HTML = 1
   }
 
   /**
@@ -446,12 +464,14 @@ copilot/full-repository-analysis
    * Validate and sanitize a filename to prevent directory traversal and other attacks.
    */
   sanitizeFilename(filename: string): string {
-    if (!filename) return '';
+    // Start with empty string if input is null/undefined
+    let sanitized = filename || '';
 
     // Remove path separators to prevent directory traversal
-    let sanitized = filename.replace(/[/\\]/g, '');
+    sanitized = sanitized.replace(/[/\\]/g, '');
 
-    // Remove null bytes
+    // Remove null bytes - necessary for security to prevent path truncation attacks
+    // eslint-disable-next-line no-control-regex
     sanitized = sanitized.replace(/\x00/g, '');
 
     // Remove leading dots to prevent hidden files
