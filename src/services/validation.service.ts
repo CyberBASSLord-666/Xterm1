@@ -5,13 +5,12 @@
  * - Strict URL, filename, and input validators
  */
 
-import { Injectable, inject } from '@angular/core';
-import { DomSanitizer, SecurityContext } from '@angular/platform-browser';
+import { Injectable, inject, SecurityContext } from '@angular/core';
+import { DomSanitizer } from '@angular/platform-browser';
 // CJS/ESM interop shim for sanitize-html across build configs.
 import * as sanitizeHtmlLib from 'sanitize-html';
 
 type SanitizeHtmlFn = (html: string, options: any) => string;
-// @ts-expect-error – runtime interop between CJS/ESM
 const sanitizeHtmlFn: SanitizeHtmlFn = (sanitizeHtmlLib as any).default ?? (sanitizeHtmlLib as any);
 
 /** Single source of truth for base URL in URL parsing across CSR/SSR. */

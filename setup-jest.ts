@@ -48,3 +48,19 @@ global.createImageBitmap = jest.fn().mockImplementation(() =>
 // Mock URL.createObjectURL and revokeObjectURL
 global.URL.createObjectURL = jest.fn(() => 'blob:mock-url');
 global.URL.revokeObjectURL = jest.fn();
+
+// Mock crypto.randomUUID for Node environments
+if (!globalThis.crypto?.randomUUID) {
+  Object.defineProperty(globalThis, 'crypto', {
+    value: {
+      ...globalThis.crypto,
+      randomUUID: jest.fn(() => {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+          const r = Math.random() * 16 | 0;
+          const v = c === 'x' ? r : (r & 0x3 | 0x8);
+          return v.toString(16);
+        });
+      }),
+    },
+  });
+}
