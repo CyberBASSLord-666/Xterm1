@@ -173,16 +173,6 @@ export class ValidationService {
 private static readonly allowedRelTokens: ReadonlySet<string> = new Set([
     'alternate',
     'author',
-    'help',
-    'license',
-    'next',
-    'nofollow',
-    'noopener',
-    'noreferrer',
-    'prev'
-  ]);
-    'alternate',
-    'author',
     'external',
     'help',
     'license',
@@ -194,12 +184,7 @@ private static readonly allowedRelTokens: ReadonlySet<string> = new Set([
     'ugc'
   ]);
 
-private static readonly safeClassPattern = /^[a-z0-9_-]+$/;
-  // And in sanitizeClassAttribute:
-  const lower = cls.toLowerCase();
-  if (seen.has(lower)) { continue; }
-  seen.add(lower);
-  sanitizedClasses.push(lower); // Use normalized lowercase
+  private static readonly safeClassPattern = /^[a-z0-9_-]+$/;
 
   private static isControlCharacter(codePoint: number): boolean {
     return ValidationService.controlCharacterRanges.some(([start, end]) => codePoint >= start && codePoint <= end);
