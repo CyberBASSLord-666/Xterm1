@@ -39,7 +39,7 @@ export class AppInitializerService {
         this.requestCache.startPeriodicCleanup(60000); // Every minute
 
         // Initialize Gemini client if API key is available
-        const apiKey = this.config.getGeminiApiKey() || environment.geminiApiKey;
+        const apiKey = this.config.getGeminiApiKey();
         if (apiKey) {
           initializeGeminiClient(apiKey);
           this.logger.info('Gemini API client initialized', undefined, 'AppInitializer');

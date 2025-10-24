@@ -5,13 +5,12 @@
  * - Strict URL, filename, and input validators
  */
 
-import { Injectable, inject } from '@angular/core';
-import { DomSanitizer, SecurityContext } from '@angular/platform-browser';
+import { Injectable, inject, SecurityContext } from '@angular/core';
+import { DomSanitizer } from '@angular/platform-browser';
 // CJS/ESM interop shim for sanitize-html across build configs.
 import * as sanitizeHtmlLib from 'sanitize-html';
 
 type SanitizeHtmlFn = (html: string, options: any) => string;
-// @ts-expect-error – runtime interop between CJS/ESM
 const sanitizeHtmlFn: SanitizeHtmlFn = (sanitizeHtmlLib as any).default ?? (sanitizeHtmlLib as any);
 
 /** Single source of truth for base URL in URL parsing across CSR/SSR. */
@@ -25,11 +24,23 @@ const ALLOWED_SCHEMES_NO_COLON = ['http', 'https', 'mailto', 'blob'];
 
 /** Strings that indicate dangerous protocols, including common encoded variants. */
 const DANGEROUS_PROTOCOL_MARKERS = [
-  'javascript:', 'javascript&colon;', 'javascript&#58;', 'javascript&#x3a;', 'javascript&#x003a;',
-  'data:', 'data&colon;', 'data&#58;', 'data&#x3a;',
-  'vbscript:', 'vbscript&colon;', 'vbscript&#58;', 'vbscript&#x3a;',
-  'file:', 'file&colon;',
-  'about:', 'about&colon;',
+  'javascript:',
+  'javascript&colon;',
+  'javascript&#58;',
+  'javascript&#x3a;',
+  'javascript&#x003a;',
+  'data:',
+  'data&colon;',
+  'data&#58;',
+  'data&#x3a;',
+  'vbscript:',
+  'vbscript&colon;',
+  'vbscript&#58;',
+  'vbscript&#x3a;',
+  'file:',
+  'file&colon;',
+  'about:',
+  'about&colon;',
 ];
 
 export interface ValidationResult {
@@ -98,7 +109,8 @@ export class ValidationService {
     if (seed !== undefined) {
       if (!Number.isInteger(seed)) errors.push('Seed must be an integer');
       if (typeof seed === 'number' && seed < 0) errors.push('Seed must be a positive number');
-      if (typeof seed === 'number' && seed > Number.MAX_SAFE_INTEGER) errors.push('Seed is too large');
+      if (typeof seed === 'number' && seed > Number.MAX_SAFE_INTEGER)
+        errors.push('Seed is too large');
     }
     return { isValid: errors.length === 0, errors };
   }
@@ -136,11 +148,11 @@ export class ValidationService {
   sanitizeString(input: string): string {
     let s = (input ?? '').normalize('NFC');
     // eslint-disable-next-line no-control-regex
-    s = s.replace(/[\x00-\x1F\x7F-\x9F]/g, '');                    // C0/C1 + nulls
-    s = s.replace(/[\u200B-\u200F\uFEFF]/g, '');                   // ZWSP/ZWJ/ZWNJ/LRM/RLM/BOM
-    s = s.replace(/[\u202A-\u202E\u2060-\u2069]/g, '');            // bidi overrides/isolates
-    s = s.replace(/[\u2028\u2029]/g, '');                          // line/para sep
-    s = s.trim().replace(/\s+/g, ' ');                             // collapse whitespace
+    s = s.replace(/[\x00-\x1F\x7F-\x9F]/g, ''); // C0/C1 + nulls
+    s = s.replace(/[\u200B-\u200F\uFEFF]/g, ''); // ZWSP/ZWJ/ZWNJ/LRM/RLM/BOM
+    s = s.replace(/[\u202A-\u202E\u2060-\u2069]/g, ''); // bidi overrides/isolates
+    s = s.replace(/[\u2028\u2029]/g, ''); // line/para sep
+    s = s.trim().replace(/\s+/g, ' '); // collapse whitespace
     return s;
   }
 
@@ -201,15 +213,17 @@ export class ValidationService {
     // Normalize allowlist: drop style/srcdoc/on* regardless of caller config.
     const normalizedAllowedAttrs: Record<string, string[]> = {};
     const dropAttr = (name: string) =>
-      name.toLowerCase() === 'style' || name.toLowerCase() === 'srcdoc' || name.toLowerCase().startsWith('on');
+      name.toLowerCase() === 'style' ||
+      name.toLowerCase() === 'srcdoc' ||
+      name.toLowerCase().startsWith('on');
 
     for (const [tag, attrs] of Object.entries(allowedAttributes)) {
       normalizedAllowedAttrs[tag.toLowerCase()] = (attrs || [])
-        .filter(a => !dropAttr(a))
-        .map(a => a.toLowerCase());
+        .filter((a) => !dropAttr(a))
+        .map((a) => a.toLowerCase());
     }
     if (normalizedAllowedAttrs['*']) {
-      normalizedAllowedAttrs['*'] = normalizedAllowedAttrs['*'].filter(a => !dropAttr(a));
+      normalizedAllowedAttrs['*'] = normalizedAllowedAttrs['*'].filter((a) => !dropAttr(a));
     }
 
     const hasDom =
@@ -228,7 +242,7 @@ export class ValidationService {
         allowProtocolRelative: false,
         transformTags: {
           '*': (tagName: string, attribs: Record<string, string>) => {
-            const { style, srcdoc, ...rest } = attribs || {};
+            const { style: _style, srcdoc: _srcdoc, ...rest } = attribs || {};
             for (const k of Object.keys(rest)) {
               if (k.toLowerCase().startsWith('on')) delete (rest as any)[k];
             }
@@ -243,18 +257,18 @@ export class ValidationService {
     const doc = parser.parseFromString(raw, 'text/html');
 
     const outContainer = document.createElement('div');
-    const allowedTagSet = new Set(allowedTags.map(t => t.toLowerCase()));
-    const globalAllowed = new Set((normalizedAllowedAttrs['*'] ?? []).map(a => a.toLowerCase()));
+    const allowedTagSet = new Set(allowedTags.map((t) => t.toLowerCase()));
+    const globalAllowed = new Set((normalizedAllowedAttrs['*'] ?? []).map((a) => a.toLowerCase()));
     const perTagAllowed = new Map<string, Set<string>>(
       Object.entries(normalizedAllowedAttrs)
         .filter(([k]) => k !== '*')
-        .map(([k, v]) => [k.toLowerCase(), new Set(v.map(x => x.toLowerCase()))])
+        .map(([k, v]) => [k.toLowerCase(), new Set(v.map((x) => x.toLowerCase()))])
     );
 
     const isSafeHrefOrSrc = (value: string): boolean => {
       const v = (value ?? '').trim();
-      if (v.startsWith('//')) return false;                       // protocol-relative
-      if (v.startsWith('#')) return true;                         // fragment-only
+      if (v.startsWith('//')) return false; // protocol-relative
+      if (v.startsWith('#')) return true; // fragment-only
       if (v.startsWith('/') || v.startsWith('./') || v.startsWith('../')) return true; // relative
 
       try {
@@ -375,20 +389,39 @@ export class ValidationService {
   sanitizeFilename(filename: string): string {
     let s = filename ?? '';
 
-    s = s.replace(/[/\\]/g, '');                 // separators
+    s = s.replace(/[/\\]/g, ''); // separators
     // eslint-disable-next-line no-control-regex
-    s = s.replace(/\x00/g, '');                  // nulls
-    s = s.replace(/^\.+/, '');                   // leading dots (hidden)
-    s = s.replace(/[^a-zA-Z0-9._-]/g, '_');      // portable charset
-    s = s.replace(/[.\s]+$/g, '');               // trailing dots/spaces (Windows)
+    s = s.replace(/\x00/g, ''); // nulls
+    s = s.replace(/^\.+/, ''); // leading dots (hidden)
+    s = s.replace(/[^a-zA-Z0-9._-]/g, '_'); // portable charset
+    s = s.replace(/[.\s]+$/g, ''); // trailing dots/spaces (Windows)
     if (s.length === 0) s = 'file';
 
     // Avoid Windows reserved device names (case-insensitive)
     const base = s.split('.')[0]?.toUpperCase();
     const reserved = new Set([
-      'CON','PRN','AUX','NUL',
-      'COM1','COM2','COM3','COM4','COM5','COM6','COM7','COM8','COM9',
-      'LPT1','LPT2','LPT3','LPT4','LPT5','LPT6','LPT7','LPT8','LPT9',
+      'CON',
+      'PRN',
+      'AUX',
+      'NUL',
+      'COM1',
+      'COM2',
+      'COM3',
+      'COM4',
+      'COM5',
+      'COM6',
+      'COM7',
+      'COM8',
+      'COM9',
+      'LPT1',
+      'LPT2',
+      'LPT3',
+      'LPT4',
+      'LPT5',
+      'LPT6',
+      'LPT7',
+      'LPT8',
+      'LPT9',
     ]);
     if (base && reserved.has(base)) s = `_${s}`;
 
