@@ -14,6 +14,24 @@ type SanitizeHtmlFn = (html: string, options: any) => string;
 // @ts-expect-error – runtime interop between CJS/ESM
 const sanitizeHtmlFn: SanitizeHtmlFn = (sanitizeHtmlLib as any).default ?? (sanitizeHtmlLib as any);
 
+/** Single source of truth for base URL in URL parsing across CSR/SSR. */
+const DEFAULT_BASE_URL = 'http://localhost';
+
+/** Allowlisted URL protocols (with colon). Use these for URL API protocol checks. */
+const ALLOWED_URL_PROTOCOLS = ['http:', 'https:', 'mailto:', 'blob:'];
+
+/** Same allowlist, scheme names without colon for sanitize-html config. */
+const ALLOWED_SCHEMES_NO_COLON = ['http', 'https', 'mailto', 'blob'];
+
+/** Strings that indicate dangerous protocols, including common encoded variants. */
+const DANGEROUS_PROTOCOL_MARKERS = [
+  'javascript:', 'javascript&colon;', 'javascript&#58;', 'javascript&#x3a;', 'javascript&#x003a;',
+  'data:', 'data&colon;', 'data&#58;', 'data&#x3a;',
+  'vbscript:', 'vbscript&colon;', 'vbscript&#58;', 'vbscript&#x3a;',
+  'file:', 'file&colon;',
+  'about:', 'about&colon;',
+];
+
 export interface ValidationResult {
   isValid: boolean;
   errors: string[];
@@ -139,7 +157,7 @@ export class ValidationService {
       allowedTags: [],
       allowedAttributes: {},
       disallowedTagsMode: 'discard',
-      allowedSchemes: ['http', 'https', 'mailto', 'blob'],
+      allowedSchemes: [...ALLOWED_SCHEMES_NO_COLON],
       allowedSchemesByTag: {},
       allowedSchemesAppliedToAttributes: ['href', 'src', 'cite'],
       allowProtocolRelative: false,
@@ -149,14 +167,9 @@ export class ValidationService {
     out = this.replaceRepeatedly(out, /\s*on\w+\s*=\s*["'][^"']*["']/gi, '');
     out = this.replaceRepeatedly(out, /\s*on\w+\s*=\s*[^\s>]*/gi, '');
 
-    // Dangerous protocol strings (encoded/whitespace-tolerant)
-    for (const proto of [
-      'javascript:', 'javascript&colon;', 'javascript&#58;', 'javascript&#x3a;', 'javascript&#x003a;',
-      'data:', 'data&colon;', 'data&#58;', 'data&#x3a;',
-      'vbscript:', 'vbscript&colon;', 'vbscript&#58;', 'vbscript&#x3a;',
-      'file:', 'about:'
-    ]) {
-      const pattern = proto.replace(':', '\\s*:\\s*');
+    // Dangerous protocol strings (encoded/whitespace-tolerant for literal ':' variants)
+    for (const proto of DANGEROUS_PROTOCOL_MARKERS) {
+      const pattern = proto.includes(':') ? proto.replace(':', '\\s*:\\s*') : proto;
       out = this.replaceRepeatedly(out, new RegExp(pattern, 'gi'), '');
     }
 
@@ -209,7 +222,7 @@ export class ValidationService {
       return sanitizeHtmlFn(raw, {
         allowedTags,
         allowedAttributes: normalizedAllowedAttrs,
-        allowedSchemes: ['http', 'https', 'mailto', 'blob'],
+        allowedSchemes: [...ALLOWED_SCHEMES_NO_COLON],
         allowedSchemesByTag: {},
         allowedSchemesAppliedToAttributes: ['href', 'src', 'cite'],
         allowProtocolRelative: false,
@@ -243,9 +256,10 @@ export class ValidationService {
       if (v.startsWith('//')) return false;                       // protocol-relative
       if (v.startsWith('#')) return true;                         // fragment-only
       if (v.startsWith('/') || v.startsWith('./') || v.startsWith('../')) return true; // relative
+
       try {
-        const u = new URL(v, window.location.origin);
-        return ['http:', 'https:', 'mailto:', 'blob:'].includes(u.protocol);
+        const u = new URL(v, DEFAULT_BASE_URL);
+        return ALLOWED_URL_PROTOCOLS.includes(u.protocol);
       } catch {
         return false;
       }
@@ -316,13 +330,9 @@ export class ValidationService {
     if (lower.startsWith('//')) return ''; // protocol-relative denied
 
     // Fast deny for obvious bad schemes (including HTML entity encodings)
-    const bad = [
-      'javascript:', 'javascript&colon;', 'javascript&#58;', 'javascript&#x3a;', 'javascript&#x003a;',
-      'data:', 'data&colon;', 'data&#58;', 'data&#x3a;',
-      'vbscript:', 'vbscript&colon;', 'vbscript&#58;', 'vbscript&#x3a;',
-      'file:', 'file&colon;', 'about:', 'about&colon;',
-    ];
-    for (const proto of bad) if (lower.includes(proto)) return '';
+    for (const proto of DANGEROUS_PROTOCOL_MARKERS) {
+      if (lower.includes(proto)) return '';
+    }
 
     // Decode once: refuse if decoding introduces control chars or bad schemes.
     try {
@@ -330,18 +340,20 @@ export class ValidationService {
       // eslint-disable-next-line no-control-regex
       if (/[\x00-\x1F\x7F]/.test(decoded)) return '';
       const decLower = decoded.toLowerCase();
-      for (const proto of bad) if (decLower.includes(proto)) return '';
+      for (const proto of DANGEROUS_PROTOCOL_MARKERS) {
+        if (decLower.includes(proto)) return '';
+      }
     } catch {
       return ''; // malformed encoding
     }
 
     // Absolute vs relative
     try {
-      const parsed = new URL(normalized, 'http://example.com'); // base for relative
-      const isAbsolute = parsed.origin !== 'http://example.com';
+      const parsed = new URL(normalized, DEFAULT_BASE_URL); // unified base for relative parsing
+      const isAbsolute = parsed.origin !== new URL(DEFAULT_BASE_URL).origin;
 
       if (isAbsolute) {
-        return ['http:', 'https:', 'mailto:', 'blob:'].includes(parsed.protocol) ? normalized : '';
+        return ALLOWED_URL_PROTOCOLS.includes(parsed.protocol) ? normalized : '';
       }
 
       // Relative: permit rooted/relative paths and fragments only
