@@ -1,102 +1,65 @@
+/**
+ * Validation & Sanitization Service (Angular)
+ * - Defense-in-depth against XSS, protocol smuggling, Unicode obfuscation
+ * - SSR-safe (no DOM usage on server path); deterministic & testable
+ * - Strict URL, filename, and input validators
+ */
+
 import { Injectable, inject } from '@angular/core';
-import { DomSanitizer } from '@angular/platform-browser';
+import { DomSanitizer, SecurityContext } from '@angular/platform-browser';
+// CJS/ESM interop shim for sanitize-html across build configs.
+import * as sanitizeHtmlLib from 'sanitize-html';
+
+type SanitizeHtmlFn = (html: string, options: any) => string;
+// @ts-expect-error – runtime interop between CJS/ESM
+const sanitizeHtmlFn: SanitizeHtmlFn = (sanitizeHtmlLib as any).default ?? (sanitizeHtmlLib as any);
 
 export interface ValidationResult {
   isValid: boolean;
   errors: string[];
 }
 
-/**
- * Service for input validation and sanitization (defense-in-depth).
- * - String hygiene (Unicode normalization, control char stripping)
- * - URL validation/sanitization (protocol allowlist + decoding checks)
- * - HTML sanitization (library first; optional whitelist mode)
- * - Filename hardening (path traversal, reserved names, null bytes)
- *
- * Notes:
- * - Uses Angular's DomSanitizer for an additional security boundary when binding to [innerHTML].
- * - Avoids DOM access paths in core methods so it works in SSR; whitelist mode falls back safely.
- */
 @Injectable({ providedIn: 'root' })
 export class ValidationService {
   private readonly domSanitizer = inject(DomSanitizer);
 
-  // Constants for sanitization
-  private readonly DEFAULT_BASE_URL = 'http://localhost';
-  private static readonly RESERVED_DEVICE_NAMES = new Set([
-    'CON',
-    'PRN',
-    'AUX',
-    'NUL',
-    'COM1',
-    'COM2',
-    'COM3',
-    'COM4',
-    'COM5',
-    'COM6',
-    'COM7',
-    'COM8',
-    'COM9',
-    'LPT1',
-    'LPT2',
-    'LPT3',
-    'LPT4',
-    'LPT5',
-    'LPT6',
-    'LPT7',
-    'LPT8',
-    'LPT9',
-  ]);
-
-  /**
-   * Replace matches repeatedly until input stabilizes.
-   */
+  /** Replace matches repeatedly until input stabilizes (fixed point). */
   private replaceRepeatedly(input: string, regex: RegExp, replacement: string): string {
-    let previous: string;
+    let prev: string;
     do {
-      previous = input;
+      prev = input;
       input = input.replace(regex, replacement);
-    } while (input !== previous);
+    } while (input !== prev);
     return input;
   }
 
-  /**
-   * Validate a free-form prompt.
-   */
+  /** Validate a free-form prompt. */
   validatePrompt(prompt: string): ValidationResult {
     const errors: string[] = [];
-
     const value = (prompt ?? '').trim();
 
-    if (value.length === 0) {
-      errors.push('Prompt cannot be empty');
-    }
+    if (value.length === 0) errors.push('Prompt cannot be empty');
+    if (value.length > 2000) errors.push('Prompt is too long (maximum 2000 characters)');
 
-    if (value.length > 2000) {
-      errors.push('Prompt is too long (maximum 2000 characters)');
-    }
-
-    // Only compute special char ratio when length is non-zero to avoid div-by-zero.
     if (value.length > 0) {
       const specials = (value.match(/[^a-zA-Z0-9\s,.!?-]/g) || []).length;
-      const specialCharRatio = specials / value.length;
-      if (specialCharRatio > 0.3) {
-        errors.push('Prompt contains too many special characters');
-      }
+      const ratio = specials / value.length;
+      if (ratio > 0.3) errors.push('Prompt contains too many special characters');
     }
-
     return { isValid: errors.length === 0, errors };
   }
 
-  /**
-   * Validate an image URL (http/https/blob) with structural checks.
-   */
+  /** Validate an image URL (http/https/blob) structurally. */
   validateImageUrl(url: string): ValidationResult {
     const errors: string[] = [];
     const value = (url ?? '').trim();
 
     if (value.length === 0) {
       errors.push('URL cannot be empty');
+      return { isValid: false, errors };
+    }
+    if (value.startsWith('//')) {
+      errors.push('Protocol-relative URLs are not allowed');
       return { isValid: false, errors };
     }
 
@@ -108,286 +71,33 @@ export class ValidationService {
     } catch {
       errors.push('Invalid URL format');
     }
-
     return { isValid: errors.length === 0, errors };
   }
 
-  /**
-   * Validate an optional integer seed.
-   */
+  /** Validate optional integer seed. */
   validateSeed(seed: number | undefined): ValidationResult {
     const errors: string[] = [];
     if (seed !== undefined) {
       if (!Number.isInteger(seed)) errors.push('Seed must be an integer');
       if (typeof seed === 'number' && seed < 0) errors.push('Seed must be a positive number');
-      if (typeof seed === 'number' && seed > Number.MAX_SAFE_INTEGER)
-        errors.push('Seed is too large');
+      if (typeof seed === 'number' && seed > Number.MAX_SAFE_INTEGER) errors.push('Seed is too large');
     }
     return { isValid: errors.length === 0, errors };
   }
 
-  /**
-   * Validate image dimensions within bounds.
-   */
+  /** Validate image dimensions within safe bounds. */
   validateDimensions(width: number, height: number): ValidationResult {
     const errors: string[] = [];
-
     if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
       errors.push('Dimensions must be positive numbers');
     } else {
       if (width > 8192 || height > 8192) errors.push('Dimensions are too large (maximum 8192px)');
       if (width < 64 || height < 64) errors.push('Dimensions are too small (minimum 64px)');
     }
-
     return { isValid: errors.length === 0, errors };
   }
 
-  /**
-   * String hygiene: normalize & strip dangerous/invisible code points.
-   * - NFC normalization guards combining char tricks.
-   * - Remove C0/C1 control chars, nulls, zero-width, bidi overrides, etc.
-   */
-  sanitizeString(input: string): string {
-    let sanitized = (input ?? '').normalize('NFC');
-
-    // Remove C0 (0x00-0x1F) and C1 (0x7F-0x9F) control characters including null bytes
-    // to prevent injection attacks and data corruption per OWASP guidelines.
-    // eslint-disable-next-line no-control-regex
-    sanitized = sanitized.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
-
-    // Zero-width & format characters often abused for obfuscation.
-    sanitized = sanitized.replace(/[\u200B-\u200F\uFEFF]/g, ''); // ZWSP, ZWJ, ZWNJ, LRM, RLM, BOM
-
-    // Bidi overrides / isolates
-    sanitized = sanitized.replace(/[\u202A-\u202E\u2060-\u2069]/g, '');
-
-    // Unicode line/paragraph separators
-    sanitized = sanitized.replace(/[\u2028\u2029]/g, '');
-
-    // Collapse whitespace
-    sanitized = sanitized.trim().replace(/\s+/g, ' ');
-
-    return sanitized;
-  }
-
-  /**
-   * Strict HTML sanitization to plain text (no tags retained).
-   * Strips all HTML tags and keeps only text content, then applies
-   * additional defensive scrubbing for protocol keywords & patterns.
-   */
-  sanitizeHtml(html: string): string {
-    const raw = (html ?? '').trim();
-    if (raw.length === 0) return '';
-
-    // 1) Strip all HTML tags and keep only text content
-    let sanitized: string;
-    if (typeof DOMParser !== 'undefined') {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(raw, 'text/html');
-      sanitized = doc.body.textContent || '';
-    } else {
-      // SSR fallback: basic regex to strip tags (not perfect but safe)
-      sanitized = raw.replace(/<[^>]*>/g, '');
-    }
-
-    // 2) Remove event handler intent strings (defensive; mostly irrelevant when tags are gone)
-    sanitized = this.replaceRepeatedly(sanitized, /\s*on\w+\s*=\s*["'][^"']*["']/gi, '');
-    sanitized = this.replaceRepeatedly(sanitized, /\s*on\w+\s*=\s*[^\s>]*/gi, '');
-
-    // 3) Nuke dangerous protocols (including encoded/colon variants) found in text
-    const dangerous = [
-      'javascript:',
-      'javascript&colon;',
-      'javascript&#58;',
-      'javascript&#x3a;',
-      'javascript&#x003a;',
-      'data:',
-      'data&colon;',
-      'data&#58;',
-      'data&#x3a;',
-      'vbscript:',
-      'vbscript&colon;',
-      'vbscript&#58;',
-      'vbscript&#x3a;',
-      'file:',
-      'about:',
-    ];
-    for (const proto of dangerous) {
-      const pattern = proto.replace(':', '\\s*:\\s*'); // be tolerant to whitespace around colon
-      sanitized = this.replaceRepeatedly(sanitized, new RegExp(pattern, 'gi'), '');
-    }
-
-    // 4) Remove CSS url() with dangerous protocols if somehow present in text
-    sanitized = sanitized.replace(
-      /url\s*\(\s*['"]?\s*(?:javascript:|data:|vbscript:)[^)]*['"]?\s*\)/gi,
-      ''
-    );
-
-    return sanitized;
-  }
-
-  /**
-   * Prepare sanitized HTML for safe Angular rendering.
-   * Use this result for [innerHTML]; Angular will still apply its security checks.
-   */
-  sanitizeHtmlForAngular(html: string): string {
-    const plain = this.sanitizeHtml(html);
-    // Use Angular's sanitizeHtml method which handles the security context internally
-    return this.domSanitizer.sanitize(1 /* SecurityContext.HTML */, plain) ?? '';
-  }
-
-  /**
-   * Helper: Append children nodes after sanitization (unwrap)
-   */
-  private appendChildrenUnwrapped(
-    src: Node,
-    destParent: Node,
-    sanitizeNodeFn: (node: Node) => Node | null
-  ): void {
-    for (const child of Array.from(src.childNodes)) {
-      const sanitizedChild = sanitizeNodeFn(child);
-      if (sanitizedChild) destParent.appendChild(sanitizedChild);
-    }
-  }
-
-  /**
-   * Helper: Check if URL/href/src value is safe (protocol allowlist)
-   */
-  private isSafeHrefOrSrc(value: string): boolean {
-    const v = (value ?? '').trim();
-    if (v.startsWith('#')) return true; // fragment
-    if (v.startsWith('/') || v.startsWith('./') || v.startsWith('../')) return true; // relative
-    try {
-      const u = new URL(
-        v,
-        typeof window !== 'undefined' ? window.location.origin : this.DEFAULT_BASE_URL
-      );
-      return ['http:', 'https:', 'mailto:'].includes(u.protocol);
-    } catch {
-      return false;
-    }
-  }
-
-  /**
-   * Helper: Sanitize a single DOM node based on allowlist
-   */
-  private sanitizeNodeWithAllowlist(
-    node: Node,
-    allowedTagSet: Set<string>,
-    globalAllowed: Set<string>,
-    tagToAllowed: Map<string, Set<string>>
-  ): Node | null {
-    if (node.nodeType === Node.TEXT_NODE) {
-      // Clean text content with sanitizeString rules (light pass).
-      const text = this.sanitizeString(node.textContent ?? '');
-      return document.createTextNode(text);
-    }
-
-    if (node.nodeType === Node.ELEMENT_NODE) {
-      const el = node as Element;
-      const tag = el.tagName.toLowerCase();
-
-      if (!allowedTagSet.has(tag)) {
-        // Strip the element but keep sanitized children (unwrap)
-        const frag = document.createDocumentFragment();
-        this.appendChildrenUnwrapped(el, frag, (n) =>
-          this.sanitizeNodeWithAllowlist(n, allowedTagSet, globalAllowed, tagToAllowed)
-        );
-        return frag;
-      }
-
-      const out = document.createElement(tag);
-
-      // Copy only allowed attributes; drop style by default.
-      const allowedForTag = new Set([
-        ...globalAllowed,
-        ...(tagToAllowed.get(tag) ?? new Set<string>()),
-      ]);
-
-      for (const attr of Array.from(el.attributes)) {
-        const name = attr.name.toLowerCase();
-        if (!allowedForTag.has(name)) continue;
-        const val = attr.value;
-
-        if (name === 'href' || name === 'src' || name === 'cite') {
-          if (this.isSafeHrefOrSrc(val)) {
-            out.setAttribute(name, val);
-          }
-          continue;
-        }
-
-        if (name === 'style') {
-          // Disallow inline style by default (skip).
-          continue;
-        }
-
-        out.setAttribute(name, val);
-      }
-
-      // Recurse
-      this.appendChildrenUnwrapped(el, out, (n) =>
-        this.sanitizeNodeWithAllowlist(n, allowedTagSet, globalAllowed, tagToAllowed)
-      );
-      return out;
-    }
-
-    // Drop comments, processing instructions, etc.
-    return null;
-  }
-
-  /**
-   * Whitelist-based HTML sanitizer that preserves allowed markup.
-   * - In browser: DOMParser traversal with attribute-level filtering.
-   * - In SSR / no DOM: falls back to sanitize-html with equivalent allowlist.
-   *
-   * @param html Raw HTML
-   * @param allowedTags Allowed element names (lowercase)
-   * @param allowedAttributes Map of tag -> allowed attribute names (lowercase). Use '*' for global.
-   * @returns Sanitized HTML string limited to the allowlist.
-   */
-  sanitizeHtmlAdvanced(
-    html: string,
-    allowedTags: string[] = [],
-    allowedAttributes: Record<string, string[]> = {}
-  ): string {
-    const raw = (html ?? '').trim();
-    if (raw.length === 0) return '';
-
-    // If no tags allowed, reuse strict plain-text sanitizer.
-    if (allowedTags.length === 0) return this.sanitizeHtml(raw);
-
-    // SSR-safe fallback: if DOM APIs are not available, fall back to plain text sanitization
-    const hasDom = typeof window !== 'undefined' && typeof DOMParser !== 'undefined';
-    if (!hasDom) {
-      // In SSR context without DOM, fall back to plain text sanitization for safety
-      return this.sanitizeHtml(raw);
-    }
-
-    // Browser path: DOM traversal + manual filtering
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(raw, 'text/html');
-
-    const container = document.createElement('div');
-
-    const globalAllowed = new Set((allowedAttributes['*'] ?? []).map((a) => a.toLowerCase()));
-    const tagToAllowed = new Map<string, Set<string>>(
-      Object.entries(allowedAttributes).map(([k, v]) => [
-        k.toLowerCase(),
-        new Set(v.map((x) => x.toLowerCase())),
-      ])
-    );
-    const allowedTagSet = new Set(allowedTags.map((t) => t.toLowerCase()));
-
-    this.appendChildrenUnwrapped(doc.body, container, (n) =>
-      this.sanitizeNodeWithAllowlist(n, allowedTagSet, globalAllowed, tagToAllowed)
-    );
-    return container.innerHTML;
-  }
-
-  /**
-   * Validate an API key format (lightweight).
-   * Accepts alnum, dot, underscore, dash; length heuristic.
-   */
+  /** Lightweight API key validator (format heuristic). */
   validateApiKey(key: string): ValidationResult {
     const errors: string[] = [];
     const value = (key ?? '').trim();
@@ -402,64 +112,239 @@ export class ValidationService {
   }
 
   /**
-   * URL sanitizer: allowlist protocols; rejects encoded protocol smuggling.
+   * Unicode hygiene & control character stripping.
+   * NFC normalization + removal of control/zero-width/bidi/invisible chars.
+   */
+  sanitizeString(input: string): string {
+    let s = (input ?? '').normalize('NFC');
+    // eslint-disable-next-line no-control-regex
+    s = s.replace(/[\x00-\x1F\x7F-\x9F]/g, '');                    // C0/C1 + nulls
+    s = s.replace(/[\u200B-\u200F\uFEFF]/g, '');                   // ZWSP/ZWJ/ZWNJ/LRM/RLM/BOM
+    s = s.replace(/[\u202A-\u202E\u2060-\u2069]/g, '');            // bidi overrides/isolates
+    s = s.replace(/[\u2028\u2029]/g, '');                          // line/para sep
+    s = s.trim().replace(/\s+/g, ' ');                             // collapse whitespace
+    return s;
+  }
+
+  /**
+   * Strict HTML → plain text sanitizer.
+   * 1) sanitize-html strips all tags/attrs
+   * 2) scrub residual protocol strings / url() patterns
+   */
+  sanitizeHtml(html: string): string {
+    const raw = (html ?? '').trim();
+    if (!raw) return '';
+
+    let out = sanitizeHtmlFn(raw, {
+      allowedTags: [],
+      allowedAttributes: {},
+      disallowedTagsMode: 'discard',
+      allowedSchemes: ['http', 'https', 'mailto', 'blob'],
+      allowedSchemesByTag: {},
+      allowedSchemesAppliedToAttributes: ['href', 'src', 'cite'],
+      allowProtocolRelative: false,
+    });
+
+    // Event handler patterns (defensive; moot when no tags remain)
+    out = this.replaceRepeatedly(out, /\s*on\w+\s*=\s*["'][^"']*["']/gi, '');
+    out = this.replaceRepeatedly(out, /\s*on\w+\s*=\s*[^\s>]*/gi, '');
+
+    // Dangerous protocol strings (encoded/whitespace-tolerant)
+    for (const proto of [
+      'javascript:', 'javascript&colon;', 'javascript&#58;', 'javascript&#x3a;', 'javascript&#x003a;',
+      'data:', 'data&colon;', 'data&#58;', 'data&#x3a;',
+      'vbscript:', 'vbscript&colon;', 'vbscript&#58;', 'vbscript&#x3a;',
+      'file:', 'about:'
+    ]) {
+      const pattern = proto.replace(':', '\\s*:\\s*');
+      out = this.replaceRepeatedly(out, new RegExp(pattern, 'gi'), '');
+    }
+
+    // CSS url() with bad schemes (if any residual text contains it)
+    out = out.replace(/url\s*\(\s*['"]?\s*(?:javascript:|data:|vbscript:)[^)]*['"]?\s*\)/gi, '');
+    return out;
+  }
+
+  /** Use for [innerHTML]; still passes Angular’s security checks. */
+  sanitizeHtmlForAngular(html: string): string {
+    const textOnly = this.sanitizeHtml(html);
+    return this.domSanitizer.sanitize(SecurityContext.HTML, textOnly) ?? '';
+  }
+
+  /**
+   * Whitelist sanitizer that preserves select markup.
+   * Browser: DOMParser traversal; SSR: sanitize-html fallback with an equivalent allowlist.
+   * Never allows inline event handlers (on*), inline style, or srcdoc.
+   */
+  sanitizeHtmlAdvanced(
+    html: string,
+    allowedTags: string[] = [],
+    allowedAttributes: Record<string, string[]> = {}
+  ): string {
+    const raw = (html ?? '').trim();
+    if (!raw) return '';
+    if (allowedTags.length === 0) return this.sanitizeHtml(raw);
+
+    // Normalize allowlist: drop style/srcdoc/on* regardless of caller config.
+    const normalizedAllowedAttrs: Record<string, string[]> = {};
+    const dropAttr = (name: string) =>
+      name.toLowerCase() === 'style' || name.toLowerCase() === 'srcdoc' || name.toLowerCase().startsWith('on');
+
+    for (const [tag, attrs] of Object.entries(allowedAttributes)) {
+      normalizedAllowedAttrs[tag.toLowerCase()] = (attrs || [])
+        .filter(a => !dropAttr(a))
+        .map(a => a.toLowerCase());
+    }
+    if (normalizedAllowedAttrs['*']) {
+      normalizedAllowedAttrs['*'] = normalizedAllowedAttrs['*'].filter(a => !dropAttr(a));
+    }
+
+    const hasDom =
+      typeof window !== 'undefined' &&
+      typeof (window as any).DOMParser !== 'undefined' &&
+      typeof document !== 'undefined';
+
+    if (!hasDom) {
+      // SSR-safe fallback using sanitize-html with equivalent allowlist.
+      return sanitizeHtmlFn(raw, {
+        allowedTags,
+        allowedAttributes: normalizedAllowedAttrs,
+        allowedSchemes: ['http', 'https', 'mailto', 'blob'],
+        allowedSchemesByTag: {},
+        allowedSchemesAppliedToAttributes: ['href', 'src', 'cite'],
+        allowProtocolRelative: false,
+        transformTags: {
+          '*': (tagName: string, attribs: Record<string, string>) => {
+            const { style, srcdoc, ...rest } = attribs || {};
+            for (const k of Object.keys(rest)) {
+              if (k.toLowerCase().startsWith('on')) delete (rest as any)[k];
+            }
+            return { tagName, attribs: rest };
+          },
+        },
+      });
+    }
+
+    // Browser path: DOM traversal & selective attribute copy.
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(raw, 'text/html');
+
+    const outContainer = document.createElement('div');
+    const allowedTagSet = new Set(allowedTags.map(t => t.toLowerCase()));
+    const globalAllowed = new Set((normalizedAllowedAttrs['*'] ?? []).map(a => a.toLowerCase()));
+    const perTagAllowed = new Map<string, Set<string>>(
+      Object.entries(normalizedAllowedAttrs)
+        .filter(([k]) => k !== '*')
+        .map(([k, v]) => [k.toLowerCase(), new Set(v.map(x => x.toLowerCase()))])
+    );
+
+    const isSafeHrefOrSrc = (value: string): boolean => {
+      const v = (value ?? '').trim();
+      if (v.startsWith('//')) return false;                       // protocol-relative
+      if (v.startsWith('#')) return true;                         // fragment-only
+      if (v.startsWith('/') || v.startsWith('./') || v.startsWith('../')) return true; // relative
+      try {
+        const u = new URL(v, window.location.origin);
+        return ['http:', 'https:', 'mailto:', 'blob:'].includes(u.protocol);
+      } catch {
+        return false;
+      }
+    };
+
+    const appendChildrenUnwrapped = (src: Node, dest: Node) => {
+      for (const child of Array.from(src.childNodes)) {
+        const n = sanitizeNode(child);
+        if (n) dest.appendChild(n);
+      }
+    };
+
+    const sanitizeNode = (node: Node): Node | null => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const text = this.sanitizeString(node.textContent ?? '');
+        return document.createTextNode(text);
+      }
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const el = node as Element;
+        const tag = el.tagName.toLowerCase();
+
+        if (!allowedTagSet.has(tag)) {
+          const frag = document.createDocumentFragment();
+          appendChildrenUnwrapped(el, frag);
+          return frag;
+        }
+
+        const outEl = document.createElement(tag);
+        const allowed = new Set([
+          ...globalAllowed,
+          ...(perTagAllowed.get(tag) ?? new Set<string>()),
+        ]);
+
+        for (const attr of Array.from(el.attributes)) {
+          const name = attr.name.toLowerCase();
+          if (name === 'style' || name === 'srcdoc' || name.startsWith('on')) continue; // hard bans
+          if (!allowed.has(name)) continue;
+
+          const val = attr.value;
+          if (name === 'href' || name === 'src' || name === 'cite') {
+            if (isSafeHrefOrSrc(val)) {
+              outEl.setAttribute(name, val);
+            }
+            continue;
+          }
+          outEl.setAttribute(name, val);
+        }
+
+        appendChildrenUnwrapped(el, outEl);
+        return outEl;
+      }
+      return null; // drop comments/others
+    };
+
+    appendChildrenUnwrapped(doc.body, outContainer);
+    return outContainer.innerHTML;
+  }
+
+  /**
+   * URL sanitizer: allowlist protocols; reject smuggling, control chars, and protocol-relative.
    * Returns '' for unsafe/invalid URLs.
    */
   sanitizeUrl(url: string): string {
     if (!url) return '';
     const normalized = url.trim();
-
-    // Quick deny for protocol-looking prefixes (case/encoding variants)
     const lower = normalized.toLowerCase();
+
+    if (lower.startsWith('//')) return ''; // protocol-relative denied
+
+    // Fast deny for obvious bad schemes (including HTML entity encodings)
     const bad = [
-      'javascript:',
-      'javascript&colon;',
-      'javascript&#58;',
-      'javascript&#x3a;',
-      'javascript&#x003a;',
-      'data:',
-      'data&colon;',
-      'data&#58;',
-      'data&#x3a;',
-      'vbscript:',
-      'vbscript&colon;',
-      'vbscript&#58;',
-      'vbscript&#x3a;',
-      'file:',
-      'file&colon;',
-      'about:',
-      'about&colon;',
+      'javascript:', 'javascript&colon;', 'javascript&#58;', 'javascript&#x3a;', 'javascript&#x003a;',
+      'data:', 'data&colon;', 'data&#58;', 'data&#x3a;',
+      'vbscript:', 'vbscript&colon;', 'vbscript&#58;', 'vbscript&#x3a;',
+      'file:', 'file&colon;', 'about:', 'about&colon;',
     ];
-    for (const proto of bad) {
-      if (lower.includes(proto)) return '';
-    }
+    for (const proto of bad) if (lower.includes(proto)) return '';
 
-    // Decode once to catch encoded protocols
+    // Decode once: refuse if decoding introduces control chars or bad schemes.
     try {
-      const decodedLower = decodeURIComponent(normalized).toLowerCase();
-      for (const proto of bad) {
-        if (decodedLower.includes(proto)) return '';
-      }
+      const decoded = decodeURIComponent(normalized);
+      // eslint-disable-next-line no-control-regex
+      if (/[\x00-\x1F\x7F]/.test(decoded)) return '';
+      const decLower = decoded.toLowerCase();
+      for (const proto of bad) if (decLower.includes(proto)) return '';
     } catch {
-      return ''; // malformed encodings
+      return ''; // malformed encoding
     }
 
-    // Absolute URL path
+    // Absolute vs relative
     try {
-      const parsed = new URL(normalized, 'http://localhost'); // base for relative handling
+      const parsed = new URL(normalized, 'http://example.com'); // base for relative
+      const isAbsolute = parsed.origin !== 'http://example.com';
 
-      // Check if this is an absolute URL (has explicit protocol)
-      if (
-        normalized.includes('://') ||
-        normalized.startsWith('mailto:') ||
-        normalized.startsWith('blob:')
-      ) {
-        // Absolute URL: enforce protocol allowlist
-        const allowed = ['http:', 'https:', 'mailto:', 'blob:'];
-        return allowed.includes(parsed.protocol) ? normalized : '';
+      if (isAbsolute) {
+        return ['http:', 'https:', 'mailto:', 'blob:'].includes(parsed.protocol) ? normalized : '';
       }
 
-      // Relative URL: ensure it doesn't contain dangerous patterns
+      // Relative: permit rooted/relative paths and fragments only
       if (
         normalized.startsWith('/') ||
         normalized.startsWith('./') ||
@@ -468,44 +353,34 @@ export class ValidationService {
       ) {
         return normalized;
       }
-
       return '';
     } catch {
       return '';
     }
   }
 
-  /**
-   * Harden a filename against traversal/injection; keep simple, portable set.
-   */
+  /** Filename hardening across platforms. */
   sanitizeFilename(filename: string): string {
-    let sanitized = filename ?? '';
+    let s = filename ?? '';
 
-    // Remove path separators
-    sanitized = sanitized.replace(/[/\\]/g, '');
-
-    // Null bytes (path truncation)
+    s = s.replace(/[/\\]/g, '');                 // separators
     // eslint-disable-next-line no-control-regex
-    sanitized = sanitized.replace(/\x00/g, '');
+    s = s.replace(/\x00/g, '');                  // nulls
+    s = s.replace(/^\.+/, '');                   // leading dots (hidden)
+    s = s.replace(/[^a-zA-Z0-9._-]/g, '_');      // portable charset
+    s = s.replace(/[.\s]+$/g, '');               // trailing dots/spaces (Windows)
+    if (s.length === 0) s = 'file';
 
-    // Collapse leading dots (hidden files)
-    sanitized = sanitized.replace(/^\.+/, '');
+    // Avoid Windows reserved device names (case-insensitive)
+    const base = s.split('.')[0]?.toUpperCase();
+    const reserved = new Set([
+      'CON','PRN','AUX','NUL',
+      'COM1','COM2','COM3','COM4','COM5','COM6','COM7','COM8','COM9',
+      'LPT1','LPT2','LPT3','LPT4','LPT5','LPT6','LPT7','LPT8','LPT9',
+    ]);
+    if (base && reserved.has(base)) s = `_${s}`;
 
-    // Whitelist basic portable charset
-    sanitized = sanitized.replace(/[^a-zA-Z0-9._-]/g, '_');
-
-    // Trim trailing dots/spaces (Windows quirk)
-    sanitized = sanitized.replace(/[.\s]+$/g, '');
-
-    // Avoid reserved device names on Windows (case-insensitive), with or without extension.
-    const base = sanitized.split('.')[0]?.toUpperCase();
-    if (base && ValidationService.RESERVED_DEVICE_NAMES.has(base)) {
-      sanitized = `_${sanitized}`;
-    }
-
-    if (sanitized.length === 0) sanitized = 'file';
-    if (sanitized.length > 255) sanitized = sanitized.substring(0, 255);
-
-    return sanitized;
+    if (s.length > 255) s = s.slice(0, 255);
+    return s;
   }
 }
