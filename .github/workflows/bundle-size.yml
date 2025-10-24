@@ -66,9 +66,9 @@ jobs:
             echo "⚠️ **Warning**: Bundle size exceeds target budget by $((ACTUAL_KB - BUDGET_KB))KB" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "Consider:" >> $GITHUB_STEP_SUMMARY
-            echo "- Adding more lazy loading" >> $GITHUB_STEP_SUMMARY
-            echo "- Optimizing large dependencies" >> $GITHUB_STEP_SUMMARY
-            echo "- Using dynamic imports" >> $GITHUB_STEP_SUMMARY
+            echo "- Adding more lazy loading." >> $GITHUB_STEP_SUMMARY
+            echo "- Optimizing large dependencies." >> $GITHUB_STEP_SUMMARY
+            echo "- Using dynamic imports." >> $GITHUB_STEP_SUMMARY
           fi
       
       - name: Comment on PR

@@ -1,6 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { DomSanitizer, SecurityContext } from '@angular/platform-browser';
-import sanitizeHtmlLib from 'sanitize-html';
+import { DomSanitizer } from '@angular/platform-browser';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -21,6 +20,33 @@ export interface ValidationResult {
 @Injectable({ providedIn: 'root' })
 export class ValidationService {
   private readonly domSanitizer = inject(DomSanitizer);
+
+  // Constants for sanitization
+  private readonly DEFAULT_BASE_URL = 'http://localhost';
+  private static readonly RESERVED_DEVICE_NAMES = new Set([
+    'CON',
+    'PRN',
+    'AUX',
+    'NUL',
+    'COM1',
+    'COM2',
+    'COM3',
+    'COM4',
+    'COM5',
+    'COM6',
+    'COM7',
+    'COM8',
+    'COM9',
+    'LPT1',
+    'LPT2',
+    'LPT3',
+    'LPT4',
+    'LPT5',
+    'LPT6',
+    'LPT7',
+    'LPT8',
+    'LPT9',
+  ]);
 
   /**
    * Replace matches repeatedly until input stabilizes.
@@ -94,7 +120,8 @@ export class ValidationService {
     if (seed !== undefined) {
       if (!Number.isInteger(seed)) errors.push('Seed must be an integer');
       if (typeof seed === 'number' && seed < 0) errors.push('Seed must be a positive number');
-      if (typeof seed === 'number' && seed > Number.MAX_SAFE_INTEGER) errors.push('Seed is too large');
+      if (typeof seed === 'number' && seed > Number.MAX_SAFE_INTEGER)
+        errors.push('Seed is too large');
     }
     return { isValid: errors.length === 0, errors };
   }
@@ -145,25 +172,23 @@ export class ValidationService {
 
   /**
    * Strict HTML sanitization to plain text (no tags retained).
-   * Defense-in-depth:
-   *  - Layer 1: sanitize-html library removes all tags/attrs.
-   *  - Layers 2–4: extra scrubbing for protocol keywords & CSS url() patterns that could
-   *    survive via encoding in text contexts or downstream re-interpretation.
+   * Strips all HTML tags and keeps only text content, then applies
+   * additional defensive scrubbing for protocol keywords & patterns.
    */
   sanitizeHtml(html: string): string {
     const raw = (html ?? '').trim();
     if (raw.length === 0) return '';
 
-    // 1) Library pass: strip all tags & attributes (plain text result)
-    let sanitized = sanitizeHtmlLib(raw, {
-      allowedTags: [],
-      allowedAttributes: {},
-      disallowedTagsMode: 'discard',
-      allowedSchemes: ['http', 'https', 'mailto'],
-      allowedSchemesByTag: {},
-      allowedSchemesAppliedToAttributes: ['href', 'src', 'cite'],
-      allowProtocolRelative: false,
-    });
+    // 1) Strip all HTML tags and keep only text content
+    let sanitized: string;
+    if (typeof DOMParser !== 'undefined') {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(raw, 'text/html');
+      sanitized = doc.body.textContent || '';
+    } else {
+      // SSR fallback: basic regex to strip tags (not perfect but safe)
+      sanitized = raw.replace(/<[^>]*>/g, '');
+    }
 
     // 2) Remove event handler intent strings (defensive; mostly irrelevant when tags are gone)
     sanitized = this.replaceRepeatedly(sanitized, /\s*on\w+\s*=\s*["'][^"']*["']/gi, '');
@@ -171,10 +196,21 @@ export class ValidationService {
 
     // 3) Nuke dangerous protocols (including encoded/colon variants) found in text
     const dangerous = [
-      'javascript:', 'javascript&colon;', 'javascript&#58;', 'javascript&#x3a;', 'javascript&#x003a;',
-      'data:', 'data&colon;', 'data&#58;', 'data&#x3a;',
-      'vbscript:', 'vbscript&colon;', 'vbscript&#58;', 'vbscript&#x3a;',
-      'file:', 'about:',
+      'javascript:',
+      'javascript&colon;',
+      'javascript&#58;',
+      'javascript&#x3a;',
+      'javascript&#x003a;',
+      'data:',
+      'data&colon;',
+      'data&#58;',
+      'data&#x3a;',
+      'vbscript:',
+      'vbscript&colon;',
+      'vbscript&#58;',
+      'vbscript&#x3a;',
+      'file:',
+      'about:',
     ];
     for (const proto of dangerous) {
       const pattern = proto.replace(':', '\\s*:\\s*'); // be tolerant to whitespace around colon
@@ -196,7 +232,107 @@ export class ValidationService {
    */
   sanitizeHtmlForAngular(html: string): string {
     const plain = this.sanitizeHtml(html);
-    return this.domSanitizer.sanitize(SecurityContext.HTML, plain) ?? '';
+    // Use Angular's sanitizeHtml method which handles the security context internally
+    return this.domSanitizer.sanitize(1 /* SecurityContext.HTML */, plain) ?? '';
+  }
+
+  /**
+   * Helper: Append children nodes after sanitization (unwrap)
+   */
+  private appendChildrenUnwrapped(
+    src: Node,
+    destParent: Node,
+    sanitizeNodeFn: (node: Node) => Node | null
+  ): void {
+    for (const child of Array.from(src.childNodes)) {
+      const sanitizedChild = sanitizeNodeFn(child);
+      if (sanitizedChild) destParent.appendChild(sanitizedChild);
+    }
+  }
+
+  /**
+   * Helper: Check if URL/href/src value is safe (protocol allowlist)
+   */
+  private isSafeHrefOrSrc(value: string): boolean {
+    const v = (value ?? '').trim();
+    if (v.startsWith('#')) return true; // fragment
+    if (v.startsWith('/') || v.startsWith('./') || v.startsWith('../')) return true; // relative
+    try {
+      const u = new URL(
+        v,
+        typeof window !== 'undefined' ? window.location.origin : this.DEFAULT_BASE_URL
+      );
+      return ['http:', 'https:', 'mailto:'].includes(u.protocol);
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Helper: Sanitize a single DOM node based on allowlist
+   */
+  private sanitizeNodeWithAllowlist(
+    node: Node,
+    allowedTagSet: Set<string>,
+    globalAllowed: Set<string>,
+    tagToAllowed: Map<string, Set<string>>
+  ): Node | null {
+    if (node.nodeType === Node.TEXT_NODE) {
+      // Clean text content with sanitizeString rules (light pass).
+      const text = this.sanitizeString(node.textContent ?? '');
+      return document.createTextNode(text);
+    }
+
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      const el = node as Element;
+      const tag = el.tagName.toLowerCase();
+
+      if (!allowedTagSet.has(tag)) {
+        // Strip the element but keep sanitized children (unwrap)
+        const frag = document.createDocumentFragment();
+        this.appendChildrenUnwrapped(el, frag, (n) =>
+          this.sanitizeNodeWithAllowlist(n, allowedTagSet, globalAllowed, tagToAllowed)
+        );
+        return frag;
+      }
+
+      const out = document.createElement(tag);
+
+      // Copy only allowed attributes; drop style by default.
+      const allowedForTag = new Set([
+        ...globalAllowed,
+        ...(tagToAllowed.get(tag) ?? new Set<string>()),
+      ]);
+
+      for (const attr of Array.from(el.attributes)) {
+        const name = attr.name.toLowerCase();
+        if (!allowedForTag.has(name)) continue;
+        const val = attr.value;
+
+        if (name === 'href' || name === 'src' || name === 'cite') {
+          if (this.isSafeHrefOrSrc(val)) {
+            out.setAttribute(name, val);
+          }
+          continue;
+        }
+
+        if (name === 'style') {
+          // Disallow inline style by default (skip).
+          continue;
+        }
+
+        out.setAttribute(name, val);
+      }
+
+      // Recurse
+      this.appendChildrenUnwrapped(el, out, (n) =>
+        this.sanitizeNodeWithAllowlist(n, allowedTagSet, globalAllowed, tagToAllowed)
+      );
+      return out;
+    }
+
+    // Drop comments, processing instructions, etc.
+    return null;
   }
 
   /**
@@ -220,26 +356,11 @@ export class ValidationService {
     // If no tags allowed, reuse strict plain-text sanitizer.
     if (allowedTags.length === 0) return this.sanitizeHtml(raw);
 
-    // SSR-safe fallback when DOM APIs are not available
+    // SSR-safe fallback: if DOM APIs are not available, fall back to plain text sanitization
     const hasDom = typeof window !== 'undefined' && typeof DOMParser !== 'undefined';
     if (!hasDom) {
-      return sanitizeHtmlLib(raw, {
-        allowedTags,
-        allowedAttributes: Object.keys(allowedAttributes).length
-          ? allowedAttributes
-          : {}, // sanitize-html expects {} when none
-        allowedSchemes: ['http', 'https', 'mailto'],
-        allowedSchemesByTag: {},
-        allowedSchemesAppliedToAttributes: ['href', 'src', 'cite'],
-        allowProtocolRelative: false,
-        transformTags: {
-          // Drop inline style entirely by default (too easy to abuse)
-          '*': (tagName, attribs) => {
-            const { style, ...rest } = attribs as Record<string, string>;
-            return { tagName, attribs: rest };
-          },
-        },
-      });
+      // In SSR context without DOM, fall back to plain text sanitization for safety
+      return this.sanitizeHtml(raw);
     }
 
     // Browser path: DOM traversal + manual filtering
@@ -248,87 +369,18 @@ export class ValidationService {
 
     const container = document.createElement('div');
 
-    const globalAllowed = new Set((allowedAttributes['*'] ?? []).map(a => a.toLowerCase()));
+    const globalAllowed = new Set((allowedAttributes['*'] ?? []).map((a) => a.toLowerCase()));
     const tagToAllowed = new Map<string, Set<string>>(
-      Object.entries(allowedAttributes).map(([k, v]) => [k.toLowerCase(), new Set(v.map(x => x.toLowerCase()))])
+      Object.entries(allowedAttributes).map(([k, v]) => [
+        k.toLowerCase(),
+        new Set(v.map((x) => x.toLowerCase())),
+      ])
     );
-    const allowedTagSet = new Set(allowedTags.map(t => t.toLowerCase()));
+    const allowedTagSet = new Set(allowedTags.map((t) => t.toLowerCase()));
 
-    const appendChildrenUnwrapped = (src: Node, destParent: Node) => {
-      for (const child of Array.from(src.childNodes)) {
-        const sanitizedChild = sanitizeNode(child);
-        if (sanitizedChild) destParent.appendChild(sanitizedChild);
-      }
-    };
-
-    const isSafeHrefOrSrc = (value: string): boolean => {
-      const v = (value ?? '').trim();
-      if (v.startsWith('#')) return true; // fragment
-      if (v.startsWith('/') || v.startsWith('./') || v.startsWith('../')) return true; // relative
-      try {
-        const u = new URL(v, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
-        return ['http:', 'https:', 'mailto:'].includes(u.protocol);
-      } catch {
-        return false;
-      }
-    };
-
-    const sanitizeNode = (node: Node): Node | null => {
-      if (node.nodeType === Node.TEXT_NODE) {
-        // Clean text content with sanitizeString rules (light pass).
-        const text = this.sanitizeString(node.textContent ?? '');
-        return document.createTextNode(text);
-      }
-
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        const el = node as Element;
-        const tag = el.tagName.toLowerCase();
-
-        if (!allowedTagSet.has(tag)) {
-          // Strip the element but keep sanitized children (unwrap)
-          const frag = document.createDocumentFragment();
-          appendChildrenUnwrapped(el, frag);
-          return frag;
-        }
-
-        const out = document.createElement(tag);
-
-        // Copy only allowed attributes; drop style by default.
-        const allowedForTag = new Set([
-          ...globalAllowed,
-          ...(tagToAllowed.get(tag) ?? new Set<string>()),
-        ]);
-
-        for (const attr of Array.from(el.attributes)) {
-          const name = attr.name.toLowerCase();
-          if (!allowedForTag.has(name)) continue;
-          const val = attr.value;
-
-          if (name === 'href' || name === 'src' || name === 'cite') {
-            if (isSafeHrefOrSrc(val)) {
-              out.setAttribute(name, val);
-            }
-            continue;
-          }
-
-          if (name === 'style') {
-            // Disallow inline style by default (skip).
-            continue;
-          }
-
-          out.setAttribute(name, val);
-        }
-
-        // Recurse
-        appendChildrenUnwrapped(el, out);
-        return out;
-      }
-
-      // Drop comments, processing instructions, etc.
-      return null;
-    };
-
-    appendChildrenUnwrapped(doc.body, container);
+    this.appendChildrenUnwrapped(doc.body, container, (n) =>
+      this.sanitizeNodeWithAllowlist(n, allowedTagSet, globalAllowed, tagToAllowed)
+    );
     return container.innerHTML;
   }
 
@@ -360,10 +412,23 @@ export class ValidationService {
     // Quick deny for protocol-looking prefixes (case/encoding variants)
     const lower = normalized.toLowerCase();
     const bad = [
-      'javascript:', 'javascript&colon;', 'javascript&#58;', 'javascript&#x3a;', 'javascript&#x003a;',
-      'data:', 'data&colon;', 'data&#58;', 'data&#x3a;',
-      'vbscript:', 'vbscript&colon;', 'vbscript&#58;', 'vbscript&#x3a;',
-      'file:', 'file&colon;', 'about:', 'about&colon;',
+      'javascript:',
+      'javascript&colon;',
+      'javascript&#58;',
+      'javascript&#x3a;',
+      'javascript&#x003a;',
+      'data:',
+      'data&colon;',
+      'data&#58;',
+      'data&#x3a;',
+      'vbscript:',
+      'vbscript&colon;',
+      'vbscript&#58;',
+      'vbscript&#x3a;',
+      'file:',
+      'file&colon;',
+      'about:',
+      'about&colon;',
     ];
     for (const proto of bad) {
       if (lower.includes(proto)) return '';
@@ -381,9 +446,15 @@ export class ValidationService {
 
     // Absolute URL path
     try {
-      const parsed = new URL(normalized, 'http://example.com'); // base for relative handling
-      // If user supplied a protocol, enforce allowlist
-      if (parsed.origin !== 'http://example.com') {
+      const parsed = new URL(normalized, 'http://localhost'); // base for relative handling
+
+      // Check if this is an absolute URL (has explicit protocol)
+      if (
+        normalized.includes('://') ||
+        normalized.startsWith('mailto:') ||
+        normalized.startsWith('blob:')
+      ) {
+        // Absolute URL: enforce protocol allowlist
         const allowed = ['http:', 'https:', 'mailto:', 'blob:'];
         return allowed.includes(parsed.protocol) ? normalized : '';
       }
@@ -428,12 +499,7 @@ export class ValidationService {
 
     // Avoid reserved device names on Windows (case-insensitive), with or without extension.
     const base = sanitized.split('.')[0]?.toUpperCase();
-    const reserved = new Set([
-      'CON', 'PRN', 'AUX', 'NUL',
-      'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9',
-      'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9',
-    ]);
-    if (base && reserved.has(base)) {
+    if (base && ValidationService.RESERVED_DEVICE_NAMES.has(base)) {
       sanitized = `_${sanitized}`;
     }
 

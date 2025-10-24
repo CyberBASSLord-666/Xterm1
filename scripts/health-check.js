@@ -56,6 +56,7 @@ function exec(command) {
   try {
     return execSync(command, { encoding: 'utf-8', stdio: 'pipe' }).trim();
   } catch (error) {
+    logError(`Command failed: "${command}"\n${error.message}`);
     return null;
   }
 }
