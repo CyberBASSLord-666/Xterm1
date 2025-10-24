@@ -123,7 +123,8 @@ export class ValidationService {
   sanitizeString(input: string): string {
     let sanitized = (input ?? '').normalize('NFC');
 
-    // Control chars (C0/C1) including nulls.
+    // Remove C0 (0x00-0x1F) and C1 (0x7F-0x9F) control characters including null bytes
+    // to prevent injection attacks and data corruption per OWASP guidelines.
     // eslint-disable-next-line no-control-regex
     sanitized = sanitized.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
 
