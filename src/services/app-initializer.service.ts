@@ -4,8 +4,17 @@ import { ConfigService } from './config.service';
 import { RequestCacheService } from './request-cache.service';
 import { KeyboardShortcutsService } from './keyboard-shortcuts.service';
 import { PerformanceMonitorService } from './performance-monitor.service';
+import { AnalyticsService } from './analytics.service';
 import { initializeGeminiClient } from './pollinations.client';
 import { environment } from '../environments/environment';
+
+/**
+ * Runtime configuration interface for dynamic configuration injection.
+ */
+interface RuntimeConfig {
+  geminiApiKey?: string;
+  analyticsMeasurementId?: string;
+}
 
 /**
  * App initialization service.
@@ -18,6 +27,7 @@ export class AppInitializerService {
   private requestCache = inject(RequestCacheService);
   private keyboardShortcuts = inject(KeyboardShortcutsService);
   private perfMonitor = inject(PerformanceMonitorService);
+  private analytics = inject(AnalyticsService);
 
   /**
    * Initialize the application.
@@ -35,6 +45,9 @@ export class AppInitializerService {
           'AppInitializer'
         );
 
+        // Hydrate configuration from various sources
+        this.hydrateConfiguration();
+
         // Start cache cleanup
         this.requestCache.startPeriodicCleanup(60000); // Every minute
 
@@ -44,11 +57,30 @@ export class AppInitializerService {
           initializeGeminiClient(apiKey);
           this.logger.info('Gemini API client initialized', undefined, 'AppInitializer');
         } else {
+          // Check if we should fail fast in production
+          const bootstrapConfig = (environment as any).bootstrapConfig;
+          if (environment.production && bootstrapConfig?.failOnMissingGeminiKey === true) {
+            throw new Error('Missing Gemini API key in production environment.');
+          }
           this.logger.warn(
             'No Gemini API key found. AI features will be limited.',
             undefined,
             'AppInitializer'
           );
+        }
+
+        // Initialize analytics if measurement ID is available
+        const analyticsMeasurementId = this.config.getAnalyticsMeasurementId();
+        if (analyticsMeasurementId) {
+          this.analytics.setEnabled(true);
+          this.analytics.initialize(analyticsMeasurementId);
+          this.logger.info(
+            'Analytics initialized',
+            { measurementId: analyticsMeasurementId },
+            'AppInitializer'
+          );
+        } else {
+          this.logger.debug('Analytics not configured', undefined, 'AppInitializer');
         }
 
         // Setup default keyboard shortcuts
@@ -64,6 +96,69 @@ export class AppInitializerService {
         throw error;
       }
     });
+  }
+
+  /**
+   * Hydrate configuration from multiple sources in priority order:
+   * 1. Runtime config object (window.__POLLIWALL_RUNTIME_CONFIG__)
+   * 2. Meta tags in document head
+   * 3. Environment bootstrapConfig
+   */
+  private hydrateConfiguration(): void {
+    // First, check for runtime config (highest priority)
+    const runtimeConfig = (window as any).__POLLIWALL_RUNTIME_CONFIG__ as RuntimeConfig | undefined;
+    if (runtimeConfig) {
+      if (runtimeConfig.geminiApiKey) {
+        this.config.setGeminiApiKey(runtimeConfig.geminiApiKey);
+        this.logger.debug('Gemini API key loaded from runtime config', undefined, 'AppInitializer');
+      }
+      if (runtimeConfig.analyticsMeasurementId) {
+        this.config.setAnalyticsMeasurementId(runtimeConfig.analyticsMeasurementId);
+        this.logger.debug(
+          'Analytics measurement ID loaded from runtime config',
+          undefined,
+          'AppInitializer'
+        );
+      }
+      return; // Runtime config takes precedence, skip other sources
+    }
+
+    // Second, check for meta tags
+    const bootstrapConfig = (environment as any).bootstrapConfig;
+    if (bootstrapConfig?.meta) {
+      const geminiKeyMeta = bootstrapConfig.meta.geminiApiKey;
+      const analyticsIdMeta = bootstrapConfig.meta.analyticsMeasurementId;
+
+      if (geminiKeyMeta) {
+        const geminiMeta = document.querySelector(
+          `meta[name="${geminiKeyMeta}"]`
+        ) as HTMLMetaElement;
+        if (geminiMeta) {
+          const content = geminiMeta.getAttribute('content');
+          if (content) {
+            this.config.setGeminiApiKey(content);
+            this.logger.debug('Gemini API key loaded from meta tag', undefined, 'AppInitializer');
+          }
+        }
+      }
+
+      if (analyticsIdMeta) {
+        const analyticsMeta = document.querySelector(
+          `meta[name="${analyticsIdMeta}"]`
+        ) as HTMLMetaElement;
+        if (analyticsMeta) {
+          const content = analyticsMeta.getAttribute('content');
+          if (content) {
+            this.config.setAnalyticsMeasurementId(content);
+            this.logger.debug(
+              'Analytics measurement ID loaded from meta tag',
+              undefined,
+              'AppInitializer'
+            );
+          }
+        }
+      }
+    }
   }
 
   /**
