@@ -9,7 +9,7 @@ export class ToastComponent implements OnInit, OnDestroy {
   message = signal<string | null>(null);
   private timeoutId: number | undefined;
 
-  private handleToast = (event: Event) => {
+  private handleToast = (event: Event): void => {
     const customEvent = event as CustomEvent<string>;
     this.message.set(customEvent.detail);
 
@@ -21,11 +21,11 @@ export class ToastComponent implements OnInit, OnDestroy {
     }, 4000);
   };
 
-  ngOnInit(): void {
+  public ngOnInit(): void {
     window.addEventListener('toast', this.handleToast);
   }
 
-  ngOnDestroy(): void {
+  public ngOnDestroy(): void {
     window.removeEventListener('toast', this.handleToast);
     if (this.timeoutId) {
       clearTimeout(this.timeoutId);

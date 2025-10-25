@@ -70,33 +70,33 @@ export class EditorComponent implements OnInit {
     });
   }
 
-  ngOnInit() {
+  public ngOnInit(): void {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(async (params) => {
       const id = params.get('id');
       if (!id) {
-        this.router.navigateByUrl('/gallery');
+        await this.router.navigateByUrl('/gallery');
         return;
       }
       await this.loadItem(id);
     });
   }
 
-  onRestyleInput(event: Event) {
+  public onRestyleInput(event: Event): void {
     this.restyle.set((event.target as HTMLInputElement).value);
   }
 
-  async loadItem(id: string) {
+  public async loadItem(id: string): Promise<void> {
     const item = await this.gs.get(id);
     if (!item) {
       this.toast.show('Not found');
-      this.router.navigateByUrl('/gallery');
+      await this.router.navigateByUrl('/gallery');
       return;
     }
     this.item.set(item);
     await this.loadLineage(item);
   }
 
-  async loadLineage(currentItem: GalleryItem) {
+  public async loadLineage(currentItem: GalleryItem): Promise<void> {
     let parent: GalleryItem | null = null;
     if (currentItem.lineage?.parentId) {
       parent = (await this.gs.get(currentItem.lineage.parentId)) ?? null;
@@ -107,7 +107,7 @@ export class EditorComponent implements OnInit {
     this.lineage.set({ parent, children });
   }
 
-  async makeVariant() {
+  public async makeVariant(): Promise<void> {
     const base = this.item();
     if (!base) return;
     this.working.set(true);
@@ -142,15 +142,16 @@ export class EditorComponent implements OnInit {
         collectionId: base.collectionId,
       });
       this.toast.show('Variant added to gallery.');
-      this.router.navigate(['/edit', id]);
-    } catch (e: any) {
-      this.toast.show(`Variant failed: ${e.message || e}`);
+      await this.router.navigate(['/edit', id]);
+    } catch (e: unknown) {
+      const error = e as Error;
+      this.toast.show(`Variant failed: ${error.message || String(e)}`);
     } finally {
       this.working.set(false);
     }
   }
 
-  async makeRestyle() {
+  public async makeRestyle(): Promise<void> {
     const base = this.item();
     if (!base) return;
     this.working.set(true);
@@ -185,15 +186,16 @@ export class EditorComponent implements OnInit {
         collectionId: base.collectionId,
       });
       this.toast.show('Restyle added to gallery.');
-      this.router.navigate(['/edit', id]);
-    } catch (e: any) {
-      this.toast.show(`Restyle failed: ${e.message || e}`);
+      await this.router.navigate(['/edit', id]);
+    } catch (e: unknown) {
+      const error = e as Error;
+      this.toast.show(`Restyle failed: ${error.message || String(e)}`);
     } finally {
       this.working.set(false);
     }
   }
 
-  async toggleFavorite() {
+  public async toggleFavorite(): Promise<void> {
     const item = this.item();
     if (!item) return;
     const isFav = await this.gs.toggleFavorite(item.id);
@@ -201,7 +203,7 @@ export class EditorComponent implements OnInit {
     this.toast.show(isFav ? 'Added to favorites.' : 'Removed from favorites.');
   }
 
-  downloadImage() {
+  public downloadImage(): void {
     const url = this.itemUrl();
     const item = this.item();
     if (!item || !url) return;
@@ -213,7 +215,7 @@ export class EditorComponent implements OnInit {
     document.body.removeChild(a);
   }
 
-  async shareImage() {
+  public async shareImage(): Promise<void> {
     const item = this.item();
     if (!item || !navigator.share) {
       this.toast.show('Web Share API not available on this browser.');
@@ -226,15 +228,17 @@ export class EditorComponent implements OnInit {
         text: `Check out this wallpaper I made: ${item.prompt}`,
         files: [file],
       });
-    } catch (error: any) {
-      if (error.name !== 'AbortError') {
+    } catch (error: unknown) {
+      const err = error as { name?: string };
+      if (err.name !== 'AbortError') {
         this.toast.show('Failed to share image.');
+        // eslint-disable-next-line no-console
         console.error('Share error:', error);
       }
     }
   }
 
-  previewAudio() {
+  public previewAudio(): void {
     const item = this.item();
     if (!item) return;
 
@@ -252,14 +256,17 @@ export class EditorComponent implements OnInit {
     this.audioWorking.set(true);
     try {
       const utterance = textToSpeech(item.prompt);
-      utterance.onend = () => this.audioWorking.set(false);
-      utterance.onerror = (e) => {
+      utterance.onend = (): void => {
+        this.audioWorking.set(false);
+      };
+      utterance.onerror = (e): void => {
         this.audioWorking.set(false);
         this.toast.show(`Audio error: ${e.error}`);
       };
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const error = e as Error;
       this.audioWorking.set(false);
-      this.toast.show(`Audio failed: ${e.message}`);
+      this.toast.show(`Audio failed: ${error.message}`);
     }
   }
 }

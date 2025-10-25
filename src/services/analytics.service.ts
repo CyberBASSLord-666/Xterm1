@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { environment } from '../environments/environment';
-import type { WindowWithAnalytics } from '@/types/utility.types';
+import type { WindowWithAnalytics } from '../types/utility.types';
 
 export interface AnalyticsEvent {
   name: string;

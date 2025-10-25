@@ -215,7 +215,7 @@ export class ValidationService {
 
     // Normalize allowlist: drop style/srcdoc/on* regardless of caller config.
     const normalizedAllowedAttrs: Record<string, string[]> = {};
-    const dropAttr = (name: string) =>
+    const dropAttr = (name: string): boolean =>
       name.toLowerCase() === 'style' ||
       name.toLowerCase() === 'srcdoc' ||
       name.toLowerCase().startsWith('on');
@@ -231,7 +231,7 @@ export class ValidationService {
 
     const hasDom =
       typeof window !== 'undefined' &&
-      typeof (window as any).DOMParser !== 'undefined' &&
+      typeof (window as { DOMParser?: unknown }).DOMParser !== 'undefined' &&
       typeof document !== 'undefined';
 
     if (!hasDom) {
@@ -247,7 +247,10 @@ export class ValidationService {
           '*': (tagName: string, attribs: Record<string, string>) => {
             const { style: _style, srcdoc: _srcdoc, ...rest } = attribs || {};
             for (const k of Object.keys(rest)) {
-              if (k.toLowerCase().startsWith('on')) delete (rest as any)[k];
+              if (k.toLowerCase().startsWith('on')) {
+                const restMutable = rest as Record<string, string>;
+                delete restMutable[k];
+              }
             }
             return { tagName, attribs: rest };
           },

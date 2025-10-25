@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { environment } from '../environments/environment';
-import type { EnvironmentConfig } from '@/types/utility.types';
+import type { EnvironmentConfig } from '../types/utility.types';
 
 @Injectable({ providedIn: 'root' })
 export class ConfigService {

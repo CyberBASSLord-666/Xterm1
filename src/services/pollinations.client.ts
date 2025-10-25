@@ -132,8 +132,8 @@ async function fetchWithRetries(
  */
 class RequestQueue {
   private queue: Array<{
-    requestFn: RequestFn<unknown>;
-    resolve: (value: unknown) => void;
+    requestFn: RequestFn<any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+    resolve: (value: any) => void; // eslint-disable-line @typescript-eslint/no-explicit-any
     reject: (reason?: Error) => void;
     abortController?: AbortController;
   }> = [];
@@ -151,7 +151,7 @@ class RequestQueue {
     return new Promise<T>((resolve, reject) => {
       this.queue.push({ requestFn, resolve, reject, abortController });
       if (!this.isProcessing) {
-        this.processQueue();
+        void this.processQueue();
       }
     });
   }
@@ -291,7 +291,13 @@ export async function createDeviceWallpaper({
   supported: SupportedResolutions;
   prompt: string;
   options: ImageOptions;
-}): Promise<{ blob: Blob; width: number; height: number; aspect: string; mode: string }> {
+}): Promise<{
+  blob: Blob;
+  width: number;
+  height: number;
+  aspect: string;
+  mode: 'exact' | 'constrained';
+}> {
   const target = computeExactFitTarget(device, supported);
   const blob = await generateImage(prompt, target.width, target.height, options);
   return { blob, ...target };

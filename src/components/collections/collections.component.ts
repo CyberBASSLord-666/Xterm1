@@ -18,21 +18,21 @@ export class CollectionsComponent implements OnInit {
   loading = signal(true);
   newCollectionName = signal('');
 
-  async ngOnInit() {
+  public async ngOnInit(): Promise<void> {
     await this.loadCollections();
   }
 
-  onNameInput(event: Event) {
+  public onNameInput(event: Event): void {
     this.newCollectionName.set((event.target as HTMLInputElement).value);
   }
 
-  async loadCollections() {
+  public async loadCollections(): Promise<void> {
     this.loading.set(true);
     this.collections.set(await this.galleryService.listCollections());
     this.loading.set(false);
   }
 
-  async createCollection() {
+  public async createCollection(): Promise<void> {
     const name = this.newCollectionName().trim();
     if (!name) {
       this.toastService.show('Please enter a collection name.');
@@ -43,12 +43,13 @@ export class CollectionsComponent implements OnInit {
       this.newCollectionName.set('');
       this.toastService.show(`Collection "${name}" created.`);
       await this.loadCollections();
-    } catch (e: any) {
-      this.toastService.show(`Error creating collection: ${e.message}`);
+    } catch (e: unknown) {
+      const error = e as Error;
+      this.toastService.show(`Error creating collection: ${error.message}`);
     }
   }
 
-  async deleteCollection(collection: Collection) {
+  public async deleteCollection(collection: Collection): Promise<void> {
     if (
       confirm(
         `Are you sure you want to delete the "${collection.name}" collection? All wallpapers within it will be uncategorized.`
@@ -58,8 +59,9 @@ export class CollectionsComponent implements OnInit {
         await this.galleryService.removeCollection(collection.id);
         this.toastService.show(`Collection "${collection.name}" deleted.`);
         await this.loadCollections();
-      } catch (e: any) {
-        this.toastService.show(`Error deleting collection: ${e.message}`);
+      } catch (e: unknown) {
+        const error = e as Error;
+        this.toastService.show(`Error deleting collection: ${error.message}`);
       }
     }
   }

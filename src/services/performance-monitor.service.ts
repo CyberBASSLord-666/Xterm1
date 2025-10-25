@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { LoggerService } from './logger.service';
-import type { Metadata, PerformanceEntryWithProcessing } from '@/types/utility.types';
+import type { Metadata, PerformanceEntryWithProcessing } from '../types/utility.types';
 
 export interface PerformanceMetric {
   name: string;
@@ -344,8 +344,8 @@ export class PerformanceMonitorService {
   /**
    * Log current performance metrics summary.
    */
-  logSummary(): void {
-    const summary: any = {
+  public logSummary(): void {
+    const summary: Record<string, unknown> = {
       activeMetrics: this.activeMetrics.size,
       completedMetrics: this.completedMetrics.length,
       webVitals: this.getWebVitals(),

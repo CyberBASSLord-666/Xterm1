@@ -52,27 +52,31 @@ export class FeedComponent implements OnInit, OnDestroy {
     this.imageEventSource?.close();
     this.imageEventSource = new EventSource('https://image.pollinations.ai/feed');
 
-    this.imageEventSource.onopen = () => {
+    this.imageEventSource.onopen = (): void => {
       // Reset delay on successful connection
       this.imageReconnectDelay = 2000;
     };
 
-    this.imageEventSource.onmessage = (event) => {
+    this.imageEventSource.onmessage = (event): void => {
       if (!event.data || this.feedMode() !== 'image' || this.isPaused()) return;
       try {
         const data: FeedImageEvent = JSON.parse(event.data);
         this.feedItems.update((list) => [data, ...list.slice(0, 99)]); // Keep list to 100 items
-      } catch (e) {
+      } catch {
+        // eslint-disable-next-line no-console
         console.warn('Non-JSON image feed event:', event.data);
       }
     };
 
-    this.imageEventSource.onerror = (err) => {
+    this.imageEventSource.onerror = (err): void => {
+      // eslint-disable-next-line no-console
       console.error('Image feed error, reconnecting...', err);
       this.toast.show(`Image feed disconnected. Retrying in ${this.imageReconnectDelay / 1000}s.`);
       this.imageEventSource?.close(); // Close the faulty source
 
-      setTimeout(() => this.connectImageFeed(), this.imageReconnectDelay);
+      setTimeout(() => {
+        this.connectImageFeed();
+      }, this.imageReconnectDelay);
 
       // Increase delay for the next attempt
       this.imageReconnectDelay = Math.min(this.imageReconnectDelay * 2, this.maxReconnectDelay);
@@ -83,22 +87,24 @@ export class FeedComponent implements OnInit, OnDestroy {
     this.textEventSource?.close();
     this.textEventSource = new EventSource('https://text.pollinations.ai/feed');
 
-    this.textEventSource.onopen = () => {
+    this.textEventSource.onopen = (): void => {
       // Reset delay on successful connection
       this.textReconnectDelay = 2000;
     };
 
-    this.textEventSource.onmessage = (event) => {
+    this.textEventSource.onmessage = (event): void => {
       if (!event.data || this.feedMode() !== 'text' || this.isPaused()) return;
       try {
         const data: FeedTextEvent = JSON.parse(event.data);
         this.textFeedItems.update((list) => [data, ...list.slice(0, 99)]);
-      } catch (e) {
+      } catch {
+        // eslint-disable-next-line no-console
         console.warn('Non-JSON text feed event:', event.data);
       }
     };
 
-    this.textEventSource.onerror = (err) => {
+    this.textEventSource.onerror = (err): void => {
+      // eslint-disable-next-line no-console
       console.error('Text feed error, reconnecting...', err);
       this.toast.show(`Text feed disconnected. Retrying in ${this.textReconnectDelay / 1000}s.`);
       this.textEventSource?.close(); // Close the faulty source

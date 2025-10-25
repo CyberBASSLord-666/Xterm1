@@ -20,8 +20,8 @@ interface PendingRequest<T> {
 @Injectable({ providedIn: 'root' })
 export class RequestCacheService {
   private logger = inject(LoggerService);
-  private cache = new Map<string, CacheEntry<unknown>>();
-  private pendingRequests = new Map<string, PendingRequest<unknown>>();
+  private cache = new Map<string, CacheEntry<any>>(); // eslint-disable-line @typescript-eslint/no-explicit-any
+  private pendingRequests = new Map<string, PendingRequest<any>>(); // eslint-disable-line @typescript-eslint/no-explicit-any
   private readonly defaultTTL = 5 * 60 * 1000; // 5 minutes
 
   /**
@@ -44,7 +44,7 @@ export class RequestCacheService {
     }
 
     // Check if request is already pending
-    const pending = this.pendingRequests.get(key);
+    const pending = this.pendingRequests.get(key) as PendingRequest<T> | undefined;
     if (pending) {
       this.logger.debug(`Request deduplication: ${key}`, undefined, 'RequestCache');
       pending.subscribers++;

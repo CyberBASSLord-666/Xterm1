@@ -109,7 +109,7 @@ export class GalleryComponent implements OnInit, OnDestroy {
     });
   }
 
-  async ngOnInit() {
+  public async ngOnInit(): Promise<void> {
     this.loading.set(true);
     const [items, collections] = await Promise.all([
       this.galleryService.list(),
@@ -120,34 +120,34 @@ export class GalleryComponent implements OnInit, OnDestroy {
     this.loading.set(false);
   }
 
-  ngOnDestroy() {
+  public ngOnDestroy(): void {
     this.revokeAllThumbUrls();
   }
 
   // --- Type-safe event handlers ---
-  onSearchInput(event: Event) {
+  public onSearchInput(event: Event): void {
     this.searchQuery.set((event.target as HTMLInputElement).value);
   }
 
-  onModelFilterChange(event: Event) {
+  public onModelFilterChange(event: Event): void {
     this.filterModel.set((event.target as HTMLSelectElement).value);
   }
 
-  onAspectFilterChange(event: Event) {
+  public onAspectFilterChange(event: Event): void {
     this.filterAspect.set((event.target as HTMLSelectElement).value);
   }
 
-  onDateFilterChange(event: Event) {
+  public onDateFilterChange(event: Event): void {
     this.filterDate.set((event.target as HTMLSelectElement).value);
   }
   // --- End of type-safe event handlers ---
 
-  private revokeAllThumbUrls() {
+  private revokeAllThumbUrls(): void {
     this.thumbUrls.forEach((url) => URL.revokeObjectURL(url));
     this.thumbUrls.clear();
   }
 
-  async toggleFavorite(event: MouseEvent, id: string) {
+  public async toggleFavorite(event: MouseEvent, id: string): Promise<void> {
     event.preventDefault(); // prevent navigation
     event.stopPropagation();
     const isFav = await this.galleryService.toggleFavorite(id);
@@ -157,12 +157,12 @@ export class GalleryComponent implements OnInit, OnDestroy {
     this.toastService.show(isFav ? 'Added to favorites.' : 'Removed from favorites.');
   }
 
-  toggleSelectionMode() {
+  public toggleSelectionMode(): void {
     this.isSelecting.update((v) => !v);
     this.selectedIds.set(new Set());
   }
 
-  toggleItemSelection(event: MouseEvent, id: string) {
+  public toggleItemSelection(event: MouseEvent, id: string): void {
     event.preventDefault();
     event.stopPropagation();
     this.selectedIds.update((ids) => {
@@ -175,15 +175,15 @@ export class GalleryComponent implements OnInit, OnDestroy {
     });
   }
 
-  selectAll() {
+  public selectAll(): void {
     this.selectedIds.set(new Set(this.filteredItems().map((i) => i.id)));
   }
 
-  deselectAll() {
+  public deselectAll(): void {
     this.selectedIds.set(new Set());
   }
 
-  async deleteSelected() {
+  public async deleteSelected(): Promise<void> {
     const ids = Array.from(this.selectedIds());
     if (confirm(`Are you sure you want to delete ${ids.length} item(s)?`)) {
       await this.galleryService.bulkRemove(ids);
@@ -193,7 +193,7 @@ export class GalleryComponent implements OnInit, OnDestroy {
     }
   }
 
-  async moveSelected(event: Event) {
+  public async moveSelected(event: Event): Promise<void> {
     const target = event.target as HTMLSelectElement;
     const collectionId = target.value;
     if (collectionId === '') return;
