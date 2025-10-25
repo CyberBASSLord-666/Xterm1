@@ -135,6 +135,77 @@ const result = await createDeviceWallpaper({
 
 ---
 
+### App Initializer Service
+
+**File**: `src/services/app-initializer.service.ts`
+
+Application initialization service that handles startup configuration and service setup.
+
+#### Methods
+
+##### `initialize(): Promise<void>`
+
+Initialize the application during bootstrap. Called automatically via APP_INITIALIZER.
+
+**Initialization Steps**:
+1. Sets log level based on environment (DEBUG for development, WARN for production)
+2. Hydrates configuration from multiple sources (runtime config, meta tags, environment)
+3. Starts request cache periodic cleanup
+4. Initializes Gemini AI client if API key available
+5. Initializes analytics if measurement ID available
+6. Sets up keyboard shortcuts service
+7. Logs Web Vitals metrics
+
+**Configuration Sources** (in priority order):
+1. Runtime configuration object: `window.__POLLIWALL_RUNTIME_CONFIG__`
+2. HTML meta tags: `<meta name="gemini-api-key">` and `<meta name="analytics-measurement-id">`
+3. Environment bootstrap configuration
+
+**Production Fail-Fast**:
+If `environment.bootstrapConfig.failOnMissingGeminiKey` is true and no Gemini API key is found in production, throws an error to prevent incomplete deployment.
+
+**Example**:
+```typescript
+// In app.config.ts
+import { APP_INITIALIZER, ApplicationConfig } from '@angular/core';
+import { AppInitializerService, initializeApp } from './services/app-initializer.service';
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    {
+      provide: APP_INITIALIZER,
+      useFactory: initializeApp,
+      deps: [AppInitializerService],
+      multi: true
+    }
+  ]
+};
+```
+
+**Runtime Configuration Example**:
+```html
+<!-- Inject configuration at runtime -->
+<script>
+  window.__POLLIWALL_RUNTIME_CONFIG__ = {
+    geminiApiKey: 'your-api-key',
+    analyticsMeasurementId: 'G-XXXXXXXXXX'
+  };
+</script>
+```
+
+**Meta Tag Configuration Example**:
+```html
+<!-- Inject secrets via meta tags -->
+<meta name="gemini-api-key" content="your-api-key" />
+<meta name="analytics-measurement-id" content="G-XXXXXXXXXX" />
+```
+
+##### `destroy(): void`
+
+Cleanup method for application shutdown. Logs performance summary.
+
+---
+
 ### Logger Service
 
 **File**: `src/services/logger.service.ts`
@@ -656,7 +727,7 @@ interface ShortcutConfig {
 
 **File**: `src/directives/lazy-image.directive.ts`
 
-Lazy load images using Intersection Observer.
+Lazy load images using Intersection Observer with dynamic source binding.
 
 **Usage**:
 ```html
@@ -664,19 +735,44 @@ Lazy load images using Intersection Observer.
   [appLazyImage]="imageUrl"
   [lazySrc]="placeholderUrl"
   [lazyThreshold]="0.1"
-  alt="Description"
->
+  alt="Description" />
 ```
 
 **Inputs**:
-- `lazySrc` (string): Optional placeholder image
-- `lazyThreshold` (number): Visibility threshold (default: 0.1)
+- `appLazyImage` (string | null): The actual image source URL to lazy load
+- `lazySrc` (string): Optional placeholder image to display while loading
+- `lazyThreshold` (number): Visibility threshold for triggering load (default: 0.1)
 
 **Features**:
-- Loads image when it enters viewport
-- Supports placeholder images
-- Automatically cleans up observers
-- Adds CSS classes: `lazy-loaded`, `lazy-error`
+- Loads image when it enters viewport using Intersection Observer
+- Supports placeholder images during loading
+- Automatically reuses observer instance for efficiency
+- Handles dynamic source changes (re-observes when source updates)
+- Falls back to immediate loading when IntersectionObserver is unavailable
+- Automatically cleans up observers on destroy
+- Adds CSS classes: `lazy-loaded` (on success), `lazy-error` (on failure)
+- Clears metadata after successful load
+
+**Example**:
+```typescript
+@Component({
+  template: `
+    <img 
+      [appLazyImage]="wallpaperUrl"
+      [lazySrc]="thumbnailUrl"
+      alt="AI Generated Wallpaper"
+    />
+  `
+})
+export class GalleryComponent {
+  wallpaperUrl = 'https://example.com/wallpaper.jpg';
+  thumbnailUrl = 'data:image/png;base64,...';
+}
+```
+
+**Browser Compatibility**:
+- Modern browsers with IntersectionObserver support: lazy loading with viewport detection
+- Browsers without IntersectionObserver: immediate loading (graceful degradation)
 
 ---
 
