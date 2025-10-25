@@ -1,7 +1,7 @@
 # ============================================================================
 # Dependabot Configuration for PolliWall (Xterm1)
 # ============================================================================
-# Version: 2.0.0
+# Version: 2.0.1
 # Last Updated: 2025-10-25
 # Maintainer: CyberBASSLord-666
 #
@@ -161,9 +161,9 @@ updates:
       # Tailwind CSS alpha versions - explicit updates only
       # Project uses v4 alpha, don't auto-update to avoid instability
       - dependency-name: "tailwindcss"
-        versions: [">=4.0.0-alpha.17"]
+        update-types: ["version-update:semver-major"]
       - dependency-name: "@tailwindcss/postcss"
-        versions: [">=4.0.0-alpha.17"]
+        update-types: ["version-update:semver-major"]
     
     # -------------------------------------------------------------------------
     # Allow Configuration
@@ -196,6 +196,7 @@ updates:
       # GROUP 2: Development Dependencies - Minor and Patch
       # Low-risk updates for build tools, test frameworks, linters
       npm-development-minor-patch:
+        applies-to: version-updates
         dependency-type: "development"
         patterns:
           - "@angular-eslint/*"
@@ -221,6 +222,7 @@ updates:
       # GROUP 3: Production Dependencies - Minor and Patch
       # Runtime dependencies, grouped separately from dev dependencies
       npm-production-minor-patch:
+        applies-to: version-updates
         dependency-type: "production"
         patterns:
           - "@angular/common"
@@ -244,6 +246,7 @@ updates:
       # All major version bumps grouped together for careful evaluation
       # Requires thorough testing due to potential breaking changes
       npm-major-updates:
+        applies-to: version-updates
         patterns:
           - "*"
         update-types:
@@ -287,14 +290,10 @@ updates:
     # -------------------------------------------------------------------------
     # Pull Request Limits
     # -------------------------------------------------------------------------
-    # Set to 3 to match our grouping strategy (minor-patch, major, security)
-    # -------------------------------------------------------------------------
     open-pull-requests-limit: 3
     
     # -------------------------------------------------------------------------
     # Rebase Strategy
-    # -------------------------------------------------------------------------
-    # Disabled to prevent automatic rebases that could cause CI issues
     # -------------------------------------------------------------------------
     rebase-strategy: "disabled"
     
@@ -331,16 +330,9 @@ updates:
     # -------------------------------------------------------------------------
     # Ignore Configuration
     # -------------------------------------------------------------------------
-    # Pin specific action versions that require manual verification
-    # -------------------------------------------------------------------------
     ignore:
-      # CodeScan action pinned to specific commit for security audit compliance
       - dependency-name: "codescan-io/codescan-scanner-action"
-        # Currently pinned to: 5b2e8c5683ef6a5adc8fa3b7950bb07debccce12
-      
-      # Actions cache v3 is stable, skip major updates temporarily
       - dependency-name: "actions/cache"
-        versions: ["4.x"]
         update-types: ["version-update:semver-major"]
     
     # -------------------------------------------------------------------------
@@ -356,6 +348,7 @@ updates:
       # GROUP 2: Core Actions - Minor and Patch
       # Standard GitHub-maintained actions
       gha-core-minor-patch:
+        applies-to: version-updates
         patterns:
           - "actions/checkout"
           - "actions/setup-node"
@@ -374,6 +367,7 @@ updates:
       # GROUP 3: Security Actions - Minor and Patch
       # CodeQL and security scanning actions
       gha-security-minor-patch:
+        applies-to: version-updates
         patterns:
           - "github/codeql-action/*"
           - "codescan-io/codescan-scanner-action"
@@ -384,6 +378,7 @@ updates:
       # GROUP 4: Third-Party Actions - Minor and Patch
       # External actions like Lighthouse, Codecov
       gha-third-party-minor-patch:
+        applies-to: version-updates
         patterns:
           - "codecov/codecov-action"
           - "treosh/lighthouse-ci-action"
@@ -394,12 +389,12 @@ updates:
       # GROUP 5: Major Updates - ALL Actions
       # All major version bumps require manual review
       gha-major-updates:
+        applies-to: version-updates
         patterns:
           - "*"
         update-types:
           - "major"
         exclude-patterns:
-          # Explicitly pinned actions excluded from auto-updates
           - "codescan-io/codescan-scanner-action"
 
 # ============================================================================
