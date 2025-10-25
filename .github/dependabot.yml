@@ -1,7 +1,6 @@
 version: 2
 
 updates:
-  # --- npm ---
   - package-ecosystem: "npm"
     directory: "/"
     target-branch: "main"
@@ -10,25 +9,23 @@ updates:
       day: "monday"
       time: "06:00"
       timezone: "America/Denver"
-    open-pull-requests-limit: 2        # hard cap per-ecosystem
-    rebase-strategy: "disabled"        # avoid CI thrash from auto-rebases
+    open-pull-requests-limit: 2
+    rebase-strategy: "disabled"
     versioning-strategy: "increase-if-necessary"
     reviewers: ["CyberBASSLord-666"]
     assignees: ["CyberBASSLord-666"]
     labels: ["dependencies","npm"]
-    pull-request-branch-name:
-      separator: "-"
     commit-message:
       prefix: "chore"
       prefix-development: "chore"
       include: "scope"
-    # Pace big bumps; keep minors quick.
+    pull-request-branch-name:
+      separator: "-"
     cooldown:
-      default-days: 0
-      semver-minor-days: 3
+      default-days: 3           # must be 1–90
       semver-major-days: 14
-      include: ["*"]
-    # Two PRs max: one for minor/patch, one for majors. Security bundled separately.
+      semver-minor-days: 3
+      semver-patch-days: 1
     groups:
       npm-minor-patch:
         patterns: ["*"]
@@ -40,7 +37,6 @@ updates:
         applies-to: "security-updates"
         patterns: ["*"]
 
-  # --- GitHub Actions ---
   - package-ecosystem: "github-actions"
     directory: "/"
     target-branch: "main"
@@ -54,11 +50,14 @@ updates:
     reviewers: ["CyberBASSLord-666"]
     assignees: ["CyberBASSLord-666"]
     labels: ["dependencies","github-actions"]
-    pull-request-branch-name:
-      separator: "-"
     commit-message:
       prefix: "chore"
       include: "scope"
+    cooldown:
+      default-days: 3           # must be 1–90
+      semver-major-days: 14
+      semver-minor-days: 3
+      semver-patch-days: 1
     groups:
       gha-minor-patch:
         patterns: ["*"]
