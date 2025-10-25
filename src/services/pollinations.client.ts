@@ -87,7 +87,7 @@ async function fetchWithRetries(
         const errorText = await response.text();
         console.error('Raw API Error:', errorText);
 
-        let errorMessage = `Request failed with status ${response.status}`;
+        let errorMessage;
         try {
           const errorJson = JSON.parse(errorText);
           if (errorJson.details?.error?.code === 'content_filter') {
