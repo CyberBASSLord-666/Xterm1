@@ -7,3 +7,5 @@ export * from './dom-utils';
 export * from './performance-utils';
 export * from './type-guards';
 export * from './cache-utils';
+export * from './service-patterns';
+export * from './http-client';

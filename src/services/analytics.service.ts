@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { environment } from '../environments/environment';
 import type { WindowWithAnalytics } from '../types/utility.types';
+import { PERFORMANCE_CONFIG, FEATURE_FLAGS } from '../constants';
 
 export interface AnalyticsEvent {
   name: string;
@@ -24,13 +25,14 @@ export interface AnalyticsConfig {
 /**
  * Analytics service for tracking user interactions and application events.
  * Supports multiple analytics providers (Google Analytics, custom backend, etc.)
+ * TODO: Implement batch event sending for improved performance
  */
 @Injectable({ providedIn: 'root' })
 export class AnalyticsService {
   private logger = inject(LoggerService);
-  private enabled: boolean = environment.production;
+  private enabled: boolean = environment.production && FEATURE_FLAGS.ENABLE_ANALYTICS;
   private eventQueue: AnalyticsEvent[] = [];
-  private readonly maxQueueSize = 100;
+  private readonly maxQueueSize = PERFORMANCE_CONFIG.MAX_ANALYTICS_QUEUE;
 
   /**
    * Initialize analytics (call this in app initialization).

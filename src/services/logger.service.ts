@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { CACHE_CONFIG } from '../constants';
 
 export enum LogLevel {
   DEBUG = 0,
@@ -24,7 +25,7 @@ export interface LogEntry {
 export class LoggerService {
   private logLevel: LogLevel;
   private logHistory: LogEntry[] = [];
-  private readonly maxHistorySize = 100;
+  private readonly maxHistorySize = CACHE_CONFIG.MAX_CACHE_SIZE;
 
   constructor() {
     // In production, set to WARN or ERROR to reduce noise

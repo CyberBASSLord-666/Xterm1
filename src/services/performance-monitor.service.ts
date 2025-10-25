@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { LoggerService } from './logger.service';
 import type { Metadata, PerformanceEntryWithProcessing } from '../types/utility.types';
+import { CACHE_CONFIG, FEATURE_FLAGS } from '../constants';
 
 export interface PerformanceMetric {
   name: string;
@@ -35,7 +36,8 @@ export class PerformanceMonitorService {
   private logger = inject(LoggerService);
   private activeMetrics = new Map<string, PerformanceMetric>();
   private completedMetrics: PerformanceMetric[] = [];
-  private readonly maxHistorySize = 100;
+  private readonly maxHistorySize = CACHE_CONFIG.MAX_CACHE_SIZE;
+  private readonly enabled = FEATURE_FLAGS.ENABLE_PERFORMANCE_MONITORING;
 
   /**
    * Start measuring a performance metric.

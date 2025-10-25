@@ -1,4 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
+import { API_CONFIG } from '../constants';
 
 export type DeviceInfo = { width: number; height: number; dpr: number };
 export type ExactFitTarget = {
@@ -20,13 +21,10 @@ export type ImageOptions = {
 };
 type TextOptions = { model?: string; system?: string; private?: boolean; referrer?: string };
 
-const IMAGE_API_BASE = 'https://image.pollinations.ai/prompt';
-const TEXT_API_BASE = 'https://text.pollinations.ai';
-// Reserved for future use
-// const IMAGE_FEED_URL = 'https://image.pollinations.ai/feed';
-// const TEXT_FEED_URL = 'https://text.pollinations.ai/feed';
-const IMAGE_INTERVAL = 5000; // 1 request per 5 seconds
-const TEXT_INTERVAL = 3000; // 1 request per 3 seconds
+const IMAGE_API_BASE = API_CONFIG.IMAGE_API_BASE;
+const TEXT_API_BASE = API_CONFIG.TEXT_API_BASE;
+const IMAGE_INTERVAL = API_CONFIG.IMAGE_INTERVAL;
+const TEXT_INTERVAL = API_CONFIG.TEXT_INTERVAL;
 
 // Gemini API Client - initialized lazily with API key
 let ai: GoogleGenAI | null = null;
