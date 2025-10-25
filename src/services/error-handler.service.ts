@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { ToastService } from './toast.service';
+import { getErrorMessage } from '../utils/type-guards';
 
 export class AppError extends Error {
   constructor(
@@ -30,7 +31,7 @@ export class ErrorHandlerService {
    * @param showToast Whether to show a toast notification to the user
    */
   public handleError(error: unknown, source: string, showToast: boolean = true): void {
-    const errorMessage = this.extractErrorMessage(error);
+    const errorMessage = getErrorMessage(error);
     const isUserFriendly = error instanceof AppError && error.isUserFriendly;
 
     // Log the error
@@ -44,67 +45,70 @@ export class ErrorHandlerService {
   }
 
   /**
-   * Extract a meaningful error message from various error types.
-   */
-  private extractErrorMessage(error: unknown): string {
-    if (typeof error === 'string') {
-      return error;
-    }
-
-    if (error instanceof AppError) {
-      return error.message;
-    }
-
-    if (error instanceof Error) {
-      return error.message;
-    }
-
-    if (error && typeof error === 'object') {
-      const errorObj = error as Record<string, unknown>;
-      if (errorObj.message && typeof errorObj.message === 'string') {
-        return errorObj.message;
-      }
-      if (errorObj.error && typeof errorObj.error === 'object') {
-        const nestedError = errorObj.error as Record<string, unknown>;
-        if (nestedError.message && typeof nestedError.message === 'string') {
-          return nestedError.message;
-        }
-      }
-    }
-
-    return 'An unexpected error occurred';
-  }
-
-  /**
    * Convert technical errors to user-friendly messages.
    */
   private getUserFriendlyMessage(error: unknown): string {
-    const message = this.extractErrorMessage(error);
+    const message = getErrorMessage(error);
 
     // Network errors
-    if (message.includes('Failed to fetch') || message.includes('NetworkError')) {
+    if (this.isNetworkError(message)) {
       return 'Network error. Please check your internet connection.';
     }
 
-    if (message.includes('timeout') || message.includes('timed out')) {
+    if (this.isTimeoutError(message)) {
       return 'The request took too long. Please try again.';
     }
 
     // API errors
-    if (message.includes('429')) {
+    if (this.isRateLimitError(message)) {
       return 'Too many requests. Please wait a moment before trying again.';
     }
 
-    if (message.includes('500') || message.includes('503')) {
+    if (this.isServerError(message)) {
       return 'The service is temporarily unavailable. Please try again later.';
     }
 
-    if (message.includes('401') || message.includes('403')) {
+    if (this.isAuthError(message)) {
       return 'Authentication failed. Please check your API key.';
     }
 
     // Default fallback
     return 'An error occurred. Please try again.';
+  }
+
+  /**
+   * Check if error is a network error
+   */
+  private isNetworkError(message: string): boolean {
+    return message.includes('Failed to fetch') || message.includes('NetworkError');
+  }
+
+  /**
+   * Check if error is a timeout error
+   */
+  private isTimeoutError(message: string): boolean {
+    return message.includes('timeout') || message.includes('timed out');
+  }
+
+  /**
+   * Check if error is a rate limit error
+   */
+  private isRateLimitError(message: string): boolean {
+    return message.includes('429');
+  }
+
+  /**
+   * Check if error is a server error
+   */
+  private isServerError(message: string): boolean {
+    return message.includes('500') || message.includes('503');
+  }
+
+  /**
+   * Check if error is an authentication error
+   */
+  private isAuthError(message: string): boolean {
+    return message.includes('401') || message.includes('403');
   }
 
   /**
@@ -121,11 +125,7 @@ export class ErrorHandlerService {
   /**
    * Wrap an async operation with error handling.
    */
-  public async wrapAsync<T>(
-    operation: () => Promise<T>,
-    source: string,
-    showToast: boolean = true
-  ): Promise<T | null> {
+  public async wrapAsync<T>(operation: () => Promise<T>, source: string, showToast: boolean = true): Promise<T | null> {
     try {
       return await operation();
     } catch (error) {
