@@ -31,7 +31,7 @@ VALID_REGISTRY_TYPES = {'npm-registry', 'maven-repository', 'composer-repository
 VALID_REGISTRY = {'type', 'url', 'username', 'password', 'key', 'token', 
                  'replaces-base', 'organization'}
 VALID_ECOSYSTEMS = {'npm', 'bundler', 'composer', 'docker', 'github-actions', 
-                   'gomod', 'gradle', 'maven', 'mix', 'npm', 'nuget', 'pip', 
+                   'gomod', 'gradle', 'maven', 'mix', 'nuget', 'pip', 
                    'terraform', 'pub', 'cargo', 'elm'}
 VALID_UPDATE = {
     'package-ecosystem', 'directory', 'schedule', 'target-branch', 'vendor', 
@@ -342,12 +342,22 @@ class DependabotValidator:
                 self.info.append(f"'{ecosystem}' and '{schedules[time_key]}' run at same time (may cause CI load)")
             schedules[time_key] = ecosystem
         
-        # Check documentation
-        config_str = str(self.config)
-        if len(config_str) > 10000:
-            self.info.append("Configuration is well-documented (comprehensive comments)")
-        elif len(config_str) < 1000:
-            self.warnings.append("Configuration lacks documentation (add more comments)")
+        # Check documentation by analyzing actual YAML file
+        try:
+            with open(self.config_path, 'r') as f:
+                lines = f.readlines()
+            
+            comment_lines = sum(1 for line in lines if line.strip().startswith('#'))
+            total_lines = len(lines)
+            
+            if total_lines > 0:
+                comment_ratio = comment_lines / total_lines
+                if comment_ratio > 0.3:
+                    self.info.append(f"Configuration is well-documented ({comment_lines}/{total_lines} lines are comments, {comment_ratio:.1%})")
+                elif comment_ratio < 0.1:
+                    self.warnings.append(f"Configuration lacks documentation ({comment_lines}/{total_lines} lines are comments, {comment_ratio:.1%})")
+        except Exception:
+            pass  # Skip documentation check if file can't be read
     
     def _print_results(self):
         """Print validation results"""
