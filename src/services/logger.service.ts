@@ -22,7 +22,7 @@ export interface LogEntry {
  */
 @Injectable({ providedIn: 'root' })
 export class LoggerService {
-  private logLevel: LogLevel = LogLevel.INFO;
+  private logLevel: LogLevel;
   private logHistory: LogEntry[] = [];
   private readonly maxHistorySize = 100;
 
