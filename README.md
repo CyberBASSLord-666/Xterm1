@@ -186,6 +186,26 @@ See [DEVELOPMENT.md](./DEVELOPMENT.md) for detailed development guidelines.
 - Comprehensive error handling
 - Detailed logging
 
+## 🔄 CI/CD & Automation
+
+### Automated Workflows
+- **Continuous Integration**: Automated linting, testing, and building on every PR
+- **Security Scanning**: CodeQL analysis and dependency review
+- **Dependabot Auto-Merge**: Automatic approval and merging of dependency updates
+  - Patch & minor updates: Auto-merged after CI passes
+  - Major updates: Require manual review
+  - Weekly updates on Mondays
+
+### GitHub Actions Workflows
+- `ci.yml` - Lint, test, build, and E2E tests
+- `security.yml` - CodeQL, dependency review, npm audit
+- `dependabot-auto-merge.yml` - Automated dependency management
+- `deploy.yml` - Production deployment
+- `codescan.yml` - Additional security scanning
+- `bundle-size.yml` - Bundle size tracking
+
+See [DEVELOPMENT.md](./DEVELOPMENT.md#dependency-management) for more details.
+
 ## 🐛 Troubleshooting
 
 ### Build Issues
