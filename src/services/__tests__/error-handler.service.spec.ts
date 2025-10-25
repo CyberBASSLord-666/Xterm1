@@ -54,11 +54,7 @@ describe('ErrorHandlerService', () => {
 
     it('should handle string errors', () => {
       service.handleError('string error', 'TestComponent', false);
-      expect(loggerService.error).toHaveBeenCalledWith(
-        'string error',
-        'string error',
-        'TestComponent'
-      );
+      expect(loggerService.error).toHaveBeenCalledWith('string error', 'string error', 'TestComponent');
     });
 
     it('should handle AppError with user-friendly messages', () => {
@@ -119,9 +115,7 @@ describe('ErrorHandlerService', () => {
     it('should convert 500 errors', () => {
       const error = new Error('500 Internal Server Error');
       service.handleError(error, 'Test');
-      expect(toastService.show).toHaveBeenCalledWith(
-        expect.stringContaining('temporarily unavailable')
-      );
+      expect(toastService.show).toHaveBeenCalledWith(expect.stringContaining('temporarily unavailable'));
     });
   });
 });
