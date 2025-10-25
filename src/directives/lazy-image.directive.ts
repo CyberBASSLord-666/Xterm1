@@ -27,10 +27,7 @@ export class LazyImageDirective implements OnInit, OnChanges, OnDestroy {
   private supportsIntersectionObserver: boolean = false;
 
   ngOnInit(): void {
-    this.supportsIntersectionObserver =
-      typeof IntersectionObserver !== 'undefined' &&
-      IntersectionObserver !== null &&
-      IntersectionObserver !== undefined;
+    this.supportsIntersectionObserver = typeof IntersectionObserver !== 'undefined';
 
     // Create the observer once during initialization if supported
     if (this.supportsIntersectionObserver) {
@@ -58,16 +55,14 @@ export class LazyImageDirective implements OnInit, OnChanges, OnDestroy {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             const img = entry.target as HTMLImageElement;
-            const src = img?.dataset?.['lazySrc'];
+            const src = img.dataset?.['lazySrc'];
 
             if (src) {
               this.loadImage(img, src);
             }
 
             // Stop observing this image after loading
-            if (img) {
-              this.observer?.unobserve(img);
-            }
+            this.observer?.unobserve(img);
           }
         });
       },

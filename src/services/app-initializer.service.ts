@@ -7,14 +7,7 @@ import { PerformanceMonitorService } from './performance-monitor.service';
 import { AnalyticsService } from './analytics.service';
 import { initializeGeminiClient } from './pollinations.client';
 import { environment } from '../environments/environment';
-
-/**
- * Runtime configuration interface for dynamic configuration injection.
- */
-interface RuntimeConfig {
-  geminiApiKey?: string;
-  analyticsMeasurementId?: string;
-}
+import type { BootstrapConfig, Environment } from '../types/global';
 
 /**
  * App initialization service.
@@ -22,12 +15,12 @@ interface RuntimeConfig {
  */
 @Injectable({ providedIn: 'root' })
 export class AppInitializerService {
-  private logger = inject(LoggerService);
-  private config = inject(ConfigService);
-  private requestCache = inject(RequestCacheService);
-  private keyboardShortcuts = inject(KeyboardShortcutsService);
-  private perfMonitor = inject(PerformanceMonitorService);
-  private analytics = inject(AnalyticsService);
+  private readonly logger = inject(LoggerService);
+  private readonly config = inject(ConfigService);
+  private readonly requestCache = inject(RequestCacheService);
+  private readonly keyboardShortcuts = inject(KeyboardShortcutsService);
+  private readonly perfMonitor = inject(PerformanceMonitorService);
+  private readonly analytics = inject(AnalyticsService);
 
   /**
    * Initialize the application.
@@ -58,7 +51,7 @@ export class AppInitializerService {
           this.logger.info('Gemini API client initialized', undefined, 'AppInitializer');
         } else {
           // Check if we should fail fast in production
-          const bootstrapConfig = (environment as any).bootstrapConfig;
+          const bootstrapConfig = this.getBootstrapConfig();
           if (environment.production && bootstrapConfig?.failOnMissingGeminiKey === true) {
             throw new Error('Missing Gemini API key in production environment.');
           }
@@ -99,6 +92,14 @@ export class AppInitializerService {
   }
 
   /**
+   * Get bootstrap configuration with proper typing.
+   */
+  private getBootstrapConfig(): BootstrapConfig | undefined {
+    const env = environment as Environment;
+    return env.bootstrapConfig;
+  }
+
+  /**
    * Hydrate configuration from multiple sources in priority order:
    * 1. Runtime config object (window.__POLLIWALL_RUNTIME_CONFIG__)
    * 2. Meta tags in document head
@@ -106,7 +107,7 @@ export class AppInitializerService {
    */
   private hydrateConfiguration(): void {
     // First, check for runtime config (highest priority)
-    const runtimeConfig = (window as any).__POLLIWALL_RUNTIME_CONFIG__ as RuntimeConfig | undefined;
+    const runtimeConfig = window.__POLLIWALL_RUNTIME_CONFIG__;
     if (runtimeConfig) {
       if (runtimeConfig.geminiApiKey) {
         this.config.setGeminiApiKey(runtimeConfig.geminiApiKey);
@@ -124,7 +125,7 @@ export class AppInitializerService {
     }
 
     // Second, check for meta tags
-    const bootstrapConfig = (environment as any).bootstrapConfig;
+    const bootstrapConfig = this.getBootstrapConfig();
     if (bootstrapConfig?.meta) {
       const geminiKeyMeta = bootstrapConfig.meta.geminiApiKey;
       const analyticsIdMeta = bootstrapConfig.meta.analyticsMeasurementId;
