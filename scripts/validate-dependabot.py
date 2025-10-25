@@ -13,14 +13,16 @@ import sys
 import yaml
 from pathlib import Path
 from typing import Dict, List, Set, Tuple
+import colorama
+colorama.init(autoreset=True)
 
-# ANSI color codes
-GREEN = '\033[92m'
-RED = '\033[91m'
-YELLOW = '\033[93m'
-BLUE = '\033[94m'
-RESET = '\033[0m'
-BOLD = '\033[1m'
+# Colorama color codes
+GREEN = colorama.Fore.GREEN
+RED = colorama.Fore.RED
+YELLOW = colorama.Fore.YELLOW
+BLUE = colorama.Fore.BLUE
+RESET = colorama.Style.RESET_ALL
+BOLD = colorama.Style.BRIGHT
 
 # Valid configuration options per GitHub Dependabot v2 documentation
 VALID_TOP_LEVEL = {'version', 'registries', 'updates', 'enable-beta-ecosystems'}
