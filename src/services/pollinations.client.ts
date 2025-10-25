@@ -106,10 +106,10 @@ async function fetchWithRetries(
         // Client-side errors should not be retried, so we throw immediately.
         throw new Error(errorMessage);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       clearTimeout(timeoutId);
-      lastError = error;
-      if (error.name === 'AbortError') {
+      lastError = error as Error;
+      if ((error as Error).name === 'AbortError') {
         lastError = new Error('Request timed out');
       }
     }
@@ -132,9 +132,9 @@ async function fetchWithRetries(
  */
 class RequestQueue {
   private queue: Array<{
-    requestFn: RequestFn<any>;
-    resolve: (value: any) => void;
-    reject: (reason?: any) => void;
+    requestFn: RequestFn<unknown>;
+    resolve: (value: unknown) => void;
+    reject: (reason?: Error) => void;
     abortController?: AbortController;
   }> = [];
   private isProcessing = false;
@@ -174,7 +174,7 @@ class RequestQueue {
     return this.queue.length;
   }
 
-  private async processQueue() {
+  private async processQueue(): Promise<void> {
     if (this.queue.length === 0) {
       this.isProcessing = false;
       return;
@@ -186,7 +186,9 @@ class RequestQueue {
     // Check if request was already cancelled
     if (abortController?.signal.aborted) {
       reject(new Error('Request cancelled'));
-      setTimeout(() => this.processQueue(), this.interval);
+      setTimeout(() => {
+        void this.processQueue();
+      }, this.interval);
       return;
     }
 
@@ -194,10 +196,13 @@ class RequestQueue {
       const result = await requestFn();
       resolve(result);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Queue request failed:', error);
-      reject(error);
+      reject(error as Error);
     } finally {
-      setTimeout(() => this.processQueue(), this.interval);
+      setTimeout(() => {
+        void this.processQueue();
+      }, this.interval);
     }
   }
 }
@@ -205,10 +210,10 @@ class RequestQueue {
 const imageQueue = new RequestQueue(IMAGE_INTERVAL);
 const textQueue = new RequestQueue(TEXT_INTERVAL);
 
-function buildQueryString(params: Record<string, any>): string {
+function buildQueryString(params: Record<string, string | number | boolean | undefined>): string {
   return Object.entries(params)
     .filter(([, value]) => value !== undefined && value !== null && value !== '')
-    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
     .join('&');
 }
 
@@ -286,7 +291,7 @@ export async function createDeviceWallpaper({
   supported: SupportedResolutions;
   prompt: string;
   options: ImageOptions;
-}) {
+}): Promise<{ blob: Blob; width: number; height: number; aspect: string; mode: string }> {
   const target = computeExactFitTarget(device, supported);
   const blob = await generateImage(prompt, target.width, target.height, options);
   return { blob, ...target };

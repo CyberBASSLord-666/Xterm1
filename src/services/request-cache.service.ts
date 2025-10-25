@@ -20,8 +20,8 @@ interface PendingRequest<T> {
 @Injectable({ providedIn: 'root' })
 export class RequestCacheService {
   private logger = inject(LoggerService);
-  private cache = new Map<string, CacheEntry<any>>();
-  private pendingRequests = new Map<string, PendingRequest<any>>();
+  private cache = new Map<string, CacheEntry<unknown>>();
+  private pendingRequests = new Map<string, PendingRequest<unknown>>();
   private readonly defaultTTL = 5 * 60 * 1000; // 5 minutes
 
   /**

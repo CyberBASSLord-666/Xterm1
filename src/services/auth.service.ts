@@ -6,14 +6,14 @@ export class AuthService {
   private toastService = inject(ToastService);
 
   private loggedIn = signal<boolean>(false);
-  isLoggedIn = this.loggedIn.asReadonly();
+  public isLoggedIn = this.loggedIn.asReadonly();
 
-  login() {
+  public login(): void {
     this.loggedIn.set(true);
     this.toastService.show('Logged in successfully! (Mocked)');
   }
 
-  logout() {
+  public logout(): void {
     this.loggedIn.set(false);
     this.toastService.show('You have been logged out.');
   }
