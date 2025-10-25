@@ -395,7 +395,8 @@ export class ValidationService {
     s = s.replace(/^\.+/, ''); // leading dots (hidden)
     s = s.replace(/[^a-zA-Z0-9._-]/g, '_'); // portable charset
     s = s.replace(/[.\s]+$/g, ''); // trailing dots/spaces (Windows)
-    if (s.length === 0) s = 'file';
+    // Use timestamp to ensure uniqueness and prevent collisions
+    if (s.length === 0) s = `file_${Date.now()}`;
 
     // Avoid Windows reserved device names (case-insensitive)
     const base = s.split('.')[0]?.toUpperCase();

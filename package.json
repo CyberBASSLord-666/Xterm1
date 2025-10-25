@@ -48,6 +48,7 @@
     "@tailwindcss/postcss": "^4.0.0-alpha.16",
     "@types/jest": "^29.5.0",
     "@types/node": "^24.6.2",
+    "@types/sanitize-html": "^2.16.0",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
     "autoprefixer": "^10.4.19",
