@@ -3,7 +3,7 @@
 **Project Name**: PolliWall (Repository: Xterm1)  
 **Type**: AI-Powered Wallpaper Generation Application  
 **Started**: August 2025  
-**First Release**: October 15, 2025  
+**First Release**: October 25, 2025  
 **Status**: Active Development  
 **License**: See LICENSE file
 
