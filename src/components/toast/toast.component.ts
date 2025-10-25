@@ -1,4 +1,5 @@
 import { Component, signal, OnDestroy, OnInit } from '@angular/core';
+import { UI_CONFIG } from '../../constants';
 
 @Component({
   selector: 'app-toast',
@@ -18,7 +19,7 @@ export class ToastComponent implements OnInit, OnDestroy {
     }
     this.timeoutId = window.setTimeout(() => {
       this.message.set(null);
-    }, 4000);
+    }, UI_CONFIG.TOAST_DURATION);
   };
 
   public ngOnInit(): void {

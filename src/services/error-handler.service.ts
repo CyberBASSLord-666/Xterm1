@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { ToastService } from './toast.service';
 import { getErrorMessage } from '../utils/type-guards';
+import { ERROR_MESSAGES } from '../constants';
 
 export class AppError extends Error {
   constructor(
@@ -52,28 +53,28 @@ export class ErrorHandlerService {
 
     // Network errors
     if (this.isNetworkError(message)) {
-      return 'Network error. Please check your internet connection.';
+      return ERROR_MESSAGES.NETWORK_ERROR;
     }
 
     if (this.isTimeoutError(message)) {
-      return 'The request took too long. Please try again.';
+      return ERROR_MESSAGES.TIMEOUT_ERROR;
     }
 
     // API errors
     if (this.isRateLimitError(message)) {
-      return 'Too many requests. Please wait a moment before trying again.';
+      return ERROR_MESSAGES.RATE_LIMIT_ERROR;
     }
 
     if (this.isServerError(message)) {
-      return 'The service is temporarily unavailable. Please try again later.';
+      return ERROR_MESSAGES.SERVER_ERROR;
     }
 
     if (this.isAuthError(message)) {
-      return 'Authentication failed. Please check your API key.';
+      return ERROR_MESSAGES.AUTH_ERROR;
     }
 
     // Default fallback
-    return 'An error occurred. Please try again.';
+    return ERROR_MESSAGES.UNKNOWN_ERROR;
   }
 
   /**
