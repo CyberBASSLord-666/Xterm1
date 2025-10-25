@@ -102,6 +102,7 @@ on:
   pull_request:
     paths:
       - '.github/dependabot.yml'
+      - 'scripts/validate-dependabot.py'
 
 jobs:
   validate:
