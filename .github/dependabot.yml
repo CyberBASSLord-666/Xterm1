@@ -1,8 +1,231 @@
-version: 2.0.2
+# ============================================================================
+# Dependabot Configuration for PolliWall (Xterm1)
+# ============================================================================
+# Version: 2.0.2
+# Last Updated: 2025-10-25
+# Maintainer: CyberBASSLord-666
+#
+# This configuration implements a sophisticated dependency update strategy
+# optimized for Angular 20 applications with comprehensive security controls,
+# intelligent grouping, and operational efficiency.
+#
+# Documentation: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+# ============================================================================
+
+version: 2
+
+# ============================================================================
+# Global Registries Configuration
+# ============================================================================
+registries:
+  npm-registry:
+    type: npm-registry
+    url: https://registry.npmjs.org
+
+# ============================================================================
+# ECOSYSTEM 1: NPM (Node Package Manager)
+# ============================================================================
 updates:
   - package-ecosystem: "npm"
     directory: "/"
+    
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "07:00"
+      timezone: "America/Denver"
+    
+    target-branch: "main"
+    open-pull-requests-limit: 3
+    rebase-strategy: "disabled"
+    versioning-strategy: "increase-if-necessary"
+    
+    # NOTE: The invalid "insecure-external-code-execution" property has been removed.
+    # Dependabot already has built-in security protections and sandboxing.
+    
+    reviewers:
+      - "CyberBASSLord-666"
+    assignees:
+      - "CyberBASSLord-666"
+    
+    labels:
+      - "dependencies"
+      - "npm"
+      - "automated"
+    
+    pull-request-branch-name:
+      separator: "-"
+    
     commit-message:
-      prefix: "fix"
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
+    
+    ignore:
+      - dependency-name: "@angular/*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "tailwindcss"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@tailwindcss/postcss"
+        update-types: ["version-update:semver-major"]
+    
+    allow:
+      - dependency-type: "direct"
+      - dependency-type: "indirect"
+    
+    groups:
+      npm-security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
+      
+      npm-development-minor-patch:
+        applies-to: version-updates
+        dependency-type: "development"
+        patterns:
+          - "@angular-eslint/*"
+          - "@angular/build"
+          - "@angular/cli"
+          - "@angular/compiler-cli"
+          - "@playwright/test"
+          - "@types/*"
+          - "@typescript-eslint/*"
+          - "cypress"
+          - "husky"
+          - "jest"
+          - "jest-preset-angular"
+          - "lint-staged"
+          - "prettier"
+          - "ts-node"
+          - "autoprefixer"
+          - "postcss"
+        update-types:
+          - "minor"
+          - "patch"
+      
+      npm-production-minor-patch:
+        applies-to: version-updates
+        dependency-type: "production"
+        patterns:
+          - "@angular/common"
+          - "@angular/compiler"
+          - "@angular/core"
+          - "@angular/forms"
+          - "@angular/platform-browser"
+          - "@angular/router"
+          - "@angular/service-worker"
+          - "@google/genai"
+          - "idb"
+          - "jszip"
+          - "rxjs"
+          - "sanitize-html"
+          - "zone.js"
+        update-types:
+          - "minor"
+          - "patch"
+      
+      npm-major-updates:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - "major"
+        exclude-patterns:
+          - "@angular/*"
+          - "eslint"
+          - "typescript"
+          - "tailwindcss"
+          - "@tailwindcss/postcss"
+
+# ============================================================================
+# ECOSYSTEM 2: GITHUB ACTIONS
+# ============================================================================
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/Denver"
+    
+    target-branch: "main"
+    open-pull-requests-limit: 3
+    rebase-strategy: "disabled"
+    
+    reviewers:
+      - "CyberBASSLord-666"
+    assignees:
+      - "CyberBASSLord-666"
+    
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "ci-cd"
+      - "automated"
+    
+    pull-request-branch-name:
+      separator: "-"
+    
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    
+    ignore:
+      - dependency-name: "codescan-io/codescan-scanner-action"
+      - dependency-name: "actions/cache"
+        update-types: ["version-update:semver-major"]
+    
+    groups:
+      gha-security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
+      
+      gha-core-minor-patch:
+        applies-to: version-updates
+        patterns:
+          - "actions/checkout"
+          - "actions/setup-node"
+          - "actions/cache"
+          - "actions/upload-artifact"
+          - "actions/download-artifact"
+          - "actions/github-script"
+          - "actions/configure-pages"
+          - "actions/upload-pages-artifact"
+          - "actions/deploy-pages"
+          - "actions/dependency-review-action"
+        update-types:
+          - "minor"
+          - "patch"
+      
+      gha-security-minor-patch:
+        applies-to: version-updates
+        patterns:
+          - "github/codeql-action/*"
+          - "codescan-io/codescan-scanner-action"
+        update-types:
+          - "minor"
+          - "patch"
+      
+      gha-third-party-minor-patch:
+        applies-to: version-updates
+        patterns:
+          - "codecov/codecov-action"
+          - "treosh/lighthouse-ci-action"
+        update-types:
+          - "minor"
+          - "patch"
+      
+      gha-major-updates:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - "major"
+        exclude-patterns:
+          - "codescan-io/codescan-scanner-action" 
