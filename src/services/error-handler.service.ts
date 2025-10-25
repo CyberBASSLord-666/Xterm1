@@ -7,7 +7,7 @@ export class AppError extends Error {
     message: string,
     public readonly code?: string,
     public readonly isUserFriendly: boolean = false,
-    public readonly details?: any
+    public readonly details?: unknown
   ) {
     super(message);
     this.name = 'AppError';
@@ -29,7 +29,7 @@ export class ErrorHandlerService {
    * @param source The source component or service where the error occurred
    * @param showToast Whether to show a toast notification to the user
    */
-  handleError(error: any, source: string, showToast: boolean = true): void {
+  public handleError(error: unknown, source: string, showToast: boolean = true): void {
     const errorMessage = this.extractErrorMessage(error);
     const isUserFriendly = error instanceof AppError && error.isUserFriendly;
 
@@ -46,7 +46,7 @@ export class ErrorHandlerService {
   /**
    * Extract a meaningful error message from various error types.
    */
-  private extractErrorMessage(error: any): string {
+  private extractErrorMessage(error: unknown): string {
     if (typeof error === 'string') {
       return error;
     }
@@ -59,12 +59,17 @@ export class ErrorHandlerService {
       return error.message;
     }
 
-    if (error?.message) {
-      return error.message;
-    }
-
-    if (error?.error?.message) {
-      return error.error.message;
+    if (error && typeof error === 'object') {
+      const errorObj = error as Record<string, unknown>;
+      if (errorObj.message && typeof errorObj.message === 'string') {
+        return errorObj.message;
+      }
+      if (errorObj.error && typeof errorObj.error === 'object') {
+        const nestedError = errorObj.error as Record<string, unknown>;
+        if (nestedError.message && typeof nestedError.message === 'string') {
+          return nestedError.message;
+        }
+      }
     }
 
     return 'An unexpected error occurred';
@@ -73,7 +78,7 @@ export class ErrorHandlerService {
   /**
    * Convert technical errors to user-friendly messages.
    */
-  private getUserFriendlyMessage(error: any): string {
+  private getUserFriendlyMessage(error: unknown): string {
     const message = this.extractErrorMessage(error);
 
     // Network errors
@@ -105,7 +110,7 @@ export class ErrorHandlerService {
   /**
    * Create a user-friendly error with automatic handling.
    */
-  createError(message: string, code?: string, showToast: boolean = true): AppError {
+  public createError(message: string, code?: string, showToast: boolean = true): AppError {
     const error = new AppError(message, code, true);
     if (showToast) {
       this.toast.show(message);
@@ -116,7 +121,7 @@ export class ErrorHandlerService {
   /**
    * Wrap an async operation with error handling.
    */
-  async wrapAsync<T>(
+  public async wrapAsync<T>(
     operation: () => Promise<T>,
     source: string,
     showToast: boolean = true

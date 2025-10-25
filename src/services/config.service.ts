@@ -1,55 +1,60 @@
 import { Injectable } from '@angular/core';
 import { environment } from '../environments/environment';
+import type { EnvironmentConfig } from '@/types/utility.types';
 
 @Injectable({ providedIn: 'root' })
 export class ConfigService {
   private geminiApiKey: string = this.normalizeString(
-    (environment as any).geminiApiKey ?? (environment as any).defaults?.geminiApiKey ?? ''
+    (environment as EnvironmentConfig).geminiApiKey ??
+      (environment as EnvironmentConfig).defaults?.geminiApiKey ??
+      ''
   );
   private analyticsMeasurementId: string = this.normalizeString(
-    (environment as any).analyticsMeasurementId ?? (environment as any).defaults?.analyticsMeasurementId ?? ''
+    (environment as EnvironmentConfig).analyticsMeasurementId ??
+      (environment as EnvironmentConfig).defaults?.analyticsMeasurementId ??
+      ''
   );
 
   /**
    * Set the Gemini API key. This should be called during app initialization
    * with a key from secure storage or user input.
    */
-  setGeminiApiKey(key: string): void {
+  public setGeminiApiKey(key: string): void {
     this.geminiApiKey = this.normalizeString(key);
   }
 
   /**
    * Get the Gemini API key. Returns empty string if not set.
    */
-  getGeminiApiKey(): string {
+  public getGeminiApiKey(): string {
     return this.geminiApiKey;
   }
 
   /**
    * Check if the Gemini API key is configured.
    */
-  hasGeminiApiKey(): boolean {
+  public hasGeminiApiKey(): boolean {
     return this.geminiApiKey.length > 0;
   }
 
   /**
    * Set the analytics measurement identifier used for telemetry.
    */
-  setAnalyticsMeasurementId(measurementId: string): void {
+  public setAnalyticsMeasurementId(measurementId: string): void {
     this.analyticsMeasurementId = this.normalizeString(measurementId);
   }
 
   /**
    * Retrieve the analytics measurement identifier, if any.
    */
-  getAnalyticsMeasurementId(): string {
+  public getAnalyticsMeasurementId(): string {
     return this.analyticsMeasurementId;
   }
 
   /**
    * Determine whether analytics has a configured measurement identifier.
    */
-  hasAnalyticsMeasurementId(): boolean {
+  public hasAnalyticsMeasurementId(): boolean {
     return this.analyticsMeasurementId.length > 0;
   }
 

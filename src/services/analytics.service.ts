@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { environment } from '../environments/environment';
+import type { WindowWithAnalytics } from '@/types/utility.types';
 
 export interface AnalyticsEvent {
   name: string;
@@ -35,7 +36,7 @@ export class AnalyticsService {
    * Initialize analytics (call this in app initialization).
    * @param trackingId Google Analytics tracking ID or similar
    */
-  initialize(trackingId?: string): void {
+  public initialize(trackingId?: string): void {
     if (!this.enabled) {
       this.logger.info('Analytics disabled in development mode', undefined, 'Analytics');
       return;
@@ -54,9 +55,11 @@ export class AnalyticsService {
    * @param measurementId GA4 Measurement ID (e.g., 'G-XXXXXXXXXX')
    */
   private loadGoogleAnalytics(measurementId: string): void {
+    const win = window as WindowWithAnalytics;
+
     // Check if gtag is already loaded
-    if ((window as any).gtag) {
-      (window as any).gtag('config', measurementId, {
+    if (win.gtag) {
+      win.gtag('config', measurementId, {
         send_page_view: false, // We'll handle page views manually
       });
       return;
@@ -69,12 +72,12 @@ export class AnalyticsService {
     document.head.appendChild(script);
 
     // Initialize gtag
-    (window as any).dataLayer = (window as any).dataLayer || [];
-    (window as any).gtag = function (...args: any[]) {
-      (window as any).dataLayer.push(args);
+    win.dataLayer = win.dataLayer || [];
+    win.gtag = function (...args: unknown[]): void {
+      win.dataLayer?.push(args);
     };
-    (window as any).gtag('js', new Date());
-    (window as any).gtag('config', measurementId, {
+    win.gtag('js', new Date());
+    win.gtag('config', measurementId, {
       send_page_view: false,
       anonymize_ip: true, // GDPR compliance
       cookie_flags: 'SameSite=None;Secure',
@@ -88,7 +91,7 @@ export class AnalyticsService {
    * @param path The page path
    * @param title The page title
    */
-  trackPageView(path: string, title?: string): void {
+  public trackPageView(path: string, title?: string): void {
     this.trackEvent({
       name: 'page_view',
       category: 'navigation',
@@ -96,8 +99,9 @@ export class AnalyticsService {
       label: path,
     });
 
-    if (this.enabled && (window as any).gtag) {
-      (window as any).gtag('event', 'page_view', {
+    const win = window as WindowWithAnalytics;
+    if (this.enabled && win.gtag) {
+      win.gtag('event', 'page_view', {
         page_path: path,
         page_title: title || document.title,
         page_location: window.location.href,
@@ -109,7 +113,7 @@ export class AnalyticsService {
    * Track a custom event with full type safety.
    * @param event The event to track
    */
-  trackEvent(event: Omit<AnalyticsEvent, 'timestamp'>): void {
+  public trackEvent(event: Omit<AnalyticsEvent, 'timestamp'>): void {
     // Validate event structure
     if (!event.name || typeof event.name !== 'string') {
       this.logger.warn('Invalid event name', event, 'Analytics');
@@ -139,11 +143,12 @@ export class AnalyticsService {
 
     this.logger.debug('Analytics event tracked', fullEvent, 'Analytics');
 
-    if (this.enabled && (window as any).gtag) {
+    const win = window as WindowWithAnalytics;
+    if (this.enabled && win.gtag) {
       try {
-        const eventParams: Record<string, any> = {
+        const eventParams: Record<string, string | number | boolean> = {
           event_category: event.category,
-          event_label: event.label,
+          event_label: event.label || '',
           non_interaction: false,
         };
 
@@ -155,7 +160,7 @@ export class AnalyticsService {
           Object.assign(eventParams, event.metadata);
         }
 
-        (window as any).gtag('event', event.action, eventParams);
+        win.gtag('event', event.action, eventParams);
       } catch (error) {
         this.logger.error('Failed to send event to GA', error, 'Analytics');
       }
@@ -167,7 +172,7 @@ export class AnalyticsService {
    * @param model The AI model used
    * @param duration Generation duration in milliseconds
    */
-  trackImageGeneration(model: string, duration: number): void {
+  public trackImageGeneration(model: string, duration: number): void {
     this.trackEvent({
       name: 'image_generation',
       category: 'generation',
@@ -182,7 +187,7 @@ export class AnalyticsService {
    * @param error The error message
    * @param source The source of the error
    */
-  trackError(error: string, source: string): void {
+  public trackError(error: string, source: string): void {
     this.trackEvent({
       name: 'error',
       category: 'error',
@@ -196,7 +201,7 @@ export class AnalyticsService {
    * @param feature The feature name
    * @param action The action performed
    */
-  trackFeatureUsage(feature: string, action: string): void {
+  public trackFeatureUsage(feature: string, action: string): void {
     this.trackEvent({
       name: 'feature_usage',
       category: 'feature',
@@ -210,7 +215,7 @@ export class AnalyticsService {
    * @param element The element interacted with
    * @param action The interaction type
    */
-  trackInteraction(element: string, action: string): void {
+  public trackInteraction(element: string, action: string): void {
     this.trackEvent({
       name: 'user_interaction',
       category: 'interaction',
@@ -222,7 +227,7 @@ export class AnalyticsService {
   /**
    * Get tracked events (for debugging).
    */
-  getEventQueue(): AnalyticsEvent[] {
+  public getEventQueue(): AnalyticsEvent[] {
     return [...this.eventQueue];
   }
 
