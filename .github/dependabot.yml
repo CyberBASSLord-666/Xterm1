@@ -15,16 +15,9 @@
 version: 2
 
 # ============================================================================
-# Global Registries Configuration
-# ============================================================================
-registries:
-  npm-registry:
-    type: npm-registry
-    url: https://registry.npmjs.org
-
-# ============================================================================
 # ECOSYSTEM 1: NPM (Node Package Manager)
 # ============================================================================
+# Note: No custom registries configured - using default public npm registry
 updates:
   - package-ecosystem: "npm"
     directory: "/"
