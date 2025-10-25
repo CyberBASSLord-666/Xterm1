@@ -432,6 +432,41 @@ lsof -ti:4200 | xargs kill
 - Clear browser cache
 - Check console for service worker errors
 
+## Dependency Management
+
+### Automated Dependabot Updates
+
+The project uses Dependabot to automatically manage dependencies. An automated workflow handles most dependency updates:
+
+**Automatic Merging:**
+- **Patch updates** (e.g., 1.0.0 → 1.0.1): Auto-approved and auto-merged after CI passes
+- **Minor updates** (e.g., 1.0.0 → 1.1.0): Auto-approved and auto-merged after CI passes
+- **Major updates** (e.g., 1.0.0 → 2.0.0): Require manual review and approval
+
+**Update Schedule:**
+- **npm dependencies**: Weekly on Mondays at 7:00 AM (America/Denver)
+- **GitHub Actions**: Weekly on Mondays at 6:00 AM (America/Denver)
+
+**Configuration Files:**
+- `.github/dependabot.yml`: Dependabot configuration
+- `.github/workflows/dependabot-auto-merge.yml`: Auto-merge workflow
+
+**How It Works:**
+1. Dependabot creates a PR for dependency updates
+2. CI workflows (lint, test, build, security) run automatically
+3. If all checks pass and the update is patch/minor:
+   - PR is auto-approved
+   - Auto-merge is enabled
+   - PR is merged automatically
+4. Major updates receive a comment requesting manual review
+
+**Manual Intervention:**
+Major version updates require manual review because they may contain breaking changes:
+1. Review the PR description and changelog
+2. Check for breaking changes
+3. Update code if necessary
+4. Approve and merge manually
+
 ## Contributing
 
 ### Before Submitting a PR
