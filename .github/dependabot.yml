@@ -1,28 +1,97 @@
 version: 2
+
 updates:
-  # Enable version updates for npm
+  # --- npm packages ---
   - package-ecosystem: "npm"
     directory: "/"
+    target-branch: "main"            # adjust if your default branch differs
     schedule:
       interval: "weekly"
       day: "monday"
+      time: "06:00"
+      timezone: "America/Denver"
     open-pull-requests-limit: 10
+    rebase-strategy: "auto"          # keep PRs up to date without manual rebases
+    versioning-strategy: "increase"  # update package.json ranges to the new version
     reviewers:
+      - "CyberBASSLord-666"
+    assignees:
       - "CyberBASSLord-666"
     labels:
       - "dependencies"
       - "npm"
     commit-message:
       prefix: "chore"
+      prefix-development: "chore"
       include: "scope"
+    pull-request-branch-name:
+      separator: "-"                 # final branch form e.g., dependabot-npm_and_yarn-<dep>-<ver>
+    # Grouping reduces PR noise while keeping major changes isolated.
+    groups:
+      # Safe, routine bumps
+      minor-and-patch-prod:
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
+      minor-and-patch-dev:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
 
-  # Enable version updates for GitHub Actions
+      # Themed buckets for common stacks/tools (applied only if present)
+      types-packages:
+        patterns:
+          - "@types/*"
+      eslint-tooling:
+        patterns:
+          - "eslint"
+          - "eslint-*"
+          - "@eslint/*"
+      test-stack:
+        patterns:
+          - "jest"
+          - "@jest/*"
+          - "vitest"
+          - "@vitest/*"
+      build-toolchain:
+        patterns:
+          - "typescript"
+          - "ts-node"
+          - "webpack"
+          - "vite"
+          - "@vitejs/*"
+          - "rollup"
+
+      # Leave majors ungrouped so each breaking change is reviewed on its own.
+      # (Dependabot will open one PR per major by default.)
+
+  # --- GitHub Actions ---
   - package-ecosystem: "github-actions"
     directory: "/"
+    target-branch: "main"            # adjust if your default branch differs
     schedule:
       interval: "weekly"
       day: "monday"
+      time: "06:30"
+      timezone: "America/Denver"
     open-pull-requests-limit: 5
+    rebase-strategy: "auto"
+    reviewers:
+      - "CyberBASSLord-666"
+    assignees:
+      - "CyberBASSLord-666"
     labels:
       - "dependencies"
       - "github-actions"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    groups:
+      actions-minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+      # Keep major workflow bumps isolated for safer review
+      # (one PR per major by default)
