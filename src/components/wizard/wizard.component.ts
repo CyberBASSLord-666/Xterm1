@@ -338,7 +338,7 @@ export class WizardComponent implements OnInit {
     if (saved) {
       try {
         this.promptHistory.set(JSON.parse(saved));
-      } catch (e) {
+      } catch {
         this.promptHistory.set([]);
       }
     }

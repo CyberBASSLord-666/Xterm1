@@ -1,12 +1,29 @@
 import { Injectable, inject } from '@angular/core';
 import { LoggerService } from './logger.service';
+import type { Metadata, PerformanceEntryWithProcessing } from '@/types/utility.types';
 
 export interface PerformanceMetric {
   name: string;
   startTime: number;
   endTime?: number;
   duration?: number;
-  metadata?: any;
+  metadata?: Metadata;
+}
+
+export interface WebVitals {
+  fcp?: number; // First Contentful Paint
+  lcp?: number; // Largest Contentful Paint
+  fid?: number; // First Input Delay
+  cls?: number; // Cumulative Layout Shift
+  ttfb?: number; // Time to First Byte
+  tti?: number; // Time to Interactive
+}
+
+interface PerformanceNavigationTimingExtended extends PerformanceEntry {
+  responseStart?: number;
+  requestStart?: number;
+  domInteractive?: number;
+  fetchStart?: number;
 }
 
 /**
@@ -26,7 +43,7 @@ export class PerformanceMonitorService {
    * @param metadata Optional metadata to associate with the metric
    * @returns The metric ID
    */
-  startMeasure(name: string, metadata?: any): string {
+  public startMeasure(name: string, metadata?: Metadata): string {
     const id = `${name}-${Date.now()}-${Math.random()}`;
     const metric: PerformanceMetric = {
       name,
@@ -76,7 +93,11 @@ export class PerformanceMonitorService {
    * @param metadata Optional metadata
    * @returns The result of the operation
    */
-  async measureAsync<T>(name: string, operation: () => Promise<T>, metadata?: any): Promise<T> {
+  public async measureAsync<T>(
+    name: string,
+    operation: () => Promise<T>,
+    metadata?: Metadata
+  ): Promise<T> {
     const id = this.startMeasure(name, metadata);
     try {
       return await operation();
@@ -92,7 +113,7 @@ export class PerformanceMonitorService {
    * @param metadata Optional metadata
    * @returns The result of the operation
    */
-  measureSync<T>(name: string, operation: () => T, metadata?: any): T {
+  public measureSync<T>(name: string, operation: () => T, metadata?: Metadata): T {
     const id = this.startMeasure(name, metadata);
     try {
       return operation();
@@ -141,23 +162,26 @@ export class PerformanceMonitorService {
   /**
    * Get Web Vitals metrics with full Core Web Vitals implementation.
    */
-  getWebVitals(): {
-    fcp?: number; // First Contentful Paint
-    lcp?: number; // Largest Contentful Paint
-    fid?: number; // First Input Delay
-    cls?: number; // Cumulative Layout Shift
-    ttfb?: number; // Time to First Byte
-    tti?: number; // Time to Interactive
-  } {
-    const vitals: any = {};
+  /**
+   * Get current Web Vitals metrics.
+   * @returns Object containing available Web Vitals metrics
+   */
+  public getWebVitals(): WebVitals {
+    const vitals: WebVitals = {};
 
     if ('PerformanceObserver' in window) {
       try {
         // Time to First Byte
-        const navigation = performance.getEntriesByType('navigation')[0] as any;
+        const navigation = performance.getEntriesByType(
+          'navigation'
+        )[0] as PerformanceNavigationTimingExtended;
         if (navigation) {
-          vitals.ttfb = navigation.responseStart - navigation.requestStart;
-          vitals.tti = navigation.domInteractive - navigation.fetchStart;
+          if (navigation.responseStart && navigation.requestStart) {
+            vitals.ttfb = navigation.responseStart - navigation.requestStart;
+          }
+          if (navigation.domInteractive && navigation.fetchStart) {
+            vitals.tti = navigation.domInteractive - navigation.fetchStart;
+          }
         }
 
         // First Contentful Paint
@@ -196,13 +220,13 @@ export class PerformanceMonitorService {
     try {
       const observer = new PerformanceObserver((list) => {
         const entries = list.getEntries();
-        const lastEntry = entries[entries.length - 1] as any;
-        if (lastEntry) {
-          callback(lastEntry.renderTime || lastEntry.loadTime);
+        const lastEntry = entries[entries.length - 1] as PerformanceEntryWithProcessing;
+        if (lastEntry && (lastEntry.renderTime || lastEntry.loadTime)) {
+          callback(lastEntry.renderTime || lastEntry.loadTime || 0);
         }
       });
       observer.observe({ type: 'largest-contentful-paint', buffered: true });
-    } catch (e) {
+    } catch {
       // LCP not supported
     }
   }
@@ -213,14 +237,15 @@ export class PerformanceMonitorService {
   private observeFID(callback: (value: number) => void): void {
     try {
       const observer = new PerformanceObserver((list) => {
-        list.getEntries().forEach((entry: any) => {
-          if (entry.processingStart) {
-            callback(entry.processingStart - entry.startTime);
+        list.getEntries().forEach((entry) => {
+          const typedEntry = entry as PerformanceEntryWithProcessing;
+          if (typedEntry.processingStart) {
+            callback(typedEntry.processingStart - entry.startTime);
           }
         });
       });
       observer.observe({ type: 'first-input', buffered: true });
-    } catch (e) {
+    } catch {
       // FID not supported
     }
   }
@@ -231,25 +256,28 @@ export class PerformanceMonitorService {
   private observeCLS(callback: (value: number) => void): void {
     let clsValue = 0;
     let sessionValue = 0;
-    let sessionEntries: any[] = [];
+    let sessionEntries: PerformanceEntryWithProcessing[] = [];
 
     try {
       const observer = new PerformanceObserver((list) => {
-        list.getEntries().forEach((entry: any) => {
-          if (!entry.hadRecentInput) {
+        list.getEntries().forEach((entry) => {
+          const typedEntry = entry as PerformanceEntryWithProcessing;
+          if (!typedEntry.hadRecentInput) {
             const firstSessionEntry = sessionEntries[0];
             const lastSessionEntry = sessionEntries[sessionEntries.length - 1];
 
             if (
               sessionValue &&
+              lastSessionEntry &&
+              firstSessionEntry &&
               entry.startTime - lastSessionEntry.startTime < 1000 &&
               entry.startTime - firstSessionEntry.startTime < 5000
             ) {
-              sessionValue += entry.value;
-              sessionEntries.push(entry);
+              sessionValue += typedEntry.value || 0;
+              sessionEntries.push(typedEntry);
             } else {
-              sessionValue = entry.value;
-              sessionEntries = [entry];
+              sessionValue = typedEntry.value || 0;
+              sessionEntries = [typedEntry];
             }
 
             if (sessionValue > clsValue) {
@@ -260,7 +288,7 @@ export class PerformanceMonitorService {
         });
       });
       observer.observe({ type: 'layout-shift', buffered: true });
-    } catch (e) {
+    } catch {
       // CLS not supported
     }
   }

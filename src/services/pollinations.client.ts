@@ -100,7 +100,7 @@ async function fetchWithRetries(
           } else {
             errorMessage = 'An unexpected API error occurred. Please try again.';
           }
-        } catch (e) {
+        } catch {
           errorMessage = 'The server returned an unexpected response. Please try again.';
         }
         // Client-side errors should not be retried, so we throw immediately.
