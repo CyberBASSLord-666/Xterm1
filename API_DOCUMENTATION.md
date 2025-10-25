@@ -167,7 +167,7 @@ If `environment.bootstrapConfig.failOnMissingGeminiKey` is true and no Gemini AP
 **Example**:
 ```typescript
 // In app.config.ts
-import { APP_INITIALIZER } from '@angular/core';
+import { APP_INITIALIZER, ApplicationConfig } from '@angular/core';
 import { AppInitializerService, initializeApp } from './services/app-initializer.service';
 
 export const appConfig: ApplicationConfig = {
@@ -735,8 +735,7 @@ Lazy load images using Intersection Observer with dynamic source binding.
   [appLazyImage]="imageUrl"
   [lazySrc]="placeholderUrl"
   [lazyThreshold]="0.1"
-  alt="Description"
->
+  alt="Description" />
 ```
 
 **Inputs**:
