@@ -1,97 +1,71 @@
 version: 2
 
 updates:
-  # --- npm packages ---
+  # --- npm ---
   - package-ecosystem: "npm"
     directory: "/"
-    target-branch: "main"            # adjust if your default branch differs
+    target-branch: "main"
     schedule:
       interval: "weekly"
       day: "monday"
       time: "06:00"
       timezone: "America/Denver"
-    open-pull-requests-limit: 10
-    rebase-strategy: "auto"          # keep PRs up to date without manual rebases
-    versioning-strategy: "increase"  # update package.json ranges to the new version
-    reviewers:
-      - "CyberBASSLord-666"
-    assignees:
-      - "CyberBASSLord-666"
-    labels:
-      - "dependencies"
-      - "npm"
+    open-pull-requests-limit: 2        # hard cap per-ecosystem
+    rebase-strategy: "disabled"        # avoid CI thrash from auto-rebases
+    versioning-strategy: "increase-if-necessary"
+    reviewers: ["CyberBASSLord-666"]
+    assignees: ["CyberBASSLord-666"]
+    labels: ["dependencies","npm"]
+    pull-request-branch-name:
+      separator: "-"
     commit-message:
       prefix: "chore"
       prefix-development: "chore"
       include: "scope"
-    pull-request-branch-name:
-      separator: "-"                 # final branch form e.g., dependabot-npm_and_yarn-<dep>-<ver>
-    # Grouping reduces PR noise while keeping major changes isolated.
+    # Pace big bumps; keep minors quick.
+    cooldown:
+      default-days: 0
+      semver-minor-days: 3
+      semver-major-days: 14
+      include: ["*"]
+    # Two PRs max: one for minor/patch, one for majors. Security bundled separately.
     groups:
-      # Safe, routine bumps
-      minor-and-patch-prod:
-        dependency-type: "production"
-        update-types:
-          - "minor"
-          - "patch"
-      minor-and-patch-dev:
-        dependency-type: "development"
-        update-types:
-          - "minor"
-          - "patch"
-
-      # Themed buckets for common stacks/tools (applied only if present)
-      types-packages:
-        patterns:
-          - "@types/*"
-      eslint-tooling:
-        patterns:
-          - "eslint"
-          - "eslint-*"
-          - "@eslint/*"
-      test-stack:
-        patterns:
-          - "jest"
-          - "@jest/*"
-          - "vitest"
-          - "@vitest/*"
-      build-toolchain:
-        patterns:
-          - "typescript"
-          - "ts-node"
-          - "webpack"
-          - "vite"
-          - "@vitejs/*"
-          - "rollup"
-
-      # Leave majors ungrouped so each breaking change is reviewed on its own.
-      # (Dependabot will open one PR per major by default.)
+      npm-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor","patch"]
+      npm-majors:
+        patterns: ["*"]
+        update-types: ["major"]
+      security-rollup:
+        applies-to: "security-updates"
+        patterns: ["*"]
 
   # --- GitHub Actions ---
   - package-ecosystem: "github-actions"
     directory: "/"
-    target-branch: "main"            # adjust if your default branch differs
+    target-branch: "main"
     schedule:
       interval: "weekly"
       day: "monday"
-      time: "06:30"
+      time: "06:15"
       timezone: "America/Denver"
-    open-pull-requests-limit: 5
-    rebase-strategy: "auto"
-    reviewers:
-      - "CyberBASSLord-666"
-    assignees:
-      - "CyberBASSLord-666"
-    labels:
-      - "dependencies"
-      - "github-actions"
+    open-pull-requests-limit: 1
+    rebase-strategy: "disabled"
+    reviewers: ["CyberBASSLord-666"]
+    assignees: ["CyberBASSLord-666"]
+    labels: ["dependencies","github-actions"]
+    pull-request-branch-name:
+      separator: "-"
     commit-message:
       prefix: "chore"
       include: "scope"
     groups:
-      actions-minor-and-patch:
-        update-types:
-          - "minor"
-          - "patch"
-      # Keep major workflow bumps isolated for safer review
-      # (one PR per major by default)
+      gha-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor","patch"]
+      gha-majors:
+        patterns: ["*"]
+        update-types: ["major"]
+      security-rollup:
+        applies-to: "security-updates"
+        patterns: ["*"]
