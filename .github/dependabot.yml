@@ -1,71 +1,454 @@
+# ============================================================================
+# Dependabot Configuration for PolliWall (Xterm1)
+# ============================================================================
+# Version: 2.0.0
+# Last Updated: 2025-10-25
+# Maintainer: CyberBASSLord-666
+#
+# This configuration implements a sophisticated dependency update strategy
+# optimized for Angular 20 applications with comprehensive security controls,
+# intelligent grouping, and operational efficiency.
+#
+# Documentation: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+# ============================================================================
+
 version: 2
 
+# ============================================================================
+# Global Registries Configuration
+# ============================================================================
+# Explicitly define registries for enhanced security and reliability.
+# Even public registries benefit from explicit configuration for audit trails.
+# ============================================================================
+registries:
+  npm-registry:
+    type: npm-registry
+    url: https://registry.npmjs.org
+    # Public registry - no authentication required
+    # Explicitly configured for security audit compliance
+
+# ============================================================================
+# ECOSYSTEM 1: NPM (Node Package Manager)
+# ============================================================================
+# Manages all JavaScript/TypeScript dependencies for the Angular application.
+# Strategy: Grouped updates with separation of concerns for minor/patch vs major
+# updates, with dedicated security update handling.
+# ============================================================================
 updates:
-  # --- npm ---
   - package-ecosystem: "npm"
     directory: "/"
+    
+    # -------------------------------------------------------------------------
+    # Schedule Configuration
+    # -------------------------------------------------------------------------
+    # Weekly updates on Monday at 07:00 MST to avoid CI bottlenecks
+    # Offset from GHA updates to distribute CI load effectively
+    # -------------------------------------------------------------------------
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+      timezone: "America/Denver"
+    
+    # -------------------------------------------------------------------------
+    # Target Branch
+    # -------------------------------------------------------------------------
+    # All updates target main branch for integration
+    # -------------------------------------------------------------------------
     target-branch: "main"
+    
+    # -------------------------------------------------------------------------
+    # Pull Request Limits
+    # -------------------------------------------------------------------------
+    # Set to 3 to accommodate our 3-group strategy:
+    # 1. minor-patch group
+    # 2. major updates group
+    # 3. security-updates group (highest priority)
+    # -------------------------------------------------------------------------
+    open-pull-requests-limit: 3
+    
+    # -------------------------------------------------------------------------
+    # Rebase Strategy
+    # -------------------------------------------------------------------------
+    # Disabled to prevent CI thrash from automatic rebases.
+    # Trade-off: PRs may become stale, but this prevents wasted CI minutes
+    # and reduces notification noise. Manual rebase when needed.
+    # -------------------------------------------------------------------------
+    rebase-strategy: "disabled"
+    
+    # -------------------------------------------------------------------------
+    # Versioning Strategy
+    # -------------------------------------------------------------------------
+    # "increase-if-necessary" ensures minimal version bumps to maintain
+    # compatibility while still getting necessary updates. More conservative
+    # than "increase" which always bumps to latest.
+    # -------------------------------------------------------------------------
+    versioning-strategy: "increase-if-necessary"
+    
+    # -------------------------------------------------------------------------
+    # Security Configuration
+    # -------------------------------------------------------------------------
+    # Deny execution of external code during updates for enhanced security.
+    # Prevents Dependabot from running post-install scripts that could
+    # introduce supply chain vulnerabilities.
+    # -------------------------------------------------------------------------
+    insecure-external-code-execution: "deny"
+    
+    # -------------------------------------------------------------------------
+    # Review and Assignment
+    # -------------------------------------------------------------------------
+    # Assign to primary maintainer for review workflow
+    # -------------------------------------------------------------------------
+    reviewers:
+      - "CyberBASSLord-666"
+    assignees:
+      - "CyberBASSLord-666"
+    
+    # -------------------------------------------------------------------------
+    # Labels
+    # -------------------------------------------------------------------------
+    # Multi-label strategy for effective filtering and automation
+    # -------------------------------------------------------------------------
+    labels:
+      - "dependencies"
+      - "npm"
+      - "automated"
+    
+    # -------------------------------------------------------------------------
+    # Branch Naming
+    # -------------------------------------------------------------------------
+    # Use hyphen separator for conventional branch naming
+    # Format: dependabot-npm-{package}-{version}
+    # -------------------------------------------------------------------------
+    pull-request-branch-name:
+      separator: "-"
+    
+    # -------------------------------------------------------------------------
+    # Commit Message Configuration
+    # -------------------------------------------------------------------------
+    # Follows Conventional Commits specification for automated changelog
+    # generation and semantic release compatibility.
+    # Prefix "chore" for non-feature dependency updates
+    # Include scope for better commit message clarity
+    # -------------------------------------------------------------------------
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
+    
+    # -------------------------------------------------------------------------
+    # Ignore Configuration
+    # -------------------------------------------------------------------------
+    # Strategic ignores for packages requiring manual intervention or
+    # packages with known breaking changes requiring careful evaluation.
+    # -------------------------------------------------------------------------
+    ignore:
+      # Angular packages - coordinated updates only, managed manually
+      # to ensure all Angular packages stay in sync
+      - dependency-name: "@angular/*"
+        update-types: ["version-update:semver-major"]
+      
+      # ESLint v9+ requires significant config migration from v8
+      # Keep on v8 until migration strategy is planned
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      
+      # TypeScript major updates require careful validation
+      # Test thoroughly before accepting major version bumps
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      
+      # Tailwind CSS alpha versions - explicit updates only
+      # Project uses v4 alpha, don't auto-update to avoid instability
+      - dependency-name: "tailwindcss"
+        versions: [">=4.0.0-alpha.17"]
+      - dependency-name: "@tailwindcss/postcss"
+        versions: [">=4.0.0-alpha.17"]
+    
+    # -------------------------------------------------------------------------
+    # Allow Configuration
+    # -------------------------------------------------------------------------
+    # Explicitly allow both direct and indirect dependencies
+    # for comprehensive security coverage
+    # -------------------------------------------------------------------------
+    allow:
+      - dependency-type: "direct"
+      - dependency-type: "indirect"
+    
+    # -------------------------------------------------------------------------
+    # Update Groups
+    # -------------------------------------------------------------------------
+    # Three-tier grouping strategy for optimal PR management:
+    # 1. Security updates (HIGHEST PRIORITY - separate PR)
+    # 2. Minor/Patch updates (grouped together for efficiency)
+    # 3. Major updates (separated for careful review)
+    # -------------------------------------------------------------------------
+    groups:
+      # GROUP 1: Security Updates - CRITICAL PRIORITY
+      # All security vulnerabilities grouped together for immediate attention
+      # Processed first, separate from other updates
+      npm-security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
+        # Security updates skip the normal grouping patterns
+      
+      # GROUP 2: Development Dependencies - Minor and Patch
+      # Low-risk updates for build tools, test frameworks, linters
+      npm-development-minor-patch:
+        dependency-type: "development"
+        patterns:
+          - "@angular-eslint/*"
+          - "@angular/build"
+          - "@angular/cli"
+          - "@angular/compiler-cli"
+          - "@playwright/test"
+          - "@types/*"
+          - "@typescript-eslint/*"
+          - "cypress"
+          - "husky"
+          - "jest"
+          - "jest-preset-angular"
+          - "lint-staged"
+          - "prettier"
+          - "ts-node"
+          - "autoprefixer"
+          - "postcss"
+        update-types:
+          - "minor"
+          - "patch"
+      
+      # GROUP 3: Production Dependencies - Minor and Patch
+      # Runtime dependencies, grouped separately from dev dependencies
+      npm-production-minor-patch:
+        dependency-type: "production"
+        patterns:
+          - "@angular/common"
+          - "@angular/compiler"
+          - "@angular/core"
+          - "@angular/forms"
+          - "@angular/platform-browser"
+          - "@angular/router"
+          - "@angular/service-worker"
+          - "@google/genai"
+          - "idb"
+          - "jszip"
+          - "rxjs"
+          - "sanitize-html"
+          - "zone.js"
+        update-types:
+          - "minor"
+          - "patch"
+      
+      # GROUP 4: Major Updates - ALL Dependencies
+      # All major version bumps grouped together for careful evaluation
+      # Requires thorough testing due to potential breaking changes
+      npm-major-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "major"
+        exclude-patterns:
+          # Exclude Angular core packages from auto-major updates
+          - "@angular/*"
+          # Exclude explicitly ignored packages
+          - "eslint"
+          - "typescript"
+          - "tailwindcss"
+          - "@tailwindcss/postcss"
+
+# ============================================================================
+# ECOSYSTEM 2: GITHUB ACTIONS
+# ============================================================================
+# Manages GitHub Actions workflow dependencies for CI/CD pipeline security.
+# Strategy: Separate minor/patch from major updates, with security priority.
+# Actions are updated less frequently but require careful validation.
+# ============================================================================
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    
+    # -------------------------------------------------------------------------
+    # Schedule Configuration
+    # -------------------------------------------------------------------------
+    # Weekly updates on Monday at 06:00 MST
+    # Runs BEFORE npm updates to ensure CI infrastructure is stable first
+    # -------------------------------------------------------------------------
     schedule:
       interval: "weekly"
       day: "monday"
       time: "06:00"
       timezone: "America/Denver"
-    open-pull-requests-limit: 2        # hard cap per-ecosystem
-    rebase-strategy: "disabled"        # avoid CI thrash from auto-rebases
-    versioning-strategy: "increase-if-necessary"
-    reviewers: ["CyberBASSLord-666"]
-    assignees: ["CyberBASSLord-666"]
-    labels: ["dependencies","npm"]
-    pull-request-branch-name:
-      separator: "-"
-    commit-message:
-      prefix: "chore"
-      prefix-development: "chore"
-      include: "scope"
-    # Pace big bumps; keep minors quick.
-    cooldown:
-      default-days: 0
-      semver-minor-days: 3
-      semver-major-days: 14
-      include: ["*"]
-    # Two PRs max: one for minor/patch, one for majors. Security bundled separately.
-    groups:
-      npm-minor-patch:
-        patterns: ["*"]
-        update-types: ["minor","patch"]
-      npm-majors:
-        patterns: ["*"]
-        update-types: ["major"]
-      security-rollup:
-        applies-to: "security-updates"
-        patterns: ["*"]
-
-  # --- GitHub Actions ---
-  - package-ecosystem: "github-actions"
-    directory: "/"
+    
+    # -------------------------------------------------------------------------
+    # Target Branch
+    # -------------------------------------------------------------------------
     target-branch: "main"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "06:15"
-      timezone: "America/Denver"
-    open-pull-requests-limit: 1
+    
+    # -------------------------------------------------------------------------
+    # Pull Request Limits
+    # -------------------------------------------------------------------------
+    # Set to 3 to match our grouping strategy (minor-patch, major, security)
+    # -------------------------------------------------------------------------
+    open-pull-requests-limit: 3
+    
+    # -------------------------------------------------------------------------
+    # Rebase Strategy
+    # -------------------------------------------------------------------------
+    # Disabled to prevent automatic rebases that could cause CI issues
+    # -------------------------------------------------------------------------
     rebase-strategy: "disabled"
-    reviewers: ["CyberBASSLord-666"]
-    assignees: ["CyberBASSLord-666"]
-    labels: ["dependencies","github-actions"]
+    
+    # -------------------------------------------------------------------------
+    # Review and Assignment
+    # -------------------------------------------------------------------------
+    reviewers:
+      - "CyberBASSLord-666"
+    assignees:
+      - "CyberBASSLord-666"
+    
+    # -------------------------------------------------------------------------
+    # Labels
+    # -------------------------------------------------------------------------
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "ci-cd"
+      - "automated"
+    
+    # -------------------------------------------------------------------------
+    # Branch Naming
+    # -------------------------------------------------------------------------
     pull-request-branch-name:
       separator: "-"
+    
+    # -------------------------------------------------------------------------
+    # Commit Message Configuration
+    # -------------------------------------------------------------------------
     commit-message:
-      prefix: "chore"
+      prefix: "ci"
       include: "scope"
+    
+    # -------------------------------------------------------------------------
+    # Ignore Configuration
+    # -------------------------------------------------------------------------
+    # Pin specific action versions that require manual verification
+    # -------------------------------------------------------------------------
+    ignore:
+      # CodeScan action pinned to specific commit for security audit compliance
+      - dependency-name: "codescan-io/codescan-scanner-action"
+        # Currently pinned to: 5b2e8c5683ef6a5adc8fa3b7950bb07debccce12
+      
+      # Actions cache v3 is stable, skip major updates temporarily
+      - dependency-name: "actions/cache"
+        versions: ["4.x"]
+        update-types: ["version-update:semver-major"]
+    
+    # -------------------------------------------------------------------------
+    # Update Groups
+    # -------------------------------------------------------------------------
     groups:
-      gha-minor-patch:
-        patterns: ["*"]
-        update-types: ["minor","patch"]
-      gha-majors:
-        patterns: ["*"]
-        update-types: ["major"]
-      security-rollup:
-        applies-to: "security-updates"
-        patterns: ["*"]
+      # GROUP 1: Security Updates - CRITICAL PRIORITY
+      gha-security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
+      
+      # GROUP 2: Core Actions - Minor and Patch
+      # Standard GitHub-maintained actions
+      gha-core-minor-patch:
+        patterns:
+          - "actions/checkout"
+          - "actions/setup-node"
+          - "actions/cache"
+          - "actions/upload-artifact"
+          - "actions/download-artifact"
+          - "actions/github-script"
+          - "actions/configure-pages"
+          - "actions/upload-pages-artifact"
+          - "actions/deploy-pages"
+          - "actions/dependency-review-action"
+        update-types:
+          - "minor"
+          - "patch"
+      
+      # GROUP 3: Security Actions - Minor and Patch
+      # CodeQL and security scanning actions
+      gha-security-minor-patch:
+        patterns:
+          - "github/codeql-action/*"
+          - "codescan-io/codescan-scanner-action"
+        update-types:
+          - "minor"
+          - "patch"
+      
+      # GROUP 4: Third-Party Actions - Minor and Patch
+      # External actions like Lighthouse, Codecov
+      gha-third-party-minor-patch:
+        patterns:
+          - "codecov/codecov-action"
+          - "treosh/lighthouse-ci-action"
+        update-types:
+          - "minor"
+          - "patch"
+      
+      # GROUP 5: Major Updates - ALL Actions
+      # All major version bumps require manual review
+      gha-major-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "major"
+        exclude-patterns:
+          # Explicitly pinned actions excluded from auto-updates
+          - "codescan-io/codescan-scanner-action"
+
+# ============================================================================
+# CONFIGURATION NOTES AND OPERATIONAL GUIDELINES
+# ============================================================================
+#
+# UPDATE STRATEGY:
+# ----------------
+# 1. Security updates are ALWAYS processed first with highest priority
+# 2. Minor/patch updates are grouped for efficiency
+# 3. Major updates are separated for careful review and testing
+# 4. Development dependencies separated from production dependencies
+#
+# PR REVIEW WORKFLOW:
+# -------------------
+# 1. Security PRs: Review and merge immediately after CI passes
+# 2. Minor/Patch PRs: Review within 1-2 business days
+# 3. Major PRs: Schedule for sprint planning, test thoroughly
+#
+# MERGE STRATEGY:
+# ---------------
+# Use the dependabot-resolve.yml workflow for bulk operations:
+# - close-all: Close all PRs (when cleaning up)
+# - merge-minor-patch: Merge all minor/patch updates
+# - merge-all: Merge everything (use with caution)
+#
+# TESTING REQUIREMENTS:
+# ---------------------
+# - Security updates: Run full CI suite
+# - Minor/Patch: Run unit tests + E2E smoke tests
+# - Major updates: Full regression testing + manual QA
+#
+# MONITORING:
+# -----------
+# - Review Dependabot alerts weekly in Security tab
+# - Check for failed PRs that need manual intervention
+# - Audit ignored packages quarterly for outdated pins
+#
+# MAINTENANCE SCHEDULE:
+# ---------------------
+# - Monthly: Review and update ignore list
+# - Quarterly: Audit pinned versions for security concerns
+# - Bi-annually: Review entire strategy for optimization
+#
+# SECURITY CONSIDERATIONS:
+# ------------------------
+# - insecure-external-code-execution set to "deny" for npm
+# - All actions should use commit SHA when possible for supply chain security
+# - Security updates bypass normal grouping for immediate attention
+# - CVE responses prioritized through dedicated security group
+#
+# ============================================================================
