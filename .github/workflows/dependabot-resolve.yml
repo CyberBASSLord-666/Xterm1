@@ -1,0 +1,115 @@
+name: Resolve Dependabot PRs
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "close-all | merge-minor-patch | merge-all"
+        required: true
+        default: close-all
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const mode = core.getInput('mode');
+            const owner = context.repo.owner;
+            const repo  = context.repo.repo;
+
+            // Get all open PRs
+            const prs = await github.paginate(github.rest.pulls.list, {
+              owner, repo, state: 'open', per_page: 100
+            });
+
+            // Filter to Dependabot PRs only
+            const dependabotPRs = prs.filter(pr =>
+              pr.user && (pr.user.login === 'dependabot[bot]' || pr.user.login === 'app/dependabot')
+            );
+
+            core.info(`Found ${dependabotPRs.length} open Dependabot PRs`);
+
+            function semverKind(from, to) {
+              const parse = v => (v || '').match(/(\d+)(?:\.(\d+))?(?:\.(\d+))?/);
+              const pf = parse(from), pt = parse(to);
+              if (!pf || !pt) return 'unknown';
+              const f = pf.slice(1).map(x => parseInt(x||'0',10));
+              const t = pt.slice(1).map(x => parseInt(x||'0',10));
+              if (t[0] > f[0]) return 'major';
+              if (t[1] > f[1]) return 'minor';
+              if (t[2] > f[2]) return 'patch';
+              return 'unknown';
+            }
+
+            // Helper: delete branch ref if it's in this repo
+            async function deleteHeadRef(pr) {
+              if (!pr.head || !pr.head.ref) return;
+              if (!pr.head.repo || pr.head.repo.fork || pr.head.repo.full_name !== `${owner}/${repo}`) return;
+              const ref = `heads/${pr.head.ref}`;
+              try {
+                await github.rest.git.deleteRef({ owner, repo, ref });
+              } catch (e) {
+                core.warning(`Could not delete ref ${ref}: ${e.message}`);
+              }
+            }
+
+            // Enable auto-merge via GraphQL (if repo setting allows it)
+            async function enableAutoMerge(pr) {
+              try {
+                const res = await github.graphql(`
+                  mutation($pr:ID!) {
+                    enablePullRequestAutoMerge(input:{ pullRequestId:$pr, mergeMethod:MERGE }) { clientMutationId }
+                  }`,
+                  { pr: pr.node_id }
+                );
+                core.info(`Auto-merge enabled for #${pr.number}`);
+                return true;
+              } catch (e) {
+                core.warning(`Auto-merge not enabled for #${pr.number}: ${e.message}`);
+                return false;
+              }
+            }
+
+            for (const pr of dependabotPRs) {
+              const body = pr.body || '';
+              const match = body.match(/ from ([0-9][0-9\.]*) to ([0-9][0-9\.]*)/i);
+              const kind  = match ? semverKind(match[1], match[2]) : 'unknown';
+
+              if (mode === 'close-all') {
+                await github.rest.pulls.update({ owner, repo, pull_number: pr.number, state: 'closed' });
+                await github.rest.issues.createComment({
+                  owner, repo, issue_number: pr.number,
+                  body: "Closed to consolidate via grouped Dependabot config."
+                });
+                await deleteHeadRef(pr);
+                core.info(`Closed #${pr.number}`);
+                continue;
+              }
+
+              if (mode === 'merge-minor-patch' && kind === 'major') {
+                core.info(`Leaving major #${pr.number} open`);
+                continue;
+              }
+
+              // Try to merge immediately; if checks not passed, enable auto-merge
+              try {
+                await github.rest.pulls.merge({ owner, repo, pull_number: pr.number, merge_method: 'merge' });
+                await deleteHeadRef(pr);
+                core.info(`Merged #${pr.number}`);
+              } catch (e) {
+                core.info(`Immediate merge failed for #${pr.number}: ${e.message}`);
+                const ok = await enableAutoMerge(pr);
+                if (!ok) {
+                  await github.rest.issues.createComment({
+                    owner, repo, issue_number: pr.number,
+                    body: "Unable to merge now; auto-merge not available. Merge when checks pass."
+                  });
+                }
+              }
+            }
