@@ -95,7 +95,7 @@ export interface QueueItem<T> {
   id: string;
   requestFn: () => Promise<T>;
   resolve: (value: T) => void;
-  reject: (reason?: any) => void;
+  reject: (reason?: Error) => void;
   abortController?: AbortController;
   addedAt: Date;
   priority?: number;

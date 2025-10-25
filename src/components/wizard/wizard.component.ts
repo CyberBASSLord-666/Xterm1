@@ -338,7 +338,7 @@ export class WizardComponent implements OnInit {
     if (saved) {
       try {
         this.promptHistory.set(JSON.parse(saved));
-      } catch (e) {
+      } catch {
         this.promptHistory.set([]);
       }
     }
@@ -443,14 +443,15 @@ export class WizardComponent implements OnInit {
       const target = computeExactFitTarget(info, this.supported);
       this.lastTarget.set(target);
       this.toastService.show(`Composed prompt for ${target.width}x${target.height}`);
-    } catch (e: any) {
-      this.toastService.show(`Compose failed: ${e.message || e}`);
+    } catch (e: unknown) {
+      const error = e as Error;
+      this.toastService.show(`Compose failed: ${error.message || String(e)}`);
     } finally {
       this.process.set(null);
     }
   }
 
-  async generate() {
+  public async generate(): Promise<void> {
     const text = this.prompt().trim();
     if (!text && !this.sourceImageUrl()) {
       this.toastService.show('Please compose or enter a prompt.');

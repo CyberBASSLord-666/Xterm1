@@ -10,8 +10,11 @@ import { DomSanitizer } from '@angular/platform-browser';
 // CJS/ESM interop shim for sanitize-html across build configs.
 import * as sanitizeHtmlLib from 'sanitize-html';
 
-type SanitizeHtmlFn = (html: string, options: any) => string;
-const sanitizeHtmlFn: SanitizeHtmlFn = (sanitizeHtmlLib as any).default ?? (sanitizeHtmlLib as any);
+type SanitizeHtmlOptions = Record<string, unknown>;
+type SanitizeHtmlFn = (html: string, options: SanitizeHtmlOptions) => string;
+const sanitizeHtmlFn: SanitizeHtmlFn =
+  (sanitizeHtmlLib as { default?: SanitizeHtmlFn } & SanitizeHtmlFn).default ??
+  (sanitizeHtmlLib as SanitizeHtmlFn);
 
 /** Single source of truth for base URL in URL parsing across CSR/SSR. */
 const DEFAULT_BASE_URL = 'http://localhost';
@@ -212,7 +215,7 @@ export class ValidationService {
 
     // Normalize allowlist: drop style/srcdoc/on* regardless of caller config.
     const normalizedAllowedAttrs: Record<string, string[]> = {};
-    const dropAttr = (name: string) =>
+    const dropAttr = (name: string): boolean =>
       name.toLowerCase() === 'style' ||
       name.toLowerCase() === 'srcdoc' ||
       name.toLowerCase().startsWith('on');
@@ -228,7 +231,7 @@ export class ValidationService {
 
     const hasDom =
       typeof window !== 'undefined' &&
-      typeof (window as any).DOMParser !== 'undefined' &&
+      typeof (window as { DOMParser?: unknown }).DOMParser !== 'undefined' &&
       typeof document !== 'undefined';
 
     if (!hasDom) {
@@ -244,7 +247,10 @@ export class ValidationService {
           '*': (tagName: string, attribs: Record<string, string>) => {
             const { style: _style, srcdoc: _srcdoc, ...rest } = attribs || {};
             for (const k of Object.keys(rest)) {
-              if (k.toLowerCase().startsWith('on')) delete (rest as any)[k];
+              if (k.toLowerCase().startsWith('on')) {
+                const restMutable = rest as Record<string, string>;
+                delete restMutable[k];
+              }
             }
             return { tagName, attribs: rest };
           },
@@ -279,7 +285,7 @@ export class ValidationService {
       }
     };
 
-    const appendChildrenUnwrapped = (src: Node, dest: Node) => {
+    const appendChildrenUnwrapped = (src: Node, dest: Node): void => {
       for (const child of Array.from(src.childNodes)) {
         const n = sanitizeNode(child);
         if (n) dest.appendChild(n);

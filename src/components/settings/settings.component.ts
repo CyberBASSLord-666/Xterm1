@@ -19,40 +19,40 @@ export class SettingsComponent {
   isExporting = signal(false);
 
   // --- Type-safe event handlers ---
-  onReferrerInput(event: Event) {
+  public onReferrerInput(event: Event): void {
     this.settingsService.referrer.set((event.target as HTMLInputElement).value);
   }
 
-  onReferrerBlur() {
+  public onReferrerBlur(): void {
     this.toastService.show('Referrer setting saved.');
   }
 
-  onNologoChange(event: Event) {
+  public onNologoChange(event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
     this.settingsService.nologo.set(checked);
     this.toastService.show(`Logo overlays ${checked ? 'disabled' : 'enabled'}.`);
   }
 
-  onPrivateChange(event: Event) {
+  public onPrivateChange(event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
     this.settingsService.private.set(checked);
     this.toastService.show(`Private generations ${checked ? 'enabled' : 'disabled'}.`);
   }
 
-  onSafeChange(event: Event) {
+  public onSafeChange(event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
     this.settingsService.safe.set(checked);
     this.toastService.show(`Strict safety filters ${checked ? 'enabled' : 'disabled'}.`);
   }
 
-  onThemeChange(event: Event) {
+  public onThemeChange(event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
     this.settingsService.themeDark.set(checked);
     this.toastService.show(`Dark mode ${checked ? 'enabled' : 'disabled'}.`);
   }
   // --- End of type-safe event handlers ---
 
-  async exportGallery() {
+  public async exportGallery(): Promise<void> {
     if (this.isExporting()) return;
     this.isExporting.set(true);
     this.toastService.show('Preparing gallery for export...');
@@ -87,8 +87,9 @@ export class SettingsComponent {
       URL.revokeObjectURL(link.href);
 
       this.toastService.show('Export started successfully!');
-    } catch (e: any) {
-      this.toastService.show(`Export failed: ${e.message}`);
+    } catch (e: unknown) {
+      const error = e as Error;
+      this.toastService.show(`Export failed: ${error.message}`);
     } finally {
       this.isExporting.set(false);
     }

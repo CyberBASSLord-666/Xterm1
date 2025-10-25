@@ -11,10 +11,12 @@ export class GlobalErrorHandler implements ErrorHandler {
   private errorHandler = inject(ErrorHandlerService);
   private logger = inject(LoggerService);
 
-  handleError(error: Error | any): void {
+  public handleError(error: Error | unknown): void {
     // Check if error is from chunk loading failure (common in Angular lazy loading)
     const chunkFailedMessage = /Loading chunk [\d]+ failed/;
-    if (chunkFailedMessage.test(error?.message)) {
+    const errorObj = error as { message?: string; rejection?: unknown };
+
+    if (errorObj?.message && chunkFailedMessage.test(errorObj.message)) {
       this.logger.error('Chunk loading failed - app may need refresh', error, 'GlobalErrorHandler');
       this.errorHandler.handleError(
         new Error('Failed to load application component. Please refresh the page.'),
@@ -24,7 +26,7 @@ export class GlobalErrorHandler implements ErrorHandler {
     }
 
     // Check if it's a zone.js error (wrap the original error)
-    const zoneAwareError = error?.rejection || error;
+    const zoneAwareError = errorObj?.rejection || error;
 
     // Log to console in development for debugging
     if (typeof error === 'object' && error !== null) {

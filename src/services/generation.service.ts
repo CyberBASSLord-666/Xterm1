@@ -32,13 +32,13 @@ export class GenerationService {
     'Rendering final details',
   ];
 
-  async generateWallpaper(
+  public async generateWallpaper(
     prompt: string,
     options: ImageOptions,
     device: DeviceInfo,
     supported: SupportedResolutions,
     presetName: string
-  ) {
+  ): Promise<void> {
     if (this.status() === 'generating' || this.status() === 'saving') {
       this.toastService.show('A generation is already in progress.');
       return;
@@ -102,9 +102,10 @@ export class GenerationService {
       this.status.set('success');
       this.statusMessage.set('Wallpaper saved to gallery.');
       this.toastService.show('Wallpaper generated and saved to gallery.');
-    } catch (e: any) {
+    } catch (e: unknown) {
       this.status.set('error');
-      const errorMessage = `Generation failed: ${e.message || e}`;
+      const error = e as Error;
+      const errorMessage = `Generation failed: ${error.message || String(e)}`;
       this.statusMessage.set(errorMessage);
       this.toastService.show(errorMessage);
     } finally {

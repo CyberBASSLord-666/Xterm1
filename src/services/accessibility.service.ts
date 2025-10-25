@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { LoggerService } from './logger.service';
+import { queryElements, hasAccessibleName, hasAssociatedLabel } from '../utils/dom-utils';
 
 export interface AccessibilityIssue {
   type: 'error' | 'warning' | 'notice';
@@ -22,7 +23,7 @@ export class AccessibilityService {
    * Run accessibility audit on the current page.
    * @returns Array of accessibility issues found
    */
-  audit(): AccessibilityIssue[] {
+  public audit(): AccessibilityIssue[] {
     this.issues = [];
 
     this.checkImages();
@@ -34,11 +35,7 @@ export class AccessibilityService {
     this.checkAriaLabels();
 
     if (this.issues.length > 0) {
-      this.logger.warn(
-        `Found ${this.issues.length} accessibility issues`,
-        this.issues,
-        'Accessibility'
-      );
+      this.logger.warn(`Found ${this.issues.length} accessibility issues`, this.issues, 'Accessibility');
     } else {
       this.logger.info('No accessibility issues found', undefined, 'Accessibility');
     }
@@ -50,7 +47,7 @@ export class AccessibilityService {
    * Check images for alt text.
    */
   private checkImages(): void {
-    const images = document.querySelectorAll('img');
+    const images = queryElements<HTMLImageElement>('img');
     images.forEach((img) => {
       if (!img.hasAttribute('alt')) {
         this.issues.push({
@@ -68,13 +65,9 @@ export class AccessibilityService {
    * Check buttons for accessible names.
    */
   private checkButtons(): void {
-    const buttons = document.querySelectorAll('button');
+    const buttons = queryElements<HTMLButtonElement>('button');
     buttons.forEach((button) => {
-      const hasText = button.textContent?.trim().length ?? 0 > 0;
-      const hasAriaLabel = button.hasAttribute('aria-label');
-      const hasAriaLabelledBy = button.hasAttribute('aria-labelledby');
-
-      if (!hasText && !hasAriaLabel && !hasAriaLabelledBy) {
+      if (!hasAccessibleName(button)) {
         this.issues.push({
           type: 'error',
           rule: 'button-name',
@@ -90,13 +83,9 @@ export class AccessibilityService {
    * Check form inputs for labels.
    */
   private checkForms(): void {
-    const inputs = document.querySelectorAll('input, select, textarea');
+    const inputs = queryElements<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea');
     inputs.forEach((input) => {
-      const hasLabel = document.querySelector(`label[for="${input.id}"]`);
-      const hasAriaLabel = input.hasAttribute('aria-label');
-      const hasAriaLabelledBy = input.hasAttribute('aria-labelledby');
-
-      if (!hasLabel && !hasAriaLabel && !hasAriaLabelledBy) {
+      if (!hasAssociatedLabel(input)) {
         this.issues.push({
           type: 'error',
           rule: 'label',
@@ -180,9 +169,7 @@ export class AccessibilityService {
    */
   private checkColorContrast(): void {
     // Check text elements for contrast
-    const textElements = document.querySelectorAll(
-      'p, span, div, a, button, h1, h2, h3, h4, h5, h6, label, li'
-    );
+    const textElements = document.querySelectorAll('p, span, div, a, button, h1, h2, h3, h4, h5, h6, label, li');
 
     textElements.forEach((element) => {
       const htmlElement = element as HTMLElement;
@@ -207,8 +194,7 @@ export class AccessibilityService {
       const fontSize = parseFloat(computedStyle.fontSize);
       const fontWeight = computedStyle.fontWeight;
       const isLargeText =
-        fontSize >= 24 ||
-        (fontSize >= 18.66 && (fontWeight === 'bold' || parseInt(fontWeight) >= 700));
+        fontSize >= 24 || (fontSize >= 18.66 && (fontWeight === 'bold' || parseInt(fontWeight) >= 700));
 
       const requiredRatio = isLargeText ? 3 : 4.5;
 
@@ -305,9 +291,7 @@ export class AccessibilityService {
    * Check for proper ARIA usage.
    */
   private checkAriaLabels(): void {
-    const elementsWithAria = document.querySelectorAll(
-      '[role], [aria-label], [aria-labelledby], [aria-describedby]'
-    );
+    const elementsWithAria = document.querySelectorAll('[role], [aria-label], [aria-labelledby], [aria-describedby]');
     elementsWithAria.forEach((element) => {
       // Check for empty aria-label
       const ariaLabel = element.getAttribute('aria-label');
