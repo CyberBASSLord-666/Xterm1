@@ -21,11 +21,11 @@ export class ToastComponent implements OnInit, OnDestroy {
     }, 4000);
   };
 
-  ngOnInit() {
+  ngOnInit(): void {
     window.addEventListener('toast', this.handleToast);
   }
 
-  ngOnDestroy() {
+  ngOnDestroy(): void {
     window.removeEventListener('toast', this.handleToast);
     if (this.timeoutId) {
       clearTimeout(this.timeoutId);

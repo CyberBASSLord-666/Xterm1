@@ -29,17 +29,17 @@ export class AppComponent {
     });
   }
 
-  toggleTheme() {
+  toggleTheme(): void {
     this.settingsService.themeDark.update((current) => !current);
     const mode = this.settingsService.themeDark() ? 'Dark' : 'Light';
     this.toastService.show(`${mode} theme enabled`);
   }
 
-  toggleMobileMenu() {
+  toggleMobileMenu(): void {
     this.isMobileMenuOpen.update((v) => !v);
   }
 
-  closeMobileMenu() {
+  closeMobileMenu(): void {
     this.isMobileMenuOpen.set(false);
   }
 }
