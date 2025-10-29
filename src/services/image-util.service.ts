@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { LoggerService } from './logger.service';
+import { IMAGE_PRESETS } from '../constants';
 
 export interface CompressionOptions {
   maxWidth?: number;
@@ -28,7 +29,7 @@ export class ImageUtilService {
    * @returns A promise that resolves to the thumbnail blob
    */
   async makeThumbnail(blob: Blob, options: ThumbnailOptions = {}): Promise<Blob> {
-    const { size = 320, quality = 0.85 } = options;
+    const { size = IMAGE_PRESETS.THUMBNAIL_SIZE, quality = IMAGE_PRESETS.THUMBNAIL_QUALITY } = options;
     const startTime = performance.now();
 
     try {
@@ -49,11 +50,7 @@ export class ImageUtilService {
       bitmap.close();
 
       const result = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob(
-          (b) => (b ? resolve(b) : reject(new Error('Canvas toBlob failed'))),
-          'image/jpeg',
-          quality
-        );
+        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Canvas toBlob failed'))), 'image/jpeg', quality);
       });
 
       const duration = performance.now() - startTime;
@@ -77,7 +74,12 @@ export class ImageUtilService {
    * @returns A promise that resolves to the compressed blob
    */
   async compressImage(blob: Blob, options: CompressionOptions = {}): Promise<Blob> {
-    const { maxWidth = 2048, maxHeight = 2048, quality = 0.85, format = 'image/jpeg' } = options;
+    const {
+      maxWidth = IMAGE_PRESETS.MAX_IMAGE_WIDTH,
+      maxHeight = IMAGE_PRESETS.MAX_IMAGE_HEIGHT,
+      quality = IMAGE_PRESETS.COMPRESSION_QUALITY,
+      format = 'image/jpeg',
+    } = options;
 
     const startTime = performance.now();
 
@@ -105,11 +107,7 @@ export class ImageUtilService {
       bitmap.close();
 
       const result = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob(
-          (b) => (b ? resolve(b) : reject(new Error('Canvas toBlob failed'))),
-          format,
-          quality
-        );
+        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Canvas toBlob failed'))), format, quality);
       });
 
       const duration = performance.now() - startTime;
@@ -162,11 +160,7 @@ export class ImageUtilService {
     bitmap.close();
 
     return new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob(
-        (b) => (b ? resolve(b) : reject(new Error('Canvas toBlob failed'))),
-        format,
-        quality
-      );
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Canvas toBlob failed'))), format, quality);
     });
   }
 
@@ -190,11 +184,7 @@ export class ImageUtilService {
     bitmap.close();
 
     return new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob(
-        (b) => (b ? resolve(b) : reject(new Error('Canvas toBlob failed'))),
-        'image/jpeg',
-        0.5
-      );
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Canvas toBlob failed'))), 'image/jpeg', 0.5);
     });
   }
 }

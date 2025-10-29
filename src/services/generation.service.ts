@@ -2,13 +2,9 @@ import { Injectable, signal, inject } from '@angular/core';
 import { GalleryService } from './gallery.service';
 import { ToastService } from './toast.service';
 import { ImageUtilService } from './image-util.service';
-import {
-  createDeviceWallpaper,
-  ImageOptions,
-  DeviceInfo,
-  SupportedResolutions,
-} from './pollinations.client';
+import { createDeviceWallpaper, ImageOptions, DeviceInfo, SupportedResolutions } from './pollinations.client';
 import { GalleryItem } from './idb';
+import { UI_CONFIG, IMAGE_PRESETS, ERROR_MESSAGES } from '../constants';
 
 @Injectable({ providedIn: 'root' })
 export class GenerationService {
@@ -18,19 +14,10 @@ export class GenerationService {
 
   readonly status = signal<'idle' | 'generating' | 'saving' | 'error' | 'success'>('idle');
   readonly statusMessage = signal('');
-  readonly currentGenerationResult = signal<{ galleryItem: GalleryItem; blobUrl: string } | null>(
-    null
-  );
+  readonly currentGenerationResult = signal<{ galleryItem: GalleryItem; blobUrl: string } | null>(null);
 
   private messageInterval: number | undefined;
-  private readonly generatingMessages = [
-    'Connecting to generative matrix',
-    'Injecting prompt into AI core',
-    'Weaving pixels from raw chaos',
-    'Applying hyperrealistic textures',
-    'Focusing light particles',
-    'Rendering final details',
-  ];
+  private readonly generatingMessages = IMAGE_PRESETS.GENERATION_MESSAGES;
 
   public async generateWallpaper(
     prompt: string,
@@ -40,7 +27,7 @@ export class GenerationService {
     presetName: string
   ): Promise<void> {
     if (this.status() === 'generating' || this.status() === 'saving') {
-      this.toastService.show('A generation is already in progress.');
+      this.toastService.show(ERROR_MESSAGES.GENERATION_IN_PROGRESS);
       return;
     }
 
@@ -52,11 +39,9 @@ export class GenerationService {
 
     let messageIndex = 1;
     this.messageInterval = window.setInterval(() => {
-      this.statusMessage.set(
-        this.generatingMessages[messageIndex % this.generatingMessages.length]
-      );
+      this.statusMessage.set(this.generatingMessages[messageIndex % this.generatingMessages.length]);
       messageIndex++;
-    }, 2500);
+    }, UI_CONFIG.GENERATION_MESSAGE_INTERVAL);
 
     try {
       const { blob, width, height, aspect, mode } = await createDeviceWallpaper({

@@ -51,28 +51,46 @@ export const UI_CONFIG = {
   MAX_PROMPT_LENGTH: 1000,
   /** Maximum history items to store */
   MAX_HISTORY_ITEMS: 20,
+  /** Generation status message interval (milliseconds) */
+  GENERATION_MESSAGE_INTERVAL: 2500,
 } as const;
 
 /** Validation Rules */
 export const VALIDATION_RULES = {
   /** Allowed URL protocols */
   ALLOWED_PROTOCOLS: ['http:', 'https:', 'mailto:', 'blob:'] as const,
+  /** Allowed URL schemes (without colon) for sanitizer */
+  ALLOWED_SCHEMES: ['http', 'https', 'mailto', 'blob'] as const,
   /** Dangerous protocol markers for XSS prevention */
   DANGEROUS_PROTOCOLS: [
     'javascript:',
     'javascript&colon;',
     'javascript&#58;',
     'javascript&#x3a;',
+    'javascript&#x003a;',
     'data:',
     'data&colon;',
+    'data&#58;',
+    'data&#x3a;',
     'vbscript:',
+    'vbscript&colon;',
+    'vbscript&#58;',
+    'vbscript&#x3a;',
     'file:',
+    'file&colon;',
     'about:',
+    'about&colon;',
   ] as const,
   /** Maximum file size for uploads (bytes) - 10MB */
   MAX_FILE_SIZE: 10 * 1024 * 1024,
   /** Allowed image MIME types */
   ALLOWED_IMAGE_TYPES: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'] as const,
+  /** Maximum prompt length */
+  MAX_PROMPT_LENGTH: 2000,
+  /** Maximum special character ratio in prompt */
+  MAX_SPECIAL_CHAR_RATIO: 0.3,
+  /** Maximum filename length */
+  MAX_FILENAME_LENGTH: 255,
 } as const;
 
 /** Accessibility Configuration */
@@ -111,6 +129,14 @@ export const ERROR_MESSAGES = {
   AUTH_ERROR: 'Authentication failed. Please check your API key.',
   VALIDATION_ERROR: 'Invalid input. Please check your data.',
   UNKNOWN_ERROR: 'An error occurred. Please try again.',
+  GENERATION_IN_PROGRESS: 'A generation is already in progress.',
+  PROMPT_EMPTY: 'Prompt cannot be empty',
+  PROMPT_TOO_LONG: 'Prompt is too long (maximum 2000 characters)',
+  PROMPT_SPECIAL_CHARS: 'Prompt contains too many special characters',
+  FILENAME_INVALID: 'Filename contains invalid characters',
+  FILENAME_TOO_LONG: 'Filename is too long',
+  URL_INVALID: 'Invalid URL format',
+  URL_DANGEROUS_PROTOCOL: 'URL contains dangerous protocol',
 } as const;
 
 /** Feature Flags */
@@ -148,6 +174,25 @@ export const IMAGE_PRESETS = {
     PORTRAIT: '9:16',
     WIDE: '21:9',
   },
+  /** Default thumbnail size (pixels) */
+  THUMBNAIL_SIZE: 320,
+  /** Default thumbnail quality (0-1) */
+  THUMBNAIL_QUALITY: 0.85,
+  /** Default compression quality (0-1) */
+  COMPRESSION_QUALITY: 0.85,
+  /** Maximum image width for compression (pixels) */
+  MAX_IMAGE_WIDTH: 2048,
+  /** Maximum image height for compression (pixels) */
+  MAX_IMAGE_HEIGHT: 2048,
+  /** Generation status messages */
+  GENERATION_MESSAGES: [
+    'Connecting to generative matrix',
+    'Injecting prompt into AI core',
+    'Weaving pixels from raw chaos',
+    'Applying hyperrealistic textures',
+    'Focusing light particles',
+    'Rendering final details',
+  ] as const,
 } as const;
 
 /** Type exports for const assertions */

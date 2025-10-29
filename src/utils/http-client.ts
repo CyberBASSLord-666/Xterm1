@@ -3,7 +3,7 @@
  * Professional-grade HTTP client with retry logic, caching, and interceptors
  */
 
-import { API_CONFIG } from '../constants';
+import { API_CONFIG, CACHE_CONFIG } from '../constants';
 import { AdvancedCache } from './cache-utils';
 
 export interface HttpRequestConfig {
@@ -41,7 +41,7 @@ export class HttpClient {
 
   constructor(cacheOptions?: { ttl?: number; maxSize?: number }) {
     this.cache = new AdvancedCache({
-      ttl: cacheOptions?.ttl ?? API_CONFIG.DEFAULT_TIMEOUT,
+      ttl: cacheOptions?.ttl ?? CACHE_CONFIG.DEFAULT_TTL,
       maxSize: cacheOptions?.maxSize ?? 50,
       evictionPolicy: 'lru',
     });
@@ -74,22 +74,14 @@ export class HttpClient {
   /**
    * Perform HTTP POST request
    */
-  public async post<T>(
-    url: string,
-    body: unknown,
-    config: HttpRequestConfig = {}
-  ): Promise<HttpResponse<T>> {
+  public async post<T>(url: string, body: unknown, config: HttpRequestConfig = {}): Promise<HttpResponse<T>> {
     return this.request<T>(url, { ...config, method: 'POST', body });
   }
 
   /**
    * Perform HTTP PUT request
    */
-  public async put<T>(
-    url: string,
-    body: unknown,
-    config: HttpRequestConfig = {}
-  ): Promise<HttpResponse<T>> {
+  public async put<T>(url: string, body: unknown, config: HttpRequestConfig = {}): Promise<HttpResponse<T>> {
     return this.request<T>(url, { ...config, method: 'PUT', body });
   }
 
@@ -173,15 +165,9 @@ export class HttpClient {
   /**
    * Perform actual HTTP request
    */
-  private async performRequest<T>(
-    url: string,
-    config: HttpRequestConfig
-  ): Promise<HttpResponse<T>> {
+  private async performRequest<T>(url: string, config: HttpRequestConfig): Promise<HttpResponse<T>> {
     const controller = new AbortController();
-    const timeoutId = setTimeout(
-      () => controller.abort(),
-      config.timeout ?? this.defaultTimeout
-    );
+    const timeoutId = setTimeout(() => controller.abort(), config.timeout ?? this.defaultTimeout);
 
     try {
       const response = await fetch(url, {
