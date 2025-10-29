@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { AccessibilityService } from './accessibility.service';
-import { LoggerService } from './logger.service';
+import { AccessibilityService } from '../accessibility.service';
+import { LoggerService } from '../logger.service';
 
 describe('AccessibilityService', () => {
   let service: AccessibilityService;

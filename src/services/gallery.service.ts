@@ -4,7 +4,7 @@ import { db, GalleryItem, Collection } from './idb';
 @Injectable({ providedIn: 'root' })
 export class GalleryService {
   // Gallery Item Methods
-  async add(item: GalleryItem) {
+  public async add(item: GalleryItem): Promise<void> {
     const d = await db();
     await d.put('images', item);
   }
@@ -19,7 +19,7 @@ export class GalleryService {
     await d.put('images', item);
   }
 
-  async remove(id: string) {
+  public async remove(id: string): Promise<void> {
     const d = await db();
     await d.delete('images', id);
   }

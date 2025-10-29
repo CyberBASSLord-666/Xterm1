@@ -1,13 +1,15 @@
 import { Injectable, inject } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { ToastService } from './toast.service';
+import { getErrorMessage } from '../utils/type-guards';
+import { ERROR_MESSAGES } from '../constants';
 
 export class AppError extends Error {
   constructor(
     message: string,
     public readonly code?: string,
     public readonly isUserFriendly: boolean = false,
-    public readonly details?: any
+    public readonly details?: unknown
   ) {
     super(message);
     this.name = 'AppError';
@@ -29,8 +31,8 @@ export class ErrorHandlerService {
    * @param source The source component or service where the error occurred
    * @param showToast Whether to show a toast notification to the user
    */
-  handleError(error: any, source: string, showToast: boolean = true): void {
-    const errorMessage = this.extractErrorMessage(error);
+  public handleError(error: unknown, source: string, showToast: boolean = true): void {
+    const errorMessage = getErrorMessage(error);
     const isUserFriendly = error instanceof AppError && error.isUserFriendly;
 
     // Log the error
@@ -44,68 +46,76 @@ export class ErrorHandlerService {
   }
 
   /**
-   * Extract a meaningful error message from various error types.
-   */
-  private extractErrorMessage(error: any): string {
-    if (typeof error === 'string') {
-      return error;
-    }
-
-    if (error instanceof AppError) {
-      return error.message;
-    }
-
-    if (error instanceof Error) {
-      return error.message;
-    }
-
-    if (error?.message) {
-      return error.message;
-    }
-
-    if (error?.error?.message) {
-      return error.error.message;
-    }
-
-    return 'An unexpected error occurred';
-  }
-
-  /**
    * Convert technical errors to user-friendly messages.
    */
-  private getUserFriendlyMessage(error: any): string {
-    const message = this.extractErrorMessage(error);
+  private getUserFriendlyMessage(error: unknown): string {
+    const message = getErrorMessage(error);
 
     // Network errors
-    if (message.includes('Failed to fetch') || message.includes('NetworkError')) {
-      return 'Network error. Please check your internet connection.';
+    if (this.isNetworkError(message)) {
+      return ERROR_MESSAGES.NETWORK_ERROR;
     }
 
-    if (message.includes('timeout') || message.includes('timed out')) {
-      return 'The request took too long. Please try again.';
+    if (this.isTimeoutError(message)) {
+      return ERROR_MESSAGES.TIMEOUT_ERROR;
     }
 
     // API errors
-    if (message.includes('429')) {
-      return 'Too many requests. Please wait a moment before trying again.';
+    if (this.isRateLimitError(message)) {
+      return ERROR_MESSAGES.RATE_LIMIT_ERROR;
     }
 
-    if (message.includes('500') || message.includes('503')) {
-      return 'The service is temporarily unavailable. Please try again later.';
+    if (this.isServerError(message)) {
+      return ERROR_MESSAGES.SERVER_ERROR;
     }
 
-    if (message.includes('401') || message.includes('403')) {
-      return 'Authentication failed. Please check your API key.';
+    if (this.isAuthError(message)) {
+      return ERROR_MESSAGES.AUTH_ERROR;
     }
 
     // Default fallback
-    return 'An error occurred. Please try again.';
+    return ERROR_MESSAGES.UNKNOWN_ERROR;
+  }
+
+  /**
+   * Check if error is a network error
+   */
+  private isNetworkError(message: string): boolean {
+    return message.includes('Failed to fetch') || message.includes('NetworkError');
+  }
+
+  /**
+   * Check if error is a timeout error
+   */
+  private isTimeoutError(message: string): boolean {
+    return message.includes('timeout') || message.includes('timed out');
+  }
+
+  /**
+   * Check if error is a rate limit error
+   */
+  private isRateLimitError(message: string): boolean {
+    return message.includes('429');
+  }
+
+  /**
+   * Check if error is a server error
+   */
+  private isServerError(message: string): boolean {
+    return message.includes('500') || message.includes('503');
+  }
+
+  /**
+   * Check if error is an authentication error
+   */
+  private isAuthError(message: string): boolean {
+    return message.includes('401') || message.includes('403');
   }
 
   /**
    * Create a user-friendly error with automatic handling.
    */
-  createError(message: string, code?: string, showToast: boolean = true): AppError {
+  public createError(message: string, code?: string, showToast: boolean = true): AppError {
     const error = new AppError(message, code, true);
     if (showToast) {
       this.toast.show(message);
@@ -116,11 +126,7 @@ export class ErrorHandlerService {
   /**
    * Wrap an async operation with error handling.
    */
-  async wrapAsync<T>(
-    operation: () => Promise<T>,
-    source: string,
-    showToast: boolean = true
-  ): Promise<T | null> {
+  public async wrapAsync<T>(operation: () => Promise<T>, source: string, showToast: boolean = true): Promise<T | null> {
     try {
       return await operation();
     } catch (error) {

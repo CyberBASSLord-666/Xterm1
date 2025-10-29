@@ -3,6 +3,7 @@ import { GalleryService } from '../../services/gallery.service';
 import { Collection } from '../../services/idb';
 import { ToastService } from '../../services/toast.service';
 import { FormsModule } from '@angular/forms';
+import { createLoadingState, createFormField } from '../../utils';
 
 @Component({
   selector: 'pw-collections',
@@ -15,40 +16,56 @@ export class CollectionsComponent implements OnInit {
   private toastService = inject(ToastService);
 
   collections = signal<Collection[]>([]);
-  loading = signal(true);
-  newCollectionName = signal('');
+  
+  // Professional loading state management
+  loadingState = createLoadingState();
+  
+  // Professional form field with validation
+  newCollectionName = createFormField('', [
+    (value: string) => (value.trim() ? null : 'Please enter a collection name'),
+    (value: string) =>
+      value.trim().length >= 2 ? null : 'Name must be at least 2 characters',
+    (value: string) =>
+      value.trim().length <= 50 ? null : 'Name must be 50 characters or less',
+  ]);
 
-  async ngOnInit() {
+  public async ngOnInit(): Promise<void> {
     await this.loadCollections();
   }
 
-  onNameInput(event: Event) {
-    this.newCollectionName.set((event.target as HTMLInputElement).value);
+  public onNameInput(event: Event): void {
+    this.newCollectionName.value.set((event.target as HTMLInputElement).value);
+    this.newCollectionName.touched.set(true);
   }
 
-  async loadCollections() {
-    this.loading.set(true);
-    this.collections.set(await this.galleryService.listCollections());
-    this.loading.set(false);
+  public async loadCollections(): Promise<void> {
+    await this.loadingState.execute(async () => {
+      this.collections.set(await this.galleryService.listCollections());
+    });
   }
 
-  async createCollection() {
-    const name = this.newCollectionName().trim();
-    if (!name) {
-      this.toastService.show('Please enter a collection name.');
+  public async createCollection(): Promise<void> {
+    this.newCollectionName.touched.set(true);
+    this.newCollectionName.validate();
+    
+    if (!this.newCollectionName.valid()) {
+      this.toastService.show(this.newCollectionName.error() || 'Invalid collection name');
       return;
     }
+    
+    const name = this.newCollectionName.value().trim();
     try {
       await this.galleryService.addCollection(name);
-      this.newCollectionName.set('');
+      this.newCollectionName.reset();
       this.toastService.show(`Collection "${name}" created.`);
       await this.loadCollections();
-    } catch (e: any) {
-      this.toastService.show(`Error creating collection: ${e.message}`);
+    } catch (e: unknown) {
+      const error = e as Error;
+      this.toastService.show(`Error creating collection: ${error.message}`);
     }
   }
 
-  async deleteCollection(collection: Collection) {
+  public async deleteCollection(collection: Collection): Promise<void> {
     if (
       confirm(
         `Are you sure you want to delete the "${collection.name}" collection? All wallpapers within it will be uncategorized.`
@@ -58,8 +75,9 @@ export class CollectionsComponent implements OnInit {
         await this.galleryService.removeCollection(collection.id);
         this.toastService.show(`Collection "${collection.name}" deleted.`);
         await this.loadCollections();
-      } catch (e: any) {
-        this.toastService.show(`Error deleting collection: ${e.message}`);
+      } catch (e: unknown) {
+        const error = e as Error;
+        this.toastService.show(`Error deleting collection: ${error.message}`);
       }
     }
   }

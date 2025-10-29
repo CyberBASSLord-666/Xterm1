@@ -1,47 +1,16 @@
-/**
- * Validation & Sanitization Service (Angular)
- * - Defense-in-depth against XSS, protocol smuggling, Unicode obfuscation
- * - SSR-safe (no DOM usage on server path); deterministic & testable
- * - Strict URL, filename, and input validators
- */
-
 import { Injectable, inject, SecurityContext } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
+import { VALIDATION_RULES, ERROR_MESSAGES } from '../constants';
 // CJS/ESM interop shim for sanitize-html across build configs.
 import * as sanitizeHtmlLib from 'sanitize-html';
 
-type SanitizeHtmlFn = (html: string, options: any) => string;
-const sanitizeHtmlFn: SanitizeHtmlFn = (sanitizeHtmlLib as any).default ?? (sanitizeHtmlLib as any);
+type SanitizeHtmlOptions = Record<string, unknown>;
+type SanitizeHtmlFn = (html: string, options: SanitizeHtmlOptions) => string;
+const sanitizeHtmlFn: SanitizeHtmlFn =
+  (sanitizeHtmlLib as { default?: SanitizeHtmlFn } & SanitizeHtmlFn).default ?? (sanitizeHtmlLib as SanitizeHtmlFn);
 
 /** Single source of truth for base URL in URL parsing across CSR/SSR. */
 const DEFAULT_BASE_URL = 'http://localhost';
-
-/** Allowlisted URL protocols (with colon). Use these for URL API protocol checks. */
-const ALLOWED_URL_PROTOCOLS = ['http:', 'https:', 'mailto:', 'blob:'];
-
-/** Same allowlist, scheme names without colon for sanitize-html config. */
-const ALLOWED_SCHEMES_NO_COLON = ['http', 'https', 'mailto', 'blob'];
-
-/** Strings that indicate dangerous protocols, including common encoded variants. */
-const DANGEROUS_PROTOCOL_MARKERS = [
-  'javascript:',
-  'javascript&colon;',
-  'javascript&#58;',
-  'javascript&#x3a;',
-  'javascript&#x003a;',
-  'data:',
-  'data&colon;',
-  'data&#58;',
-  'data&#x3a;',
-  'vbscript:',
-  'vbscript&colon;',
-  'vbscript&#58;',
-  'vbscript&#x3a;',
-  'file:',
-  'file&colon;',
-  'about:',
-  'about&colon;',
-];
 
 export interface ValidationResult {
   isValid: boolean;
@@ -67,13 +36,13 @@ export class ValidationService {
     const errors: string[] = [];
     const value = (prompt ?? '').trim();
 
-    if (value.length === 0) errors.push('Prompt cannot be empty');
-    if (value.length > 2000) errors.push('Prompt is too long (maximum 2000 characters)');
+    if (value.length === 0) errors.push(ERROR_MESSAGES.PROMPT_EMPTY);
+    if (value.length > VALIDATION_RULES.MAX_PROMPT_LENGTH) errors.push(ERROR_MESSAGES.PROMPT_TOO_LONG);
 
     if (value.length > 0) {
       const specials = (value.match(/[^a-zA-Z0-9\s,.!?-]/g) || []).length;
       const ratio = specials / value.length;
-      if (ratio > 0.3) errors.push('Prompt contains too many special characters');
+      if (ratio > VALIDATION_RULES.MAX_SPECIAL_CHAR_RATIO) errors.push(ERROR_MESSAGES.PROMPT_SPECIAL_CHARS);
     }
     return { isValid: errors.length === 0, errors };
   }
@@ -109,8 +78,7 @@ export class ValidationService {
     if (seed !== undefined) {
       if (!Number.isInteger(seed)) errors.push('Seed must be an integer');
       if (typeof seed === 'number' && seed < 0) errors.push('Seed must be a positive number');
-      if (typeof seed === 'number' && seed > Number.MAX_SAFE_INTEGER)
-        errors.push('Seed is too large');
+      if (typeof seed === 'number' && seed > Number.MAX_SAFE_INTEGER) errors.push('Seed is too large');
     }
     return { isValid: errors.length === 0, errors };
   }
@@ -169,7 +137,7 @@ export class ValidationService {
       allowedTags: [],
       allowedAttributes: {},
       disallowedTagsMode: 'discard',
-      allowedSchemes: [...ALLOWED_SCHEMES_NO_COLON],
+      allowedSchemes: [...VALIDATION_RULES.ALLOWED_SCHEMES],
       allowedSchemesByTag: {},
       allowedSchemesAppliedToAttributes: ['href', 'src', 'cite'],
       allowProtocolRelative: false,
@@ -180,7 +148,7 @@ export class ValidationService {
     out = this.replaceRepeatedly(out, /\s*on\w+\s*=\s*[^\s>]*/gi, '');
 
     // Dangerous protocol strings (encoded/whitespace-tolerant for literal ':' variants)
-    for (const proto of DANGEROUS_PROTOCOL_MARKERS) {
+    for (const proto of VALIDATION_RULES.DANGEROUS_PROTOCOLS) {
       const pattern = proto.includes(':') ? proto.replace(':', '\\s*:\\s*') : proto;
       out = this.replaceRepeatedly(out, new RegExp(pattern, 'gi'), '');
     }
@@ -212,15 +180,13 @@ export class ValidationService {
 
     // Normalize allowlist: drop style/srcdoc/on* regardless of caller config.
     const normalizedAllowedAttrs: Record<string, string[]> = {};
-    const dropAttr = (name: string) =>
-      name.toLowerCase() === 'style' ||
-      name.toLowerCase() === 'srcdoc' ||
-      name.toLowerCase().startsWith('on');
+    const dropAttr = (name: string): boolean => {
+      const lower = name.toLowerCase();
+      return lower === 'style' || lower === 'srcdoc' || lower.startsWith('on');
+    };
 
     for (const [tag, attrs] of Object.entries(allowedAttributes)) {
-      normalizedAllowedAttrs[tag.toLowerCase()] = (attrs || [])
-        .filter((a) => !dropAttr(a))
-        .map((a) => a.toLowerCase());
+      normalizedAllowedAttrs[tag.toLowerCase()] = (attrs || []).filter((a) => !dropAttr(a)).map((a) => a.toLowerCase());
     }
     if (normalizedAllowedAttrs['*']) {
       normalizedAllowedAttrs['*'] = normalizedAllowedAttrs['*'].filter((a) => !dropAttr(a));
@@ -228,15 +194,14 @@ export class ValidationService {
 
     const hasDom =
       typeof window !== 'undefined' &&
-      typeof (window as any).DOMParser !== 'undefined' &&
+      typeof (window as { DOMParser?: unknown }).DOMParser !== 'undefined' &&
       typeof document !== 'undefined';
 
     if (!hasDom) {
-      // SSR-safe fallback using sanitize-html with equivalent allowlist.
       return sanitizeHtmlFn(raw, {
         allowedTags,
         allowedAttributes: normalizedAllowedAttrs,
-        allowedSchemes: [...ALLOWED_SCHEMES_NO_COLON],
+        allowedSchemes: [...VALIDATION_RULES.ALLOWED_SCHEMES],
         allowedSchemesByTag: {},
         allowedSchemesAppliedToAttributes: ['href', 'src', 'cite'],
         allowProtocolRelative: false,
@@ -244,7 +209,10 @@ export class ValidationService {
           '*': (tagName: string, attribs: Record<string, string>) => {
             const { style: _style, srcdoc: _srcdoc, ...rest } = attribs || {};
             for (const k of Object.keys(rest)) {
-              if (k.toLowerCase().startsWith('on')) delete (rest as any)[k];
+              if (k.toLowerCase().startsWith('on')) {
+                const restMutable = rest as Record<string, string>;
+                delete restMutable[k];
+              }
             }
             return { tagName, attribs: rest };
           },
@@ -273,13 +241,13 @@ export class ValidationService {
 
       try {
         const u = new URL(v, DEFAULT_BASE_URL);
-        return ALLOWED_URL_PROTOCOLS.includes(u.protocol);
+        return (VALIDATION_RULES.ALLOWED_PROTOCOLS as readonly string[]).includes(u.protocol);
       } catch {
         return false;
       }
     };
 
-    const appendChildrenUnwrapped = (src: Node, dest: Node) => {
+    const appendChildrenUnwrapped = (src: Node, dest: Node): void => {
       for (const child of Array.from(src.childNodes)) {
         const n = sanitizeNode(child);
         if (n) dest.appendChild(n);
@@ -302,10 +270,7 @@ export class ValidationService {
         }
 
         const outEl = document.createElement(tag);
-        const allowed = new Set([
-          ...globalAllowed,
-          ...(perTagAllowed.get(tag) ?? new Set<string>()),
-        ]);
+        const allowed = new Set([...globalAllowed, ...(perTagAllowed.get(tag) ?? new Set<string>())]);
 
         for (const attr of Array.from(el.attributes)) {
           const name = attr.name.toLowerCase();
@@ -344,7 +309,7 @@ export class ValidationService {
     if (lower.startsWith('//')) return ''; // protocol-relative denied
 
     // Fast deny for obvious bad schemes (including HTML entity encodings)
-    for (const proto of DANGEROUS_PROTOCOL_MARKERS) {
+    for (const proto of VALIDATION_RULES.DANGEROUS_PROTOCOLS) {
       if (lower.includes(proto)) return '';
     }
 
@@ -354,7 +319,7 @@ export class ValidationService {
       // eslint-disable-next-line no-control-regex
       if (/[\x00-\x1F\x7F]/.test(decoded)) return '';
       const decLower = decoded.toLowerCase();
-      for (const proto of DANGEROUS_PROTOCOL_MARKERS) {
+      for (const proto of VALIDATION_RULES.DANGEROUS_PROTOCOLS) {
         if (decLower.includes(proto)) return '';
       }
     } catch {
@@ -367,7 +332,7 @@ export class ValidationService {
       const isAbsolute = parsed.origin !== new URL(DEFAULT_BASE_URL).origin;
 
       if (isAbsolute) {
-        return ALLOWED_URL_PROTOCOLS.includes(parsed.protocol) ? normalized : '';
+        return (VALIDATION_RULES.ALLOWED_PROTOCOLS as readonly string[]).includes(parsed.protocol) ? normalized : '';
       }
 
       // Relative: permit rooted/relative paths and fragments only

@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { CACHE_CONFIG } from '../constants';
 
 export enum LogLevel {
   DEBUG = 0,
@@ -12,7 +13,7 @@ export interface LogEntry {
   timestamp: Date;
   level: LogLevel;
   message: string;
-  data?: any;
+  data?: unknown;
   source?: string;
 }
 
@@ -24,7 +25,7 @@ export interface LogEntry {
 export class LoggerService {
   private logLevel: LogLevel;
   private logHistory: LogEntry[] = [];
-  private readonly maxHistorySize = 100;
+  private readonly maxHistorySize = CACHE_CONFIG.MAX_CACHE_SIZE;
 
   constructor() {
     // In production, set to WARN or ERROR to reduce noise
@@ -34,42 +35,42 @@ export class LoggerService {
   /**
    * Set the minimum log level. Logs below this level will be ignored.
    */
-  setLogLevel(level: LogLevel): void {
+  public setLogLevel(level: LogLevel): void {
     this.logLevel = level;
   }
 
   /**
    * Log a debug message.
    */
-  debug(message: string, data?: any, source?: string): void {
+  public debug(message: string, data?: unknown, source?: string): void {
     this.log(LogLevel.DEBUG, message, data, source);
   }
 
   /**
    * Log an info message.
    */
-  info(message: string, data?: any, source?: string): void {
+  public info(message: string, data?: unknown, source?: string): void {
     this.log(LogLevel.INFO, message, data, source);
   }
 
   /**
    * Log a warning message.
    */
-  warn(message: string, data?: any, source?: string): void {
+  public warn(message: string, data?: unknown, source?: string): void {
     this.log(LogLevel.WARN, message, data, source);
   }
 
   /**
    * Log an error message.
    */
-  error(message: string, error?: any, source?: string): void {
+  public error(message: string, error?: unknown, source?: string): void {
     this.log(LogLevel.ERROR, message, error, source);
   }
 
   /**
    * Internal logging implementation.
    */
-  private log(level: LogLevel, message: string, data?: any, source?: string): void {
+  private log(level: LogLevel, message: string, data?: unknown, source?: string): void {
     if (level < this.logLevel) {
       return;
     }
@@ -92,17 +93,22 @@ export class LoggerService {
     const prefix = source ? `[${source}]` : '';
     const timestamp = entry.timestamp.toISOString();
 
+    // Use structured logging for better debugging
     switch (level) {
       case LogLevel.DEBUG:
+        // eslint-disable-next-line no-console
         console.debug(`${timestamp} DEBUG ${prefix}:`, message, data || '');
         break;
       case LogLevel.INFO:
+        // eslint-disable-next-line no-console
         console.info(`${timestamp} INFO ${prefix}:`, message, data || '');
         break;
       case LogLevel.WARN:
+        // eslint-disable-next-line no-console
         console.warn(`${timestamp} WARN ${prefix}:`, message, data || '');
         break;
       case LogLevel.ERROR:
+        // eslint-disable-next-line no-console
         console.error(`${timestamp} ERROR ${prefix}:`, message, data || '');
         break;
     }
@@ -111,21 +117,21 @@ export class LoggerService {
   /**
    * Get the log history (useful for debugging).
    */
-  getHistory(): LogEntry[] {
+  public getHistory(): LogEntry[] {
     return [...this.logHistory];
   }
 
   /**
    * Clear the log history.
    */
-  clearHistory(): void {
+  public clearHistory(): void {
     this.logHistory = [];
   }
 
   /**
    * Export logs as JSON for debugging or support.
    */
-  exportLogs(): string {
+  public exportLogs(): string {
     return JSON.stringify(this.logHistory, null, 2);
   }
 }

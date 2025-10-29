@@ -12,6 +12,7 @@ import { GalleryService } from '../../services/gallery.service';
 import { Collection, GalleryItem } from '../../services/idb';
 import { RouterLink } from '@angular/router';
 import { ToastService } from '../../services/toast.service';
+import { createSelectionState, createLoadingState } from '../../utils';
 
 @Component({
   selector: 'pw-gallery',
@@ -25,20 +26,22 @@ export class GalleryComponent implements OnInit, OnDestroy {
 
   allItems = signal<GalleryItem[]>([]);
   collections = signal<Collection[]>([]);
-  loading = signal(false);
+
+  // Professional loading state management
+  loadingState = createLoadingState();
 
   // Thumbnail URL management to prevent memory leaks
   thumbUrls = new Map<string, string>();
 
-  // Filtering and Search
+  // Filtering and Search using professional filter state
   searchQuery = signal('');
   filterModel = signal('all');
   filterAspect = signal('all');
   filterDate = signal('all'); // 'all', 'today', '7days', '30days'
 
-  // Selection Mode
+  // Professional selection state management
   isSelecting = signal(false);
-  selectedIds = signal<Set<string>>(new Set());
+  selection = createSelectionState<string>();
 
   filteredItems = computed(() => {
     const query = this.searchQuery().toLowerCase();
@@ -109,45 +112,46 @@ export class GalleryComponent implements OnInit, OnDestroy {
     });
   }
 
-  async ngOnInit() {
-    this.loading.set(true);
-    const [items, collections] = await Promise.all([
-      this.galleryService.list(),
-      this.galleryService.listCollections(),
-    ]);
-    this.allItems.set(items);
-    this.collections.set(collections);
-    this.loading.set(false);
+  public async ngOnInit(): Promise<void> {
+    // Use professional loading state
+    await this.loadingState.execute(async () => {
+      const [items, collections] = await Promise.all([
+        this.galleryService.list(),
+        this.galleryService.listCollections(),
+      ]);
+      this.allItems.set(items);
+      this.collections.set(collections);
+    });
   }
 
-  ngOnDestroy() {
+  public ngOnDestroy(): void {
     this.revokeAllThumbUrls();
   }
 
   // --- Type-safe event handlers ---
-  onSearchInput(event: Event) {
+  public onSearchInput(event: Event): void {
     this.searchQuery.set((event.target as HTMLInputElement).value);
   }
 
-  onModelFilterChange(event: Event) {
+  public onModelFilterChange(event: Event): void {
     this.filterModel.set((event.target as HTMLSelectElement).value);
   }
 
-  onAspectFilterChange(event: Event) {
+  public onAspectFilterChange(event: Event): void {
     this.filterAspect.set((event.target as HTMLSelectElement).value);
   }
 
-  onDateFilterChange(event: Event) {
+  public onDateFilterChange(event: Event): void {
     this.filterDate.set((event.target as HTMLSelectElement).value);
   }
   // --- End of type-safe event handlers ---
 
-  private revokeAllThumbUrls() {
+  private revokeAllThumbUrls(): void {
     this.thumbUrls.forEach((url) => URL.revokeObjectURL(url));
     this.thumbUrls.clear();
   }
 
-  async toggleFavorite(event: MouseEvent, id: string) {
+  public async toggleFavorite(event: MouseEvent, id: string): Promise<void> {
     event.preventDefault(); // prevent navigation
     event.stopPropagation();
     const isFav = await this.galleryService.toggleFavorite(id);
@@ -157,48 +161,52 @@ export class GalleryComponent implements OnInit, OnDestroy {
     this.toastService.show(isFav ? 'Added to favorites.' : 'Removed from favorites.');
   }
 
-  toggleSelectionMode() {
+  public toggleSelectionMode(): void {
     this.isSelecting.update((v) => !v);
-    this.selectedIds.set(new Set());
+    this.selection.deselectAll();
   }
 
-  toggleItemSelection(event: MouseEvent, id: string) {
+  public toggleItemSelection(event: MouseEvent, id: string): void {
     event.preventDefault();
     event.stopPropagation();
-    this.selectedIds.update((ids) => {
-      if (ids.has(id)) {
-        ids.delete(id);
-      } else {
-        ids.add(id);
-      }
-      return new Set(ids);
-    });
+    this.selection.toggle(id);
   }
 
-  selectAll() {
-    this.selectedIds.set(new Set(this.filteredItems().map((i) => i.id)));
+  public selectAll(): void {
+    const ids = this.filteredItems().map((i) => i.id);
+    this.selection.selectAll(ids);
   }
 
-  deselectAll() {
-    this.selectedIds.set(new Set());
+  public deselectAll(): void {
+    this.selection.deselectAll();
   }
 
-  async deleteSelected() {
-    const ids = Array.from(this.selectedIds());
-    if (confirm(`Are you sure you want to delete ${ids.length} item(s)?`)) {
+  public isItemSelected(id: string): boolean {
+    return this.selection.isSelected(id);
+  }
+
+  public get selectedCount(): number {
+    return this.selection.selectedCount();
+  }
+
+  public async deleteSelected(): Promise<void> {
+    const ids = Array.from(this.selection.selectedItems());
+    const count = this.selection.selectedCount();
+    if (confirm(`Are you sure you want to delete ${count} item(s)?`)) {
       await this.galleryService.bulkRemove(ids);
       this.allItems.update((items) => items.filter((i) => !ids.includes(i.id)));
       this.toggleSelectionMode();
-      this.toastService.show(`${ids.length} item(s) deleted.`);
+      this.toastService.show(`${count} item(s) deleted.`);
     }
   }
 
-  async moveSelected(event: Event) {
+  public async moveSelected(event: Event): Promise<void> {
     const target = event.target as HTMLSelectElement;
     const collectionId = target.value;
     if (collectionId === '') return;
 
-    const ids = Array.from(this.selectedIds());
+    const ids = Array.from(this.selection.selectedItems());
+    const count = this.selection.selectedCount();
     const newCollectionId = collectionId === 'none' ? null : collectionId;
 
     await this.galleryService.moveItemsToCollection(ids, newCollectionId);
@@ -214,8 +222,8 @@ export class GalleryComponent implements OnInit, OnDestroy {
     const collection = this.collections().find((c) => c.id === newCollectionId);
     const message =
       newCollectionId === null
-        ? `${ids.length} item(s) removed from collection.`
-        : `${ids.length} item(s) moved to "${collection?.name}".`;
+        ? `${count} item(s) removed from collection.`
+        : `${count} item(s) moved to "${collection?.name}".`;
 
     this.toastService.show(message);
     this.toggleSelectionMode();

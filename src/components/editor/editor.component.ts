@@ -22,6 +22,7 @@ import {
   textToSpeech,
 } from '../../services/pollinations.client';
 import { FormsModule } from '@angular/forms';
+import { createLoadingState, createUndoRedo } from '../../utils';
 
 @Component({
   selector: 'pw-editor',
@@ -31,9 +32,17 @@ import { FormsModule } from '@angular/forms';
 })
 export class EditorComponent implements OnInit {
   item = signal<GalleryItem | null>(null);
-  restyle = signal('Golden hour warmth, gentle grain, cinematic contrast');
-  working = signal(false);
-  audioWorking = signal(false);
+
+  // Professional undo/redo for restyle input
+  restyleHistory = createUndoRedo<string>('Golden hour warmth, gentle grain, cinematic contrast');
+  restyle = this.restyleHistory.current;
+  canUndo = this.restyleHistory.canUndo;
+  canRedo = this.restyleHistory.canRedo;
+
+  // Professional loading states
+  variantState = createLoadingState();
+  restyleState = createLoadingState();
+  audioState = createLoadingState();
 
   lineage = signal<{ parent: GalleryItem | null; children: GalleryItem[] }>({
     parent: null,
@@ -70,33 +79,42 @@ export class EditorComponent implements OnInit {
     });
   }
 
-  ngOnInit() {
+  public ngOnInit(): void {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(async (params) => {
       const id = params.get('id');
       if (!id) {
-        this.router.navigateByUrl('/gallery');
+        await this.router.navigateByUrl('/gallery');
         return;
       }
       await this.loadItem(id);
     });
   }
 
-  onRestyleInput(event: Event) {
-    this.restyle.set((event.target as HTMLInputElement).value);
+  public onRestyleInput(event: Event): void {
+    const newValue = (event.target as HTMLInputElement).value;
+    this.restyleHistory.commit(newValue);
   }
 
-  async loadItem(id: string) {
+  public undo(): void {
+    this.restyleHistory.undo();
+  }
+
+  public redo(): void {
+    this.restyleHistory.redo();
+  }
+
+  public async loadItem(id: string): Promise<void> {
     const item = await this.gs.get(id);
     if (!item) {
       this.toast.show('Not found');
-      this.router.navigateByUrl('/gallery');
+      await this.router.navigateByUrl('/gallery');
       return;
     }
     this.item.set(item);
     await this.loadLineage(item);
   }
 
-  async loadLineage(currentItem: GalleryItem) {
+  public async loadLineage(currentItem: GalleryItem): Promise<void> {
     let parent: GalleryItem | null = null;
     if (currentItem.lineage?.parentId) {
       parent = (await this.gs.get(currentItem.lineage.parentId)) ?? null;
@@ -107,11 +125,11 @@ export class EditorComponent implements OnInit {
     this.lineage.set({ parent, children });
   }
 
-  async makeVariant() {
+  public async makeVariant(): Promise<void> {
     const base = this.item();
     if (!base) return;
-    this.working.set(true);
-    try {
+
+    await this.variantState.execute(async () => {
       const generationSettings = this.settingsService.getGenerationOptions();
       const vprompt = await composeVariantPrompt(base.prompt, {
         private: generationSettings.private,
@@ -142,19 +160,19 @@ export class EditorComponent implements OnInit {
         collectionId: base.collectionId,
       });
       this.toast.show('Variant added to gallery.');
-      this.router.navigate(['/edit', id]);
-    } catch (e: any) {
-      this.toast.show(`Variant failed: ${e.message || e}`);
-    } finally {
-      this.working.set(false);
+      await this.router.navigate(['/edit', id]);
+    });
+
+    if (this.variantState.error()) {
+      this.toast.show(`Variant failed: ${this.variantState.error()}`);
     }
   }
 
-  async makeRestyle() {
+  public async makeRestyle(): Promise<void> {
     const base = this.item();
     if (!base) return;
-    this.working.set(true);
-    try {
+
+    await this.restyleState.execute(async () => {
       const generationSettings = this.settingsService.getGenerationOptions();
       const rprompt = await composeRestylePrompt(base.prompt, this.restyle(), {
         private: generationSettings.private,
@@ -185,15 +203,15 @@ export class EditorComponent implements OnInit {
         collectionId: base.collectionId,
       });
       this.toast.show('Restyle added to gallery.');
-      this.router.navigate(['/edit', id]);
-    } catch (e: any) {
-      this.toast.show(`Restyle failed: ${e.message || e}`);
-    } finally {
-      this.working.set(false);
+      await this.router.navigate(['/edit', id]);
+    });
+
+    if (this.restyleState.error()) {
+      this.toast.show(`Restyle failed: ${this.restyleState.error()}`);
     }
   }
 
-  async toggleFavorite() {
+  public async toggleFavorite(): Promise<void> {
     const item = this.item();
     if (!item) return;
     const isFav = await this.gs.toggleFavorite(item.id);
@@ -201,7 +219,7 @@ export class EditorComponent implements OnInit {
     this.toast.show(isFav ? 'Added to favorites.' : 'Removed from favorites.');
   }
 
-  downloadImage() {
+  public downloadImage(): void {
     const url = this.itemUrl();
     const item = this.item();
     if (!item || !url) return;
@@ -213,7 +231,7 @@ export class EditorComponent implements OnInit {
     document.body.removeChild(a);
   }
 
-  async shareImage() {
+  public async shareImage(): Promise<void> {
     const item = this.item();
     if (!item || !navigator.share) {
       this.toast.show('Web Share API not available on this browser.');
@@ -226,15 +244,17 @@ export class EditorComponent implements OnInit {
         text: `Check out this wallpaper I made: ${item.prompt}`,
         files: [file],
       });
-    } catch (error: any) {
-      if (error.name !== 'AbortError') {
+    } catch (error: unknown) {
+      const err = error as { name?: string };
+      if (err.name !== 'AbortError') {
         this.toast.show('Failed to share image.');
+        // eslint-disable-next-line no-console
         console.error('Share error:', error);
       }
     }
   }
 
-  previewAudio() {
+  public previewAudio(): void {
     const item = this.item();
     if (!item) return;
 
@@ -243,23 +263,22 @@ export class EditorComponent implements OnInit {
       return;
     }
 
-    if (this.audioWorking()) {
+    if (this.audioState.loading()) {
       window.speechSynthesis.cancel();
-      this.audioWorking.set(false);
       return;
     }
 
-    this.audioWorking.set(true);
-    try {
-      const utterance = textToSpeech(item.prompt);
-      utterance.onend = () => this.audioWorking.set(false);
-      utterance.onerror = (e) => {
-        this.audioWorking.set(false);
-        this.toast.show(`Audio error: ${e.error}`);
-      };
-    } catch (e: any) {
-      this.audioWorking.set(false);
-      this.toast.show(`Audio failed: ${e.message}`);
+    this.audioState.execute(async () => {
+      return new Promise<void>((resolve, reject) => {
+        const utterance = textToSpeech(item.prompt);
+        utterance.onend = (): void => resolve();
+        utterance.onerror = (e): void => reject(new Error(e.error));
+        window.speechSynthesis.speak(utterance);
+      });
+    });
+
+    if (this.audioState.error()) {
+      this.toast.show(`Audio failed: ${this.audioState.error()}`);
     }
   }
 }

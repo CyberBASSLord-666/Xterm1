@@ -4,6 +4,7 @@ import { ToastService } from '../../services/toast.service';
 import { SettingsService } from '../../services/settings.service';
 import JSZip from 'jszip';
 import { FormsModule } from '@angular/forms';
+import { createLoadingState, createFormField } from '../../utils';
 
 @Component({
   selector: 'pw-settings',
@@ -16,47 +17,55 @@ export class SettingsComponent {
   private galleryService = inject(GalleryService);
   private toastService = inject(ToastService);
 
-  isExporting = signal(false);
+  // Professional loading states
+  exportState = createLoadingState();
+  importState = createLoadingState();
+
+  // Professional form validation for file import
+  importFile = createFormField<File | null>(null, [
+    (file: File | null) => (file ? null : 'Please select a file'),
+    (file: File | null) => (file?.name.endsWith('.zip') ? null : 'Only .zip files are allowed'),
+    (file: File | null) =>
+      file && file.size <= 50 * 1024 * 1024 ? null : 'File must be under 50MB',
+  ]);
 
   // --- Type-safe event handlers ---
-  onReferrerInput(event: Event) {
+  public onReferrerInput(event: Event): void {
     this.settingsService.referrer.set((event.target as HTMLInputElement).value);
   }
 
-  onReferrerBlur() {
+  public onReferrerBlur(): void {
     this.toastService.show('Referrer setting saved.');
   }
 
-  onNologoChange(event: Event) {
+  public onNologoChange(event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
     this.settingsService.nologo.set(checked);
     this.toastService.show(`Logo overlays ${checked ? 'disabled' : 'enabled'}.`);
   }
 
-  onPrivateChange(event: Event) {
+  public onPrivateChange(event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
     this.settingsService.private.set(checked);
     this.toastService.show(`Private generations ${checked ? 'enabled' : 'disabled'}.`);
   }
 
-  onSafeChange(event: Event) {
+  public onSafeChange(event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
     this.settingsService.safe.set(checked);
     this.toastService.show(`Strict safety filters ${checked ? 'enabled' : 'disabled'}.`);
   }
 
-  onThemeChange(event: Event) {
+  public onThemeChange(event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
     this.settingsService.themeDark.set(checked);
     this.toastService.show(`Dark mode ${checked ? 'enabled' : 'disabled'}.`);
   }
   // --- End of type-safe event handlers ---
 
-  async exportGallery() {
-    if (this.isExporting()) return;
-    this.isExporting.set(true);
-    this.toastService.show('Preparing gallery for export...');
-    try {
+  public async exportGallery(): Promise<void> {
+    await this.exportState.execute(async () => {
+      this.toastService.show('Preparing gallery for export...');
       const items = await this.galleryService.list();
       if (items.length === 0) {
         this.toastService.show('Your gallery is empty.');
@@ -84,13 +93,13 @@ export class SettingsComponent {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      URL.revokeObjectURL(link.href);
 
-      this.toastService.show('Export started successfully!');
-    } catch (e: any) {
-      this.toastService.show(`Export failed: ${e.message}`);
-    } finally {
-      this.isExporting.set(false);
+      URL.revokeObjectURL(link.href);
+      this.toastService.show('Export complete!');
+    });
+
+    if (this.exportState.error()) {
+      this.toastService.show(`Export failed: ${this.exportState.error()}`);
     }
   }
 }

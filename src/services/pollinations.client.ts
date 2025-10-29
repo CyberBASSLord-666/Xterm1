@@ -1,4 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
+import { API_CONFIG } from '../constants';
 
 export type DeviceInfo = { width: number; height: number; dpr: number };
 export type ExactFitTarget = {
@@ -20,13 +21,10 @@ export type ImageOptions = {
 };
 type TextOptions = { model?: string; system?: string; private?: boolean; referrer?: string };
 
-const IMAGE_API_BASE = 'https://image.pollinations.ai/prompt';
-const TEXT_API_BASE = 'https://text.pollinations.ai';
-// Reserved for future use
-// const IMAGE_FEED_URL = 'https://image.pollinations.ai/feed';
-// const TEXT_FEED_URL = 'https://text.pollinations.ai/feed';
-const IMAGE_INTERVAL = 5000; // 1 request per 5 seconds
-const TEXT_INTERVAL = 3000; // 1 request per 3 seconds
+const IMAGE_API_BASE = API_CONFIG.IMAGE_API_BASE;
+const TEXT_API_BASE = API_CONFIG.TEXT_API_BASE;
+const IMAGE_INTERVAL = API_CONFIG.IMAGE_INTERVAL;
+const TEXT_INTERVAL = API_CONFIG.TEXT_INTERVAL;
 
 // Gemini API Client - initialized lazily with API key
 let ai: GoogleGenAI | null = null;
@@ -100,16 +98,16 @@ async function fetchWithRetries(
           } else {
             errorMessage = 'An unexpected API error occurred. Please try again.';
           }
-        } catch (e) {
+        } catch {
           errorMessage = 'The server returned an unexpected response. Please try again.';
         }
         // Client-side errors should not be retried, so we throw immediately.
         throw new Error(errorMessage);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       clearTimeout(timeoutId);
-      lastError = error;
-      if (error.name === 'AbortError') {
+      lastError = error as Error;
+      if ((error as Error).name === 'AbortError') {
         lastError = new Error('Request timed out');
       }
     }
@@ -132,9 +130,9 @@ async function fetchWithRetries(
  */
 class RequestQueue {
   private queue: Array<{
-    requestFn: RequestFn<any>;
-    resolve: (value: any) => void;
-    reject: (reason?: any) => void;
+    requestFn: RequestFn<any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+    resolve: (value: any) => void; // eslint-disable-line @typescript-eslint/no-explicit-any
+    reject: (reason?: Error) => void;
     abortController?: AbortController;
   }> = [];
   private isProcessing = false;
@@ -151,7 +149,7 @@ class RequestQueue {
     return new Promise<T>((resolve, reject) => {
       this.queue.push({ requestFn, resolve, reject, abortController });
       if (!this.isProcessing) {
-        this.processQueue();
+        void this.processQueue();
       }
     });
   }
@@ -174,7 +172,7 @@ class RequestQueue {
     return this.queue.length;
   }
 
-  private async processQueue() {
+  private async processQueue(): Promise<void> {
     if (this.queue.length === 0) {
       this.isProcessing = false;
       return;
@@ -186,7 +184,9 @@ class RequestQueue {
     // Check if request was already cancelled
     if (abortController?.signal.aborted) {
       reject(new Error('Request cancelled'));
-      setTimeout(() => this.processQueue(), this.interval);
+      setTimeout(() => {
+        void this.processQueue();
+      }, this.interval);
       return;
     }
 
@@ -194,10 +194,13 @@ class RequestQueue {
       const result = await requestFn();
       resolve(result);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Queue request failed:', error);
-      reject(error);
+      reject(error as Error);
     } finally {
-      setTimeout(() => this.processQueue(), this.interval);
+      setTimeout(() => {
+        void this.processQueue();
+      }, this.interval);
     }
   }
 }
@@ -205,10 +208,15 @@ class RequestQueue {
 const imageQueue = new RequestQueue(IMAGE_INTERVAL);
 const textQueue = new RequestQueue(TEXT_INTERVAL);
 
-function buildQueryString(params: Record<string, any>): string {
+function buildQueryString(params: Record<string, string | number | boolean | undefined>): string {
   return Object.entries(params)
-    .filter(([, value]) => value !== undefined && value !== null && value !== '')
-    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+    .filter(([, value]) => {
+      // Exclude undefined, null, empty strings
+      if (value === undefined || value === null || value === '') return false;
+      // Explicitly allow false and 0 as valid query params
+      return typeof value === 'boolean' || typeof value === 'number' || typeof value === 'string';
+    })
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
     .join('&');
 }
 
@@ -286,7 +294,13 @@ export async function createDeviceWallpaper({
   supported: SupportedResolutions;
   prompt: string;
   options: ImageOptions;
-}) {
+}): Promise<{
+  blob: Blob;
+  width: number;
+  height: number;
+  aspect: string;
+  mode: 'exact' | 'constrained';
+}> {
   const target = computeExactFitTarget(device, supported);
   const blob = await generateImage(prompt, target.width, target.height, options);
   return { blob, ...target };
