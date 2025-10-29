@@ -396,6 +396,46 @@ export function combine<T extends unknown[]>(
 }
 
 /**
+ * Deep equality check that handles edge cases
+ * Supports primitives, objects, arrays, null, undefined
+ * Does not compare functions or symbols by design
+ */
+function deepEqual(a: unknown, b: unknown): boolean {
+  // Primitive comparison
+  if (a === b) return true;
+  
+  // Null/undefined handling
+  if (a == null || b == null) return false;
+  
+  // Type mismatch
+  if (typeof a !== 'object' || typeof b !== 'object') return false;
+  
+  // Array handling
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) return false;
+    return a.every((val, idx) => deepEqual(val, b[idx]));
+  }
+  
+  // Array vs object mismatch
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  
+  // Object comparison
+  const keysA = Object.keys(a as Record<string, unknown>);
+  const keysB = Object.keys(b as Record<string, unknown>);
+  
+  if (keysA.length !== keysB.length) return false;
+  
+  for (const key of keysA) {
+    if (!keysB.includes(key)) return false;
+    if (!deepEqual((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key])) {
+      return false;
+    }
+  }
+  
+  return true;
+}
+
+/**
  * Signal that only updates when value actually changes (deep equality)
  */
 export function distinctSignal<T>(initialValue: T): WritableSignal<T> {
@@ -404,13 +444,13 @@ export function distinctSignal<T>(initialValue: T): WritableSignal<T> {
   return {
     ...sig,
     set: (value: T) => {
-      if (JSON.stringify(value) !== JSON.stringify(sig())) {
+      if (!deepEqual(value, sig())) {
         sig.set(value);
       }
     },
     update: (updateFn: (value: T) => T) => {
       const newValue = updateFn(sig());
-      if (JSON.stringify(newValue) !== JSON.stringify(sig())) {
+      if (!deepEqual(newValue, sig())) {
         sig.set(newValue);
       }
     },

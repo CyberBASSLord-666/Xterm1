@@ -37,7 +37,7 @@ export class HttpClient {
   private cache: AdvancedCache<unknown>;
   private interceptors: HttpInterceptor[] = [];
   private readonly defaultTimeout = API_CONFIG.REQUEST_TIMEOUT;
-  private readonly defaultRetries = API_CONFIG.DEFAULT_RETRIES;
+  private readonly defaultRetries = API_CONFIG.MAX_RETRIES;
 
   constructor(cacheOptions?: { ttl?: number; maxSize?: number }) {
     this.cache = new AdvancedCache({

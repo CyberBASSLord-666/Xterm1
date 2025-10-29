@@ -97,7 +97,14 @@ export async function measureExecutionTime<T>(
   const result = await func();
   const duration = performance.now() - start;
 
-  // Using console.debug for development-time measurements
+  /**
+   * NOTE: Using direct console for performance measurements
+   * This is intentional because:
+   * 1. Performance utilities are foundational infrastructure
+   * 2. LoggerService may depend on these utilities (circular dependency)
+   * 3. Performance measurements need minimal overhead
+   * 4. Development-time diagnostic tool, not production logging
+   */
   // eslint-disable-next-line no-console
   console.debug(`[Performance] ${label}: ${duration.toFixed(2)}ms`);
 

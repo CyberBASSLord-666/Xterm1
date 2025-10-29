@@ -1,6 +1,13 @@
 /**
  * Logger Enhancer - Quality of Life Improvements for Development
  * Provides enhanced logging with stack traces, source maps, and actionable suggestions
+ * 
+ * NOTE: This is a lower-level logging enhancer that augments console output.
+ * It intentionally uses direct console methods because:
+ * 1. LoggerService itself may use this enhancer (avoid circular dependencies)
+ * 2. Provides foundational logging infrastructure
+ * 3. Designed for development-time debugging and diagnostics
+ * 4. Adding LoggerService dependency would create architectural anti-pattern
  */
 
 export interface LogContext {

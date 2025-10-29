@@ -4,7 +4,6 @@ import { Collection } from '../../services/idb';
 import { ToastService } from '../../services/toast.service';
 import { FormsModule } from '@angular/forms';
 import { createLoadingState, createFormField } from '../../utils';
-import { ERROR_MESSAGES } from '../../constants';
 
 @Component({
   selector: 'pw-collections',

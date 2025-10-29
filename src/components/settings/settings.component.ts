@@ -102,14 +102,4 @@ export class SettingsComponent {
       this.toastService.show(`Export failed: ${this.exportState.error()}`);
     }
   }
-      URL.revokeObjectURL(link.href);
-
-      this.toastService.show('Export started successfully!');
-    } catch (e: unknown) {
-      const error = e as Error;
-      this.toastService.show(`Export failed: ${error.message}`);
-    } finally {
-      this.isExporting.set(false);
-    }
-  }
 }

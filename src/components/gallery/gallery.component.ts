@@ -12,7 +12,7 @@ import { GalleryService } from '../../services/gallery.service';
 import { Collection, GalleryItem } from '../../services/idb';
 import { RouterLink } from '@angular/router';
 import { ToastService } from '../../services/toast.service';
-import { createSelectionState, createLoadingState, createFilterState } from '../../utils';
+import { createSelectionState, createLoadingState } from '../../utils';
 
 @Component({
   selector: 'pw-gallery',

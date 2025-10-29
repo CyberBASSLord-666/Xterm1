@@ -177,10 +177,17 @@ export class LazyServiceLoader<T> {
     }
 
     if (this.loading) {
-      // Wait for loading to complete
-      while (this.loading) {
-        await new Promise((resolve) => setTimeout(resolve, 50));
-      }
+      // Wait for loading to complete using promise-based approach
+      await new Promise<void>((resolve) => {
+        const checkLoading = (): void => {
+          if (!this.loading) {
+            resolve();
+          } else {
+            setTimeout(checkLoading, 50);
+          }
+        };
+        checkLoading();
+      });
       return this.instance!;
     }
 
