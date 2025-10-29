@@ -55,8 +55,11 @@ export async function loadWithFallback<T>(
   return Promise.race([
     primaryImport(),
     new Promise<T>((_, reject) => setTimeout(() => reject(new Error('Load timeout')), timeout)),
-  ]).catch(() => {
-    console.warn('Primary import failed or timed out, using fallback');
+  ]).catch((err) => {
+    // NOTE: Using console for bundle optimization diagnostics
+    // This is a foundational utility that logs loading failures for debugging
+    // eslint-disable-next-line no-console
+    console.warn('Primary import failed or timed out, using fallback:', err);
     return fallbackImport();
   });
 }

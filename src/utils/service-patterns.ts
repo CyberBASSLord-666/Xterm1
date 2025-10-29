@@ -177,12 +177,18 @@ export class LazyServiceLoader<T> {
     }
 
     if (this.loading) {
-      // Wait for loading to complete using promise-based approach
-      await new Promise<void>((resolve) => {
+      // Wait for loading to complete with maximum retry limit
+      const maxRetries = 100; // 5 seconds max (50ms * 100)
+      let retries = 0;
+      
+      await new Promise<void>((resolve, reject) => {
         const checkLoading = (): void => {
           if (!this.loading) {
             resolve();
+          } else if (retries >= maxRetries) {
+            reject(new Error('LazyServiceLoader: Maximum wait time exceeded'));
           } else {
+            retries++;
             setTimeout(checkLoading, 50);
           }
         };

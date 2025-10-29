@@ -148,8 +148,13 @@ export class HttpClient {
         }
 
         // Don't retry on client errors (4xx)
-        if (lastError.message.includes('4')) {
-          throw lastError;
+        // Extract status code from error message more reliably
+        const statusMatch = lastError.message.match(/status (\d+)/i);
+        if (statusMatch) {
+          const status = parseInt(statusMatch[1], 10);
+          if (status >= 400 && status < 500) {
+            throw lastError;
+          }
         }
 
         // Exponential backoff

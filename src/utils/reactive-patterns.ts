@@ -406,7 +406,7 @@ function deepEqual(a: unknown, b: unknown): boolean {
   // Type mismatch
   if (typeof a !== 'object' || typeof b !== 'object') return false;
   
-  // Array handling
+  // Array handling  
   if (Array.isArray(a) && Array.isArray(b)) {
     if (a.length !== b.length) return false;
     return a.every((val, idx) => deepEqual(val, b[idx]));
@@ -421,8 +421,11 @@ function deepEqual(a: unknown, b: unknown): boolean {
   
   if (keysA.length !== keysB.length) return false;
   
+  // Use Set for O(1) lookup instead of O(n) includes
+  const keysBSet = new Set(keysB);
+  
   for (const key of keysA) {
-    if (!keysB.includes(key)) return false;
+    if (!keysBSet.has(key)) return false;
     if (!deepEqual((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key])) {
       return false;
     }
@@ -468,7 +471,10 @@ export function persistedSignal<T>(
       loadedValue = JSON.parse(stored);
     }
   } catch (e) {
-    // Ignore parse errors
+    // Log parse errors for debugging
+    if (typeof console !== 'undefined' && console.warn) {
+      console.warn(`Failed to parse stored value for key "${key}":`, e);
+    }
   }
 
   const sig = signal(loadedValue);

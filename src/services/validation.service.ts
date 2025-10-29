@@ -180,8 +180,10 @@ export class ValidationService {
 
     // Normalize allowlist: drop style/srcdoc/on* regardless of caller config.
     const normalizedAllowedAttrs: Record<string, string[]> = {};
-    const dropAttr = (name: string): boolean =>
-      name.toLowerCase() === 'style' || name.toLowerCase() === 'srcdoc' || name.toLowerCase().startsWith('on');
+    const dropAttr = (name: string): boolean => {
+      const lower = name.toLowerCase();
+      return lower === 'style' || lower === 'srcdoc' || lower.startsWith('on');
+    };
 
     for (const [tag, attrs] of Object.entries(allowedAttributes)) {
       normalizedAllowedAttrs[tag.toLowerCase()] = (attrs || []).filter((a) => !dropAttr(a)).map((a) => a.toLowerCase());

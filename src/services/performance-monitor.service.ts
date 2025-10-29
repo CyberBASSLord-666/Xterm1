@@ -224,7 +224,7 @@ export class PerformanceMonitorService {
         const entries = list.getEntries();
         const lastEntry = entries[entries.length - 1] as PerformanceEntryWithProcessing;
         if (lastEntry && (lastEntry.renderTime || lastEntry.loadTime)) {
-          callback(lastEntry.renderTime || lastEntry.loadTime || 0);
+          callback(lastEntry.renderTime ?? lastEntry.loadTime ?? 0);
         }
       });
       observer.observe({ type: 'largest-contentful-paint', buffered: true });
