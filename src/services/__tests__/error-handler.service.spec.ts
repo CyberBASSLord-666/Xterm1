@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
-import { ErrorHandlerService, AppError } from './error-handler.service';
-import { LoggerService } from './logger.service';
-import { ToastService } from './toast.service';
+import { ErrorHandlerService, AppError } from '../error-handler.service';
+import { LoggerService } from '../logger.service';
+import { ToastService } from '../toast.service';
 
 describe('ErrorHandlerService', () => {
   let service: ErrorHandlerService;
