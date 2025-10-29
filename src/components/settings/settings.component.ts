@@ -4,6 +4,7 @@ import { ToastService } from '../../services/toast.service';
 import { SettingsService } from '../../services/settings.service';
 import JSZip from 'jszip';
 import { FormsModule } from '@angular/forms';
+import { createLoadingState, createFormField } from '../../utils';
 
 @Component({
   selector: 'pw-settings',
@@ -16,7 +17,17 @@ export class SettingsComponent {
   private galleryService = inject(GalleryService);
   private toastService = inject(ToastService);
 
-  isExporting = signal(false);
+  // Professional loading states
+  exportState = createLoadingState();
+  importState = createLoadingState();
+
+  // Professional form validation for file import
+  importFile = createFormField<File | null>(null, [
+    (file: File | null) => (file ? null : 'Please select a file'),
+    (file: File | null) => (file?.name.endsWith('.zip') ? null : 'Only .zip files are allowed'),
+    (file: File | null) =>
+      file && file.size <= 50 * 1024 * 1024 ? null : 'File must be under 50MB',
+  ]);
 
   // --- Type-safe event handlers ---
   public onReferrerInput(event: Event): void {
@@ -53,10 +64,8 @@ export class SettingsComponent {
   // --- End of type-safe event handlers ---
 
   public async exportGallery(): Promise<void> {
-    if (this.isExporting()) return;
-    this.isExporting.set(true);
-    this.toastService.show('Preparing gallery for export...');
-    try {
+    await this.exportState.execute(async () => {
+      this.toastService.show('Preparing gallery for export...');
       const items = await this.galleryService.list();
       if (items.length === 0) {
         this.toastService.show('Your gallery is empty.');
@@ -84,6 +93,15 @@ export class SettingsComponent {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+
+      URL.revokeObjectURL(link.href);
+      this.toastService.show('Export complete!');
+    });
+
+    if (this.exportState.error()) {
+      this.toastService.show(`Export failed: ${this.exportState.error()}`);
+    }
+  }
       URL.revokeObjectURL(link.href);
 
       this.toastService.show('Export started successfully!');

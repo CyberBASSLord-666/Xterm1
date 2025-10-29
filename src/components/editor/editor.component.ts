@@ -22,6 +22,7 @@ import {
   textToSpeech,
 } from '../../services/pollinations.client';
 import { FormsModule } from '@angular/forms';
+import { createLoadingState, createUndoRedo } from '../../utils';
 
 @Component({
   selector: 'pw-editor',
@@ -31,9 +32,17 @@ import { FormsModule } from '@angular/forms';
 })
 export class EditorComponent implements OnInit {
   item = signal<GalleryItem | null>(null);
-  restyle = signal('Golden hour warmth, gentle grain, cinematic contrast');
-  working = signal(false);
-  audioWorking = signal(false);
+
+  // Professional undo/redo for restyle input
+  restyleHistory = createUndoRedo<string>('Golden hour warmth, gentle grain, cinematic contrast');
+  restyle = this.restyleHistory.current;
+  canUndo = this.restyleHistory.canUndo;
+  canRedo = this.restyleHistory.canRedo;
+
+  // Professional loading states
+  variantState = createLoadingState();
+  restyleState = createLoadingState();
+  audioState = createLoadingState();
 
   lineage = signal<{ parent: GalleryItem | null; children: GalleryItem[] }>({
     parent: null,
@@ -82,7 +91,16 @@ export class EditorComponent implements OnInit {
   }
 
   public onRestyleInput(event: Event): void {
-    this.restyle.set((event.target as HTMLInputElement).value);
+    const newValue = (event.target as HTMLInputElement).value;
+    this.restyleHistory.commit(newValue);
+  }
+
+  public undo(): void {
+    this.restyleHistory.undo();
+  }
+
+  public redo(): void {
+    this.restyleHistory.redo();
   }
 
   public async loadItem(id: string): Promise<void> {
@@ -110,8 +128,8 @@ export class EditorComponent implements OnInit {
   public async makeVariant(): Promise<void> {
     const base = this.item();
     if (!base) return;
-    this.working.set(true);
-    try {
+
+    await this.variantState.execute(async () => {
       const generationSettings = this.settingsService.getGenerationOptions();
       const vprompt = await composeVariantPrompt(base.prompt, {
         private: generationSettings.private,
@@ -143,19 +161,18 @@ export class EditorComponent implements OnInit {
       });
       this.toast.show('Variant added to gallery.');
       await this.router.navigate(['/edit', id]);
-    } catch (e: unknown) {
-      const error = e as Error;
-      this.toast.show(`Variant failed: ${error.message || String(e)}`);
-    } finally {
-      this.working.set(false);
+    });
+
+    if (this.variantState.error()) {
+      this.toast.show(`Variant failed: ${this.variantState.error()}`);
     }
   }
 
   public async makeRestyle(): Promise<void> {
     const base = this.item();
     if (!base) return;
-    this.working.set(true);
-    try {
+
+    await this.restyleState.execute(async () => {
       const generationSettings = this.settingsService.getGenerationOptions();
       const rprompt = await composeRestylePrompt(base.prompt, this.restyle(), {
         private: generationSettings.private,
@@ -187,11 +204,10 @@ export class EditorComponent implements OnInit {
       });
       this.toast.show('Restyle added to gallery.');
       await this.router.navigate(['/edit', id]);
-    } catch (e: unknown) {
-      const error = e as Error;
-      this.toast.show(`Restyle failed: ${error.message || String(e)}`);
-    } finally {
-      this.working.set(false);
+    });
+
+    if (this.restyleState.error()) {
+      this.toast.show(`Restyle failed: ${this.restyleState.error()}`);
     }
   }
 
@@ -247,26 +263,22 @@ export class EditorComponent implements OnInit {
       return;
     }
 
-    if (this.audioWorking()) {
+    if (this.audioState.loading()) {
       window.speechSynthesis.cancel();
-      this.audioWorking.set(false);
       return;
     }
 
-    this.audioWorking.set(true);
-    try {
-      const utterance = textToSpeech(item.prompt);
-      utterance.onend = (): void => {
-        this.audioWorking.set(false);
-      };
-      utterance.onerror = (e): void => {
-        this.audioWorking.set(false);
-        this.toast.show(`Audio error: ${e.error}`);
-      };
-    } catch (e: unknown) {
-      const error = e as Error;
-      this.audioWorking.set(false);
-      this.toast.show(`Audio failed: ${error.message}`);
+    this.audioState.execute(async () => {
+      return new Promise<void>((resolve, reject) => {
+        const utterance = textToSpeech(item.prompt);
+        utterance.onend = (): void => resolve();
+        utterance.onerror = (e): void => reject(new Error(e.error));
+        window.speechSynthesis.speak(utterance);
+      });
+    });
+
+    if (this.audioState.error()) {
+      this.toast.show(`Audio failed: ${this.audioState.error()}`);
     }
   }
 }
