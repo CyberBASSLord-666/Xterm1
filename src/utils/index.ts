@@ -12,3 +12,5 @@ export * from './http-client';
 export * from './logger-enhancer';
 export * from './dev-tools';
 export * from './bundle-optimization';
+export * from './component-helpers';
+export * from './reactive-patterns';
