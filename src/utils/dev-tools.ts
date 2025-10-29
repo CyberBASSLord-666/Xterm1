@@ -3,8 +3,8 @@
  * Quality of Life improvements for developers working on the application
  *
  * Note: Console statements are intentional for debugging purposes
- * eslint-disable no-console, @typescript-eslint/no-explicit-any, @typescript-eslint/explicit-function-return-type
  */
+/* eslint-disable no-console, @typescript-eslint/no-explicit-any, @typescript-eslint/explicit-function-return-type */
 
 import { isDevMode } from '@angular/core';
 

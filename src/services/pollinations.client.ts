@@ -210,7 +210,13 @@ const textQueue = new RequestQueue(TEXT_INTERVAL);
 
 function buildQueryString(params: Record<string, string | number | boolean | undefined>): string {
   return Object.entries(params)
-    .filter(([, value]) => value !== undefined && value !== null && value !== '')
+    .filter(([, value]) => {
+      // Exclude undefined, null, empty strings, and falsy numbers/booleans that shouldn't be in query
+      if (value === undefined || value === null || value === '') return false;
+      // Explicitly allow false and 0 as valid query params
+      if (typeof value === 'boolean' || typeof value === 'number') return true;
+      return true;
+    })
     .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
     .join('&');
 }

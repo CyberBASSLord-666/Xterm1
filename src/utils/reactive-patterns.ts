@@ -168,12 +168,8 @@ export function createCachedComputed<T>(
     lastUpdate.set(Date.now());
   };
 
-  // Auto-refresh when stale
-  effect(() => {
-    if (isStale()) {
-      refresh();
-    }
-  });
+  // Note: Auto-refresh removed to prevent infinite loop
+  // Users should call refresh() manually when needed
 
   return {
     value: cached.asReadonly(),

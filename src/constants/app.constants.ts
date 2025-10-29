@@ -13,8 +13,8 @@ export const API_CONFIG = {
   IMAGE_INTERVAL: 5000,
   /** Text API request interval (milliseconds) */
   TEXT_INTERVAL: 3000,
-  /** Default retry attempts for failed requests */
-  DEFAULT_RETRIES: 3,
+  /** Maximum retry attempts for failed requests */
+  MAX_RETRIES: 3,
   /** Request timeout (milliseconds) */
   REQUEST_TIMEOUT: 30000,
 } as const;
@@ -47,8 +47,8 @@ export const UI_CONFIG = {
   TOAST_DURATION: 4000,
   /** Animation duration (milliseconds) */
   ANIMATION_DURATION: 300,
-  /** Maximum prompt length */
-  MAX_PROMPT_LENGTH: 1000,
+  /** Maximum prompt length (aligned with VALIDATION_RULES) */
+  MAX_PROMPT_LENGTH: 2000,
   /** Maximum history items to store */
   MAX_HISTORY_ITEMS: 20,
   /** Generation status message interval (milliseconds) */
