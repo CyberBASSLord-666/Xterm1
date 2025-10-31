@@ -349,7 +349,12 @@ export function effectWithCleanup(effectFn: () => (() => void) | void): () => vo
     if (cleanup) {
       cleanup();
     }
-    stopEffect.destroy();
+    // Support both Angular 20+ and earlier versions
+    if (typeof stopEffect === 'function') {
+      stopEffect();
+    } else if (stopEffect && typeof stopEffect.destroy === 'function') {
+      stopEffect.destroy();
+    }
   };
 }
 
