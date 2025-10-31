@@ -1,33 +1,61 @@
-import { Component, ChangeDetectionStrategy, signal, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, OnInit, OnDestroy, computed } from '@angular/core';
 import { GalleryService } from '../../services/gallery.service';
 import { ToastService } from '../../services/toast.service';
 import { SettingsService } from '../../services/settings.service';
+import { KeyboardShortcutsService } from '../../services/keyboard-shortcuts.service';
+import { LoggerService } from '../../services/logger.service';
 import JSZip from 'jszip';
 import { FormsModule } from '@angular/forms';
 import { createLoadingState, createFormField } from '../../utils';
 
 @Component({
   selector: 'pw-settings',
+  standalone: true,
   templateUrl: './settings.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule],
 })
-export class SettingsComponent {
+export class SettingsComponent implements OnInit, OnDestroy {
   settingsService = inject(SettingsService);
   private galleryService = inject(GalleryService);
   private toastService = inject(ToastService);
+  private keyboardShortcuts = inject(KeyboardShortcutsService);
+  private logger = inject(LoggerService);
 
   // Professional loading states
   exportState = createLoadingState();
   importState = createLoadingState();
+  isExporting = computed(() => this.exportState.loading());
+
+  // Constants for file validation
+  private readonly MAX_IMPORT_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
   // Professional form validation for file import
   importFile = createFormField<File | null>(null, [
-    (file: File | null) => (file ? null : 'Please select a file'),
-    (file: File | null) => (file?.name.endsWith('.zip') ? null : 'Only .zip files are allowed'),
-    (file: File | null) =>
-      file && file.size <= 50 * 1024 * 1024 ? null : 'File must be under 50MB',
+    (file: File | null): string | null => (file ? null : 'Please select a file'),
+    (file: File | null): string | null => (file?.name.endsWith('.zip') ? null : 'Only .zip files are allowed'),
+    (file: File | null): string | null =>
+      file && file.size <= this.MAX_IMPORT_FILE_SIZE
+        ? null
+        : `File must be under ${this.MAX_IMPORT_FILE_SIZE / (1024 * 1024)}MB`,
   ]);
+
+  ngOnInit(): void {
+    // Register keyboard shortcuts
+    this.keyboardShortcuts.registerDefaultShortcuts({
+      save: () => {
+        if (!this.isExporting()) {
+          // Fire-and-forget: exportGallery manages its own loading state and error handling via exportState.execute()
+          void this.exportGallery();
+        }
+      },
+    });
+  }
+
+  ngOnDestroy(): void {
+    // Unregister shortcuts
+    this.keyboardShortcuts.unregister('save');
+  }
 
   // --- Type-safe event handlers ---
   public onReferrerInput(event: Event): void {
@@ -101,5 +129,122 @@ export class SettingsComponent {
     if (this.exportState.error()) {
       this.toastService.show(`Export failed: ${this.exportState.error()}`);
     }
+  }
+
+  public async importGallery(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+
+    if (!file) {
+      this.toastService.show('No file selected.');
+      return;
+    }
+
+    // Validate file
+    this.importFile.value.set(file);
+    this.importFile.validate();
+
+    if (this.importFile.error()) {
+      this.toastService.show(this.importFile.error() || 'Invalid file.');
+      return;
+    }
+
+    await this.importState.execute(async () => {
+      this.toastService.show('Reading ZIP file...');
+
+      try {
+        const zip = await JSZip.loadAsync(file);
+
+        // Read metadata.json
+        const metadataFile = zip.file('metadata.json');
+        if (!metadataFile) {
+          throw new Error('Invalid format: metadata.json not found.');
+        }
+
+        const metadataText = await metadataFile.async('text');
+        const metadata = JSON.parse(metadataText) as Array<{
+          id: string;
+          createdAt: string;
+          width: number;
+          height: number;
+          aspect: string;
+          mode: 'exact' | 'constrained';
+          model: string;
+          prompt: string;
+          presetName?: string;
+          isFavorite: boolean;
+          collectionId: string | null;
+          seed?: number;
+          lineage?: { parentId?: string; kind?: 'variant' | 'restyle' };
+        }>;
+
+        if (!Array.isArray(metadata)) {
+          throw new Error('Invalid format: metadata must be an array.');
+        }
+
+        this.toastService.show(`Found ${metadata.length} wallpaper(s). Importing...`);
+
+        let imported = 0;
+        let skipped = 0;
+        let failed = 0;
+
+        for (const meta of metadata) {
+          try {
+            // Check if item already exists
+            const existing = await this.galleryService.get(meta.id);
+            if (existing) {
+              skipped++;
+              continue;
+            }
+
+            // Read image files
+            const imageFile = zip.file(`images/${meta.id}.jpg`);
+            const thumbFile = zip.file(`thumbnails/${meta.id}.jpg`);
+
+            if (!imageFile || !thumbFile) {
+              throw new Error(`Missing image files for ${meta.id}`);
+            }
+
+            const imageBlob = await imageFile.async('blob');
+            const thumbBlob = await thumbFile.async('blob');
+
+            // Add to gallery
+            await this.galleryService.add({
+              ...meta,
+              blob: imageBlob,
+              thumb: thumbBlob,
+            });
+
+            imported++;
+          } catch (error) {
+            // Continue-on-error strategy: Log failures for individual wallpapers and
+            // continue processing remaining items. This ensures one corrupted wallpaper
+            // doesn't prevent importing other valid items from the ZIP archive.
+            this.logger.error(`Failed to import wallpaper ${meta?.id ?? 'unknown'}`, error, 'SettingsComponent');
+            failed++;
+          }
+        }
+
+        // Inform user about complete results including partial failures
+        const parts: string[] = [`Import complete! Added ${imported} wallpaper(s)`];
+        if (failed > 0) {
+          parts.push(`${failed} failed`);
+        }
+        if (skipped > 0) {
+          parts.push(`${skipped} skipped (duplicates)`);
+        }
+        this.toastService.show(parts.join(', ') + '.');
+      } catch (error) {
+        const err = error as Error;
+        throw new Error(`Import failed: ${err.message || 'Unknown error'}`);
+      }
+    });
+
+    if (this.importState.error()) {
+      this.toastService.show(`${this.importState.error()}`);
+    }
+
+    // Reset file input
+    input.value = '';
   }
 }

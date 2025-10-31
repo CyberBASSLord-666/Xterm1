@@ -5,7 +5,7 @@
  * Provides advanced signal compositions, reactive state machines, and effect utilities.
  */
 
-import { Signal, WritableSignal, signal, computed, effect } from '@angular/core';
+import { Signal, WritableSignal, signal, computed, effect, EffectRef } from '@angular/core';
 
 /**
  * Async signal that loads data on demand
@@ -18,10 +18,7 @@ export interface AsyncSignal<T> {
   reset: () => void;
 }
 
-export function createAsyncSignal<T>(
-  loader: () => Promise<T>,
-  initialValue: T | null = null
-): AsyncSignal<T> {
+export function createAsyncSignal<T>(loader: () => Promise<T>, initialValue: T | null = null): AsyncSignal<T> {
   const data = signal<T | null>(initialValue);
   const loading = signal(false);
   const error = signal<Error | null>(null);
@@ -84,9 +81,7 @@ export function createStateMachine<S extends string, E extends string>(
 
   const can = (event: E): boolean => {
     const currentState = current();
-    const transition = transitions.find(
-      (t) => t.from === currentState && t.event === event
-    );
+    const transition = transitions.find((t) => t.from === currentState && t.event === event);
     if (!transition) return false;
     if (transition.guard && !transition.guard()) return false;
     return true;
@@ -96,9 +91,7 @@ export function createStateMachine<S extends string, E extends string>(
     if (!can(event)) return false;
 
     const currentState = current();
-    const trans = transitions.find(
-      (t) => t.from === currentState && t.event === event
-    );
+    const trans = transitions.find((t) => t.from === currentState && t.event === event);
 
     if (!trans) return false;
 
@@ -155,10 +148,7 @@ export interface CachedComputed<T> {
   isStale: Signal<boolean>;
 }
 
-export function createCachedComputed<T>(
-  computeFn: () => T,
-  staleAfterMs: number = 5000
-): CachedComputed<T> {
+export function createCachedComputed<T>(computeFn: () => T, staleAfterMs: number = 5000): CachedComputed<T> {
   const cached = signal<T>(computeFn());
   const lastUpdate = signal(Date.now());
   const isStale = computed(() => Date.now() - lastUpdate() > staleAfterMs);
@@ -218,11 +208,7 @@ export function createReactiveCollection<T, K = string>(
   };
 
   const update = (id: K, updates: Partial<T>): void => {
-    items.update((current) =>
-      current.map((item) =>
-        idExtractor(item) === id ? { ...item, ...updates } : item
-      )
-    );
+    items.update((current) => current.map((item) => (idExtractor(item) === id ? { ...item, ...updates } : item)));
   };
 
   const remove = (id: K): void => {
@@ -280,10 +266,7 @@ export interface UndoRedo<T> {
   clear: () => void;
 }
 
-export function createUndoRedo<T>(
-  initialState: T,
-  maxHistory: number = 50
-): UndoRedo<T> {
+export function createUndoRedo<T>(initialState: T, maxHistory: number = 50): UndoRedo<T> {
   const history = signal<T[]>([initialState]);
   const currentIndex = signal(0);
 
@@ -349,12 +332,10 @@ export function batchSignalUpdates(updates: Array<() => void>): void {
 /**
  * Effect with cleanup
  */
-export function effectWithCleanup(
-  effectFn: () => (() => void) | void
-): () => void {
+export function effectWithCleanup(effectFn: () => (() => void) | void): () => void {
   let cleanup: (() => void) | void;
 
-  const stopEffect = effect(() => {
+  const stopEffect: EffectRef = effect(() => {
     // Run previous cleanup
     if (cleanup) {
       cleanup();
@@ -368,26 +349,22 @@ export function effectWithCleanup(
     if (cleanup) {
       cleanup();
     }
-    stopEffect();
+    // Angular 20+ uses EffectRef with destroy() method
+    stopEffect.destroy();
   };
 }
 
 /**
  * Reactive derived state with transform
  */
-export function derived<T, R>(
-  source: Signal<T>,
-  transform: (value: T) => R
-): Signal<R> {
+export function derived<T, R>(source: Signal<T>, transform: (value: T) => R): Signal<R> {
   return computed(() => transform(source()));
 }
 
 /**
  * Combine multiple signals into one
  */
-export function combine<T extends unknown[]>(
-  ...signals: { [K in keyof T]: Signal<T[K]> }
-): Signal<T> {
+export function combine<T extends unknown[]>(...signals: { [K in keyof T]: Signal<T[K]> }): Signal<T> {
   return computed(() => signals.map((s) => s()) as T);
 }
 
@@ -399,38 +376,38 @@ export function combine<T extends unknown[]>(
 function deepEqual(a: unknown, b: unknown): boolean {
   // Primitive comparison
   if (a === b) return true;
-  
+
   // Null/undefined handling
   if (a == null || b == null) return false;
-  
+
   // Type mismatch
   if (typeof a !== 'object' || typeof b !== 'object') return false;
-  
-  // Array handling  
+
+  // Array handling
   if (Array.isArray(a) && Array.isArray(b)) {
     if (a.length !== b.length) return false;
     return a.every((val, idx) => deepEqual(val, b[idx]));
   }
-  
+
   // Array vs object mismatch
   if (Array.isArray(a) !== Array.isArray(b)) return false;
-  
+
   // Object comparison
   const keysA = Object.keys(a as Record<string, unknown>);
   const keysB = Object.keys(b as Record<string, unknown>);
-  
+
   if (keysA.length !== keysB.length) return false;
-  
+
   // Use Set for O(1) lookup instead of O(n) includes
   const keysBSet = new Set(keysB);
-  
+
   for (const key of keysA) {
     if (!keysBSet.has(key)) return false;
     if (!deepEqual((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key])) {
       return false;
     }
   }
-  
+
   return true;
 }
 
@@ -459,10 +436,7 @@ export function distinctSignal<T>(initialValue: T): WritableSignal<T> {
 /**
  * Create a signal that persists to localStorage
  */
-export function persistedSignal<T>(
-  key: string,
-  initialValue: T
-): WritableSignal<T> {
+export function persistedSignal<T>(key: string, initialValue: T): WritableSignal<T> {
   // Try to load from localStorage
   let loadedValue = initialValue;
   try {
@@ -483,7 +457,7 @@ export function persistedSignal<T>(
   effect(() => {
     try {
       localStorage.setItem(key, JSON.stringify(sig()));
-    } catch (e) {
+    } catch {
       // Ignore storage errors
     }
   });

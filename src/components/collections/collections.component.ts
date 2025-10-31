@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, signal, OnInit, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, signal, OnInit, inject, computed } from '@angular/core';
 import { GalleryService } from '../../services/gallery.service';
 import { Collection } from '../../services/idb';
 import { ToastService } from '../../services/toast.service';
@@ -7,6 +7,7 @@ import { createLoadingState, createFormField } from '../../utils';
 
 @Component({
   selector: 'pw-collections',
+  standalone: true,
   templateUrl: './collections.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule],
@@ -16,17 +17,16 @@ export class CollectionsComponent implements OnInit {
   private toastService = inject(ToastService);
 
   collections = signal<Collection[]>([]);
-  
+
   // Professional loading state management
   loadingState = createLoadingState();
-  
+  loading = computed(() => this.loadingState.loading());
+
   // Professional form field with validation
-  newCollectionName = createFormField('', [
-    (value: string) => (value.trim() ? null : 'Please enter a collection name'),
-    (value: string) =>
-      value.trim().length >= 2 ? null : 'Name must be at least 2 characters',
-    (value: string) =>
-      value.trim().length <= 50 ? null : 'Name must be 50 characters or less',
+  newCollectionName = createFormField<string>('', [
+    (value: string): string | null => (value.trim() ? null : 'Please enter a collection name'),
+    (value: string): string | null => (value.trim().length >= 2 ? null : 'Name must be at least 2 characters'),
+    (value: string): string | null => (value.trim().length <= 50 ? null : 'Name must be 50 characters or less'),
   ]);
 
   public async ngOnInit(): Promise<void> {
@@ -47,12 +47,12 @@ export class CollectionsComponent implements OnInit {
   public async createCollection(): Promise<void> {
     this.newCollectionName.touched.set(true);
     this.newCollectionName.validate();
-    
+
     if (!this.newCollectionName.valid()) {
       this.toastService.show(this.newCollectionName.error() || 'Invalid collection name');
       return;
     }
-    
+
     const name = this.newCollectionName.value().trim();
     try {
       await this.galleryService.addCollection(name);

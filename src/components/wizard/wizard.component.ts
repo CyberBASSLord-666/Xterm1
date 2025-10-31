@@ -23,6 +23,7 @@ import {
   ImageOptions,
 } from '../../services/pollinations.client';
 import { FormsModule } from '@angular/forms';
+import { SkeletonComponent } from '../skeleton/skeleton.component';
 
 interface StylePreset {
   name: string;
@@ -32,9 +33,10 @@ interface StylePreset {
 
 @Component({
   selector: 'pw-wizard',
+  standalone: true,
   templateUrl: './wizard.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule],
+  imports: [FormsModule, SkeletonComponent],
   host: {
     '(document:click)': 'onDocumentClick($event)',
   },
@@ -85,16 +87,9 @@ export class WizardComponent implements OnInit {
     return '';
   });
 
-  generatedImageUrl = computed(
-    () => this.generationService.currentGenerationResult()?.blobUrl ?? null
-  );
+  generatedImageUrl = computed(() => this.generationService.currentGenerationResult()?.blobUrl ?? null);
 
-  readonly baseQualityStyles = [
-    'ultra-high quality',
-    'hyperrealistic photography',
-    '8K resolution',
-    'insane detail',
-  ];
+  readonly baseQualityStyles = ['ultra-high quality', 'hyperrealistic photography', '8K resolution', 'insane detail'];
 
   presets: StylePreset[] = [
     {
@@ -108,12 +103,7 @@ export class WizardComponent implements OnInit {
     },
     {
       name: 'Dark & Moody',
-      styles: [
-        'Deep shadows',
-        'Dramatic contrast',
-        'Cinematic low-key lighting',
-        'Muted color palette',
-      ],
+      styles: ['Deep shadows', 'Dramatic contrast', 'Cinematic low-key lighting', 'Muted color palette'],
       suggestions: [
         'A lone figure standing on a foggy, moonlit cliff overlooking a stormy sea.',
         'An ancient, moss-covered stone staircase descending into a dark, mysterious forest.',
@@ -122,12 +112,7 @@ export class WizardComponent implements OnInit {
     },
     {
       name: 'Minimalist & Clean',
-      styles: [
-        'Clean composition',
-        'Soft natural light',
-        'Minimalist aesthetic',
-        'Smooth textures',
-      ],
+      styles: ['Clean composition', 'Soft natural light', 'Minimalist aesthetic', 'Smooth textures'],
       suggestions: [
         'A single, perfect white orchid in a minimalist ceramic vase against a soft grey background.',
         'Sunlight creating long, soft shadows across an empty, serene concrete interior space.',
@@ -477,12 +462,6 @@ export class WizardComponent implements OnInit {
       enhance: !isImg2Img && this.enhancePrompt(),
     };
 
-    await this.generationService.generateWallpaper(
-      text,
-      options,
-      info,
-      this.supported,
-      this.selectedPreset().name
-    );
+    await this.generationService.generateWallpaper(text, options, info, this.supported, this.selectedPreset().name);
   }
 }

@@ -7,15 +7,19 @@ import {
   computed,
   OnDestroy,
   effect,
+  ViewChild,
+  ElementRef,
 } from '@angular/core';
 import { GalleryService } from '../../services/gallery.service';
 import { Collection, GalleryItem } from '../../services/idb';
 import { RouterLink } from '@angular/router';
 import { ToastService } from '../../services/toast.service';
+import { KeyboardShortcutsService } from '../../services/keyboard-shortcuts.service';
 import { createSelectionState, createLoadingState } from '../../utils';
 
 @Component({
   selector: 'pw-gallery',
+  standalone: true,
   templateUrl: './gallery.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink],
@@ -23,12 +27,16 @@ import { createSelectionState, createLoadingState } from '../../utils';
 export class GalleryComponent implements OnInit, OnDestroy {
   private galleryService = inject(GalleryService);
   private toastService = inject(ToastService);
+  private keyboardShortcuts = inject(KeyboardShortcutsService);
+
+  @ViewChild('searchInput') searchInput?: ElementRef<HTMLInputElement>;
 
   allItems = signal<GalleryItem[]>([]);
   collections = signal<Collection[]>([]);
 
   // Professional loading state management
   loadingState = createLoadingState();
+  loading = computed(() => this.loadingState.loading());
 
   // Thumbnail URL management to prevent memory leaks
   thumbUrls = new Map<string, string>();
@@ -42,6 +50,7 @@ export class GalleryComponent implements OnInit, OnDestroy {
   // Professional selection state management
   isSelecting = signal(false);
   selection = createSelectionState<string>();
+  selectedIds = this.selection.selectedItems;
 
   filteredItems = computed(() => {
     const query = this.searchQuery().toLowerCase();
@@ -122,10 +131,34 @@ export class GalleryComponent implements OnInit, OnDestroy {
       this.allItems.set(items);
       this.collections.set(collections);
     });
+
+    // Register keyboard shortcuts
+    this.keyboardShortcuts.registerDefaultShortcuts({
+      delete: () => {
+        if (this.isSelecting() && this.selectedCount > 0) {
+          // Confirm before deleting to prevent accidental data loss
+          const itemText = this.selectedCount === 1 ? 'item' : 'items';
+          const confirmed = window.confirm(
+            `Are you sure you want to delete ${this.selectedCount} ${itemText}? This action cannot be undone.`
+          );
+          if (confirmed) {
+            // Fire-and-forget: deleteSelected handles its own errors internally
+            void this.deleteSelected();
+          }
+        }
+      },
+      search: () => {
+        // Focus search input using ViewChild
+        this.searchInput?.nativeElement.focus();
+      },
+    });
   }
 
   public ngOnDestroy(): void {
     this.revokeAllThumbUrls();
+    // Unregister shortcuts
+    this.keyboardShortcuts.unregister('delete');
+    this.keyboardShortcuts.unregister('search');
   }
 
   // --- Type-safe event handlers ---
@@ -155,9 +188,7 @@ export class GalleryComponent implements OnInit, OnDestroy {
     event.preventDefault(); // prevent navigation
     event.stopPropagation();
     const isFav = await this.galleryService.toggleFavorite(id);
-    this.allItems.update((items) =>
-      items.map((i) => (i.id === id ? { ...i, isFavorite: isFav } : i))
-    );
+    this.allItems.update((items) => items.map((i) => (i.id === id ? { ...i, isFavorite: isFav } : i)));
     this.toastService.show(isFav ? 'Added to favorites.' : 'Removed from favorites.');
   }
 

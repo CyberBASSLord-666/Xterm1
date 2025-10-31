@@ -11,10 +11,7 @@ import { Subject, Observable, fromEvent, takeUntil } from 'rxjs';
 /**
  * Reactive computed property that derives from multiple signals
  */
-export function computedFrom<T, R>(
-  sources: Signal<T>[],
-  computeFn: (...values: T[]) => R
-): Signal<R> {
+export function computedFrom<T, R>(sources: Signal<T>[], computeFn: (...values: T[]) => R): Signal<R> {
   return computed(() => {
     const values = sources.map((s) => s());
     return computeFn(...values);
@@ -24,10 +21,7 @@ export function computedFrom<T, R>(
 /**
  * Create a debounced signal that updates after a delay
  */
-export function debouncedSignal<T>(
-  source: Signal<T>,
-  delay: number = 300
-): Signal<T> {
+export function debouncedSignal<T>(source: Signal<T>, delay: number = 300): Signal<T> {
   const debounced = signal(source());
   let timeoutId: number | undefined;
 
@@ -47,10 +41,7 @@ export function debouncedSignal<T>(
 /**
  * Create a throttled signal that updates at most once per interval
  */
-export function throttledSignal<T>(
-  source: Signal<T>,
-  interval: number = 300
-): Signal<T> {
+export function throttledSignal<T>(source: Signal<T>, interval: number = 300): Signal<T> {
   const throttled = signal(source());
   let lastUpdate = 0;
   let timeoutId: number | undefined;
@@ -79,29 +70,46 @@ export function throttledSignal<T>(
 
 /**
  * Track loading state for async operations
+ *
+ * @breaking-change v2.0.0 - The execute method signature changed to accept a function
+ * that returns a Promise, rather than accepting a Promise directly. This allows
+ * for better control over when the async operation starts and provides cleaner syntax.
+ *
+ * Migration Guide:
+ * - Old: `execute((async () => { ... })())`
+ * - New: `execute(async () => { ... })`
+ *
+ * All call sites in this codebase were updated in commit c5ccab5.
+ * External consumers should update their code when upgrading.
+ *
+ * Backward Compatibility (v2.x):
+ * Both patterns (Promise<T> and () => Promise<T>) are supported during the deprecation period.
+ * The old Promise<T> pattern will be removed in v3.0.0.
  */
 export interface LoadingState {
   loading: Signal<boolean>;
   error: Signal<Error | null>;
-  execute: <T>(promise: Promise<T>) => Promise<T>;
+  execute: <T>(fn: (() => Promise<T>) | Promise<T>) => Promise<T>;
 }
 
 export function createLoadingState(): LoadingState {
   const loading = signal(false);
   const error = signal<Error | null>(null);
 
-  const execute = async <T>(promise: Promise<T>): Promise<T> => {
+  const execute = async <T>(fn: (() => Promise<T>) | Promise<T>): Promise<T> => {
     loading.set(true);
     error.set(null);
     try {
+      // Support both function and promise for backward compatibility
+      const promise = typeof fn === 'function' ? fn() : fn;
       const result = await promise;
-      loading.set(false);
       return result;
     } catch (e) {
       const err = e instanceof Error ? e : new Error(String(e));
       error.set(err);
-      loading.set(false);
       throw err;
+    } finally {
+      loading.set(false);
     }
   };
 
@@ -129,9 +137,7 @@ export interface PaginationState<T> {
   setItems: (items: T[]) => void;
 }
 
-export function createPaginationState<T>(
-  initialPageSize: number = 20
-): PaginationState<T> {
+export function createPaginationState<T>(initialPageSize: number = 20): PaginationState<T> {
   const items = signal<T[]>([]);
   const page = signal(1);
   const pageSize = signal(initialPageSize);
@@ -458,11 +464,7 @@ export function addEventListenerWithCleanup(
 /**
  * Observable to Signal converter with cleanup
  */
-export function toSignal<T>(
-  observable: Observable<T>,
-  initialValue: T,
-  destroyRef: DestroyRef
-): Signal<T> {
+export function toSignal<T>(observable: Observable<T>, initialValue: T, destroyRef: DestroyRef): Signal<T> {
   const sig = signal(initialValue);
   const destroy$ = new Subject<void>();
 
@@ -530,10 +532,7 @@ export interface ScrollState {
   atBottom: Signal<boolean>;
 }
 
-export function createScrollTracker(
-  element: HTMLElement | Window = window,
-  destroyRef: DestroyRef
-): ScrollState {
+export function createScrollTracker(element: HTMLElement | Window = window, destroyRef: DestroyRef): ScrollState {
   const scrollY = signal(0);
   const scrollX = signal(0);
   const previousY = signal(0);

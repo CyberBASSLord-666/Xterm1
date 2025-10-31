@@ -25,7 +25,7 @@ export interface AnalyticsConfig {
 /**
  * Analytics service for tracking user interactions and application events.
  * Supports multiple analytics providers (Google Analytics, custom backend, etc.)
- * TODO: Implement batch event sending for improved performance
+ * Implements batch event sending for improved performance.
  */
 @Injectable({ providedIn: 'root' })
 export class AnalyticsService {
@@ -33,6 +33,10 @@ export class AnalyticsService {
   private enabled: boolean = environment.production && FEATURE_FLAGS.ENABLE_ANALYTICS;
   private eventQueue: AnalyticsEvent[] = [];
   private readonly maxQueueSize = PERFORMANCE_CONFIG.MAX_ANALYTICS_QUEUE;
+  private batchTimer: ReturnType<typeof setInterval> | null = null;
+  private readonly batchInterval = 5000; // Send batch every 5 seconds
+  private readonly batchSize = 10; // Maximum events per batch
+  private isSendingBatch = false; // Prevents concurrent batch sends
 
   /**
    * Initialize analytics (call this in app initialization).
@@ -49,6 +53,9 @@ export class AnalyticsService {
 
       // Initialize Google Analytics 4 (gtag.js)
       this.loadGoogleAnalytics(trackingId);
+
+      // Start batch event sending timer
+      this.startBatchTimer();
     }
   }
 
@@ -113,6 +120,7 @@ export class AnalyticsService {
 
   /**
    * Track a custom event with full type safety.
+   * Events are queued and sent in batches for improved performance.
    * @param event The event to track
    */
   public trackEvent(event: Omit<AnalyticsEvent, 'timestamp'>): void {
@@ -143,11 +151,76 @@ export class AnalyticsService {
       this.eventQueue.shift();
     }
 
-    this.logger.debug('Analytics event tracked', fullEvent, 'Analytics');
+    this.logger.debug('Analytics event queued', fullEvent, 'Analytics');
+
+    // Send batch immediately if queue size threshold reached
+    if (this.eventQueue.length >= this.batchSize) {
+      this.sendBatch();
+    }
+  }
+
+  /**
+   * Start the batch timer for periodic event sending.
+   * @private
+   */
+  private startBatchTimer(): void {
+    if (this.batchTimer !== null) {
+      return; // Timer already running
+    }
+
+    // Use window.setInterval for consistency (returns number in browser environment)
+    this.batchTimer = window.setInterval(() => {
+      if (this.eventQueue.length > 0) {
+        this.sendBatch();
+      }
+    }, this.batchInterval) as number;
+
+    this.logger.debug('Batch timer started', { interval: this.batchInterval }, 'Analytics');
+  }
+
+  /**
+   * Stop the batch timer and ensure cleanup.
+   * @private
+   */
+  private stopBatchTimer(): void {
+    if (this.batchTimer !== null) {
+      clearInterval(this.batchTimer);
+      this.batchTimer = null;
+      this.logger.debug('Batch timer stopped', undefined, 'Analytics');
+    }
+  }
+
+  /**
+   * Send queued events in a batch to analytics provider.
+   * Prevents concurrent batch sends using a flag and moves splice after flag is set
+   * to eliminate race conditions between timer and threshold triggers.
+   * @private
+   */
+  private sendBatch(): void {
+    // Prevent concurrent batch sends by setting flag immediately before any other operations
+    if (this.isSendingBatch) {
+      return;
+    }
+    this.isSendingBatch = true;
+
+    // Early exit checks (after flag is set to prevent race conditions)
+    if (this.eventQueue.length === 0) {
+      this.isSendingBatch = false;
+      return;
+    }
 
     const win = window as WindowWithAnalytics;
-    if (this.enabled && win.gtag) {
-      try {
+    if (!this.enabled || !win.gtag) {
+      this.isSendingBatch = false;
+      return;
+    }
+
+    // Take events to send (up to batchSize)
+    const eventsToSend = this.eventQueue.splice(0, this.batchSize);
+
+    try {
+      // Send each event in the batch
+      for (const event of eventsToSend) {
         const eventParams: Record<string, string | number | boolean> = {
           event_category: event.category,
           event_label: event.label || '',
@@ -163,9 +236,13 @@ export class AnalyticsService {
         }
 
         win.gtag('event', event.action, eventParams);
-      } catch (error) {
-        this.logger.error('Failed to send event to GA', error, 'Analytics');
       }
+
+      this.logger.debug('Batch sent', { count: eventsToSend.length }, 'Analytics');
+    } catch (error) {
+      this.logger.error('Failed to send batch to GA', error, 'Analytics');
+    } finally {
+      this.isSendingBatch = false;
     }
   }
 
@@ -244,8 +321,45 @@ export class AnalyticsService {
    * Enable or disable analytics.
    */
   setEnabled(enabled: boolean): void {
+    const wasEnabled = this.enabled;
     this.enabled = enabled;
     this.logger.info(`Analytics ${enabled ? 'enabled' : 'disabled'}`, undefined, 'Analytics');
+
+    // Manage batch timer based on enabled state
+    if (enabled && !wasEnabled) {
+      this.startBatchTimer();
+    } else if (!enabled && wasEnabled) {
+      this.stopBatchTimer();
+      this.clearEventQueue();
+    }
+  }
+
+  /**
+   * Flush all queued events immediately.
+   * Useful when the application is about to close or navigate away.
+   */
+  public flush(): void {
+    if (this.eventQueue.length > 0) {
+      this.logger.debug('Flushing analytics queue', { count: this.eventQueue.length }, 'Analytics');
+      this.sendBatch();
+    }
+  }
+
+  /**
+   * Cleanup method to be called when the service is destroyed.
+   * Stops the batch timer and flushes any remaining events.
+   *
+   * Note: Since this service is providedIn: 'root', it won't be automatically destroyed.
+   * This method is primarily intended for:
+   * - Unit testing scenarios where services need explicit cleanup
+   * - Manual cleanup in specific use cases (e.g., before app shutdown)
+   * - Integration testing environments
+   *
+   * For production apps, consider calling flush() on beforeunload event instead.
+   */
+  public destroy(): void {
+    this.stopBatchTimer();
+    this.flush();
   }
 
   /**

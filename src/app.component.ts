@@ -1,6 +1,7 @@
 import { Component, ChangeDetectionStrategy, inject, effect, signal } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { ToastComponent } from './components/toast/toast.component';
+import { ShortcutsHelpComponent } from './components/shortcuts-help/shortcuts-help.component';
 import { SettingsService } from './services/settings.service';
 import { ToastService } from './services/toast.service';
 
@@ -8,7 +9,7 @@ import { ToastService } from './services/toast.service';
   selector: 'app-root',
   templateUrl: './app.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, ToastComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ToastComponent, ShortcutsHelpComponent],
 })
 export class AppComponent {
   private settingsService = inject(SettingsService);

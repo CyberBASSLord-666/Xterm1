@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   signal,
   OnInit,
+  OnDestroy,
   inject,
   computed,
   effect,
@@ -14,6 +15,7 @@ import { GalleryService } from '../../services/gallery.service';
 import { ToastService } from '../../services/toast.service';
 import { SettingsService } from '../../services/settings.service';
 import { ImageUtilService } from '../../services/image-util.service';
+import { KeyboardShortcutsService } from '../../services/keyboard-shortcuts.service';
 import { GalleryItem } from '../../services/idb';
 import {
   composeVariantPrompt,
@@ -26,11 +28,12 @@ import { createLoadingState, createUndoRedo } from '../../utils';
 
 @Component({
   selector: 'pw-editor',
+  standalone: true,
   templateUrl: './editor.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, FormsModule],
 })
-export class EditorComponent implements OnInit {
+export class EditorComponent implements OnInit, OnDestroy {
   item = signal<GalleryItem | null>(null);
 
   // Professional undo/redo for restyle input
@@ -43,6 +46,8 @@ export class EditorComponent implements OnInit {
   variantState = createLoadingState();
   restyleState = createLoadingState();
   audioState = createLoadingState();
+  working = computed(() => this.variantState.loading() || this.restyleState.loading() || this.audioState.loading());
+  audioWorking = computed(() => this.audioState.loading());
 
   lineage = signal<{ parent: GalleryItem | null; children: GalleryItem[] }>({
     parent: null,
@@ -65,6 +70,7 @@ export class EditorComponent implements OnInit {
   private toast = inject(ToastService);
   private settingsService = inject(SettingsService);
   private imageUtilService = inject(ImageUtilService);
+  private keyboardShortcuts = inject(KeyboardShortcutsService);
   private destroyRef = inject(DestroyRef);
 
   constructor() {
@@ -88,6 +94,26 @@ export class EditorComponent implements OnInit {
       }
       await this.loadItem(id);
     });
+
+    // Register keyboard shortcuts
+    this.keyboardShortcuts.registerDefaultShortcuts({
+      undo: () => {
+        if (this.canUndo()) {
+          this.undo();
+        }
+      },
+      redo: () => {
+        if (this.canRedo()) {
+          this.redo();
+        }
+      },
+    });
+  }
+
+  public ngOnDestroy(): void {
+    // Unregister shortcuts
+    this.keyboardShortcuts.unregister('undo');
+    this.keyboardShortcuts.unregister('redo');
   }
 
   public onRestyleInput(event: Event): void {
