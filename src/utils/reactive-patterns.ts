@@ -5,7 +5,7 @@
  * Provides advanced signal compositions, reactive state machines, and effect utilities.
  */
 
-import { Signal, WritableSignal, signal, computed, effect } from '@angular/core';
+import { Signal, WritableSignal, signal, computed, effect, EffectRef } from '@angular/core';
 
 /**
  * Async signal that loads data on demand
@@ -335,7 +335,7 @@ export function batchSignalUpdates(updates: Array<() => void>): void {
 export function effectWithCleanup(effectFn: () => (() => void) | void): () => void {
   let cleanup: (() => void) | void;
 
-  const stopEffect = effect(() => {
+  const stopEffect: EffectRef = effect(() => {
     // Run previous cleanup
     if (cleanup) {
       cleanup();
@@ -349,12 +349,8 @@ export function effectWithCleanup(effectFn: () => (() => void) | void): () => vo
     if (cleanup) {
       cleanup();
     }
-    // Support both Angular 20+ and earlier versions
-    if (typeof stopEffect === 'function') {
-      stopEffect();
-    } else if (stopEffect && typeof stopEffect.destroy === 'function') {
-      stopEffect.destroy();
-    }
+    // Angular 20+ uses EffectRef with destroy() method
+    stopEffect.destroy();
   };
 }
 
