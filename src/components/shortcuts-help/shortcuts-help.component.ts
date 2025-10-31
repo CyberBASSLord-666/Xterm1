@@ -62,9 +62,7 @@ export class ShortcutsHelpComponent implements OnInit, OnDestroy {
   shortcuts = signal<Array<{ id: string; config: ShortcutConfig }>>([]);
 
   /**
-   * Register the global help shortcut in ngOnInit instead of constructor.
-   * This follows Angular lifecycle best practices and ensures proper initialization order.
-   * The shortcut is registered only once per component instance and properly cleaned up.
+   * Register keyboard shortcut for showing help overlay. Cleaned up in ngOnDestroy.
    */
   ngOnInit(): void {
     // Register the help overlay shortcut
