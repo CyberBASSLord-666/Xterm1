@@ -70,6 +70,11 @@ export function throttledSignal<T>(source: Signal<T>, interval: number = 300): S
 
 /**
  * Track loading state for async operations
+ *
+ * @breaking-change The execute method signature changed to accept a function
+ * that returns a Promise, rather than accepting a Promise directly. This allows
+ * for better control over when the async operation starts and provides cleaner
+ * syntax: `execute(async () => { ... })` instead of `execute((async () => { ... })())`
  */
 export interface LoadingState {
   loading: Signal<boolean>;

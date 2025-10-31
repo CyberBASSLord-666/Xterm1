@@ -209,8 +209,10 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
             imported++;
           } catch (error) {
+            // Continue-on-error strategy: Log failures for individual wallpapers and
+            // continue processing remaining items. This ensures one corrupted wallpaper
+            // doesn't prevent importing other valid items from the ZIP archive.
             this.logger.error(`Failed to import ${meta.id}`, error, 'SettingsComponent');
-            // Continue with next item
           }
         }
 

@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, OnDestroy } from '@angular/core';
 import { KeyboardShortcutsService, ShortcutConfig } from '../../services/keyboard-shortcuts.service';
 
 @Component({
@@ -55,7 +55,7 @@ import { KeyboardShortcutsService, ShortcutConfig } from '../../services/keyboar
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ShortcutsHelpComponent {
+export class ShortcutsHelpComponent implements OnDestroy {
   private keyboardShortcuts = inject(KeyboardShortcutsService);
 
   isOpen = signal(false);
@@ -70,6 +70,11 @@ export class ShortcutsHelpComponent {
       handler: (): void => this.toggle(),
       preventDefault: true,
     });
+  }
+
+  ngOnDestroy(): void {
+    // Clean up registered shortcut to prevent memory leaks
+    this.keyboardShortcuts.unregister('help-overlay');
   }
 
   toggle(): void {
