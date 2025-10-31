@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, signal, OnInit, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, signal, OnInit, inject, computed } from '@angular/core';
 import { GalleryService } from '../../services/gallery.service';
 import { Collection } from '../../services/idb';
 import { ToastService } from '../../services/toast.service';
@@ -20,7 +20,7 @@ export class CollectionsComponent implements OnInit {
 
   // Professional loading state management
   loadingState = createLoadingState();
-  loading = this.loadingState.loading;
+  loading = computed(() => this.loadingState.loading());
 
   // Professional form field with validation
   newCollectionName = createFormField<string>('', [

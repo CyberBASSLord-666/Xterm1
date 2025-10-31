@@ -91,13 +91,13 @@ export function createLoadingState(): LoadingState {
     error.set(null);
     try {
       const result = await fn();
-      loading.set(false);
       return result;
     } catch (e) {
       const err = e instanceof Error ? e : new Error(String(e));
       error.set(err);
-      loading.set(false);
       throw err;
+    } finally {
+      loading.set(false);
     }
   };
 

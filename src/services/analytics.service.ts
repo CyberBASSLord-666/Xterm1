@@ -36,6 +36,7 @@ export class AnalyticsService {
   private batchTimer: number | null = null;
   private readonly batchInterval = 5000; // Send batch every 5 seconds
   private readonly batchSize = 10; // Maximum events per batch
+  private isSendingBatch = false; // Prevents concurrent batch sends
 
   /**
    * Initialize analytics (call this in app initialization).
@@ -190,9 +191,15 @@ export class AnalyticsService {
 
   /**
    * Send queued events in a batch to analytics provider.
+   * Prevents concurrent batch sends using a flag.
    * @private
    */
   private sendBatch(): void {
+    // Prevent concurrent batch sends
+    if (this.isSendingBatch) {
+      return;
+    }
+
     if (this.eventQueue.length === 0) {
       return;
     }
@@ -202,10 +209,12 @@ export class AnalyticsService {
       return;
     }
 
-    // Take events to send (up to batchSize)
-    const eventsToSend = this.eventQueue.splice(0, this.batchSize);
+    this.isSendingBatch = true;
 
     try {
+      // Take events to send (up to batchSize)
+      const eventsToSend = this.eventQueue.splice(0, this.batchSize);
+
       // Send each event in the batch
       for (const event of eventsToSend) {
         const eventParams: Record<string, string | number | boolean> = {
@@ -228,8 +237,8 @@ export class AnalyticsService {
       this.logger.debug('Batch sent', { count: eventsToSend.length }, 'Analytics');
     } catch (error) {
       this.logger.error('Failed to send batch to GA', error, 'Analytics');
-      // Re-add failed events back to queue (at the front)
-      this.eventQueue.unshift(...eventsToSend);
+    } finally {
+      this.isSendingBatch = false;
     }
   }
 
@@ -335,6 +344,14 @@ export class AnalyticsService {
   /**
    * Cleanup method to be called when the service is destroyed.
    * Stops the batch timer and flushes any remaining events.
+   *
+   * Note: Since this service is providedIn: 'root', it won't be automatically destroyed.
+   * This method is primarily intended for:
+   * - Unit testing scenarios where services need explicit cleanup
+   * - Manual cleanup in specific use cases (e.g., before app shutdown)
+   * - Integration testing environments
+   *
+   * For production apps, consider calling flush() on beforeunload event instead.
    */
   public destroy(): void {
     this.stopBatchTimer();

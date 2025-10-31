@@ -36,7 +36,7 @@ export class GalleryComponent implements OnInit, OnDestroy {
 
   // Professional loading state management
   loadingState = createLoadingState();
-  loading = this.loadingState.loading;
+  loading = computed(() => this.loadingState.loading());
 
   // Thumbnail URL management to prevent memory leaks
   thumbUrls = new Map<string, string>();

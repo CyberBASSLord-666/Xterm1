@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, OnInit, OnDestroy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, OnInit, OnDestroy, computed } from '@angular/core';
 import { GalleryService } from '../../services/gallery.service';
 import { ToastService } from '../../services/toast.service';
 import { SettingsService } from '../../services/settings.service';
@@ -25,7 +25,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   // Professional loading states
   exportState = createLoadingState();
   importState = createLoadingState();
-  isExporting = this.exportState.loading;
+  isExporting = computed(() => this.exportState.loading());
 
   // Professional form validation for file import
   importFile = createFormField<File | null>(null, [

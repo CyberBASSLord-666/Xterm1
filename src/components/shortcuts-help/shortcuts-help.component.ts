@@ -62,14 +62,18 @@ export class ShortcutsHelpComponent implements OnDestroy {
   shortcuts = signal<Array<{ id: string; config: ShortcutConfig }>>([]);
 
   constructor() {
-    // Listen for global help shortcut
-    this.keyboardShortcuts.register('help-overlay', {
-      key: '?',
-      shift: true,
-      description: 'Show this help',
-      handler: (): void => this.toggle(),
-      preventDefault: true,
-    });
+    // Listen for global help shortcut, but avoid duplicate registration
+    const alreadyRegistered = this.keyboardShortcuts.getAll().some((shortcut) => shortcut.id === 'help-overlay');
+
+    if (!alreadyRegistered) {
+      this.keyboardShortcuts.register('help-overlay', {
+        key: '?',
+        shift: true,
+        description: 'Show this help',
+        handler: (): void => this.toggle(),
+        preventDefault: true,
+      });
+    }
   }
 
   ngOnDestroy(): void {

@@ -47,7 +47,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   restyleState = createLoadingState();
   audioState = createLoadingState();
   working = computed(() => this.variantState.loading() || this.restyleState.loading() || this.audioState.loading());
-  audioWorking = this.audioState.loading;
+  audioWorking = computed(() => this.audioState.loading());
 
   lineage = signal<{ parent: GalleryItem | null; children: GalleryItem[] }>({
     parent: null,
