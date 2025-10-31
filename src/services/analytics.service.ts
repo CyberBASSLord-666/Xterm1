@@ -33,7 +33,7 @@ export class AnalyticsService {
   private enabled: boolean = environment.production && FEATURE_FLAGS.ENABLE_ANALYTICS;
   private eventQueue: AnalyticsEvent[] = [];
   private readonly maxQueueSize = PERFORMANCE_CONFIG.MAX_ANALYTICS_QUEUE;
-  private batchTimer: number | null = null;
+  private batchTimer: number | null = null; // Browser timer ID (number in browser environment)
   private readonly batchInterval = 5000; // Send batch every 5 seconds
   private readonly batchSize = 10; // Maximum events per batch
   private isSendingBatch = false; // Prevents concurrent batch sends
@@ -178,12 +178,12 @@ export class AnalyticsService {
   }
 
   /**
-   * Stop the batch timer.
+   * Stop the batch timer and ensure cleanup.
    * @private
    */
   private stopBatchTimer(): void {
     if (this.batchTimer !== null) {
-      window.clearInterval(this.batchTimer);
+      clearInterval(this.batchTimer);
       this.batchTimer = null;
       this.logger.debug('Batch timer stopped', undefined, 'Analytics');
     }
@@ -191,7 +191,8 @@ export class AnalyticsService {
 
   /**
    * Send queued events in a batch to analytics provider.
-   * Prevents concurrent batch sends using a flag.
+   * Prevents concurrent batch sends using a flag and moves splice after flag is set
+   * to eliminate race conditions between timer and threshold triggers.
    * @private
    */
   private sendBatch(): void {
@@ -209,12 +210,13 @@ export class AnalyticsService {
       return;
     }
 
+    // Set flag first, then splice to prevent race conditions
     this.isSendingBatch = true;
 
-    try {
-      // Take events to send (up to batchSize)
-      const eventsToSend = this.eventQueue.splice(0, this.batchSize);
+    // Take events to send (up to batchSize) immediately after setting the flag
+    const eventsToSend = this.eventQueue.splice(0, this.batchSize);
 
+    try {
       // Send each event in the batch
       for (const event of eventsToSend) {
         const eventParams: Record<string, string | number | boolean> = {

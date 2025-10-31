@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, signal, OnDestroy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, OnDestroy, OnInit } from '@angular/core';
 import { KeyboardShortcutsService, ShortcutConfig } from '../../services/keyboard-shortcuts.service';
 
 @Component({
@@ -55,14 +55,21 @@ import { KeyboardShortcutsService, ShortcutConfig } from '../../services/keyboar
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ShortcutsHelpComponent implements OnDestroy {
+export class ShortcutsHelpComponent implements OnInit, OnDestroy {
   private keyboardShortcuts = inject(KeyboardShortcutsService);
 
   isOpen = signal(false);
   shortcuts = signal<Array<{ id: string; config: ShortcutConfig }>>([]);
 
-  constructor() {
-    // Listen for global help shortcut, but avoid duplicate registration
+  /**
+   * Register the global help shortcut in ngOnInit instead of constructor.
+   * This follows Angular lifecycle best practices and ensures proper initialization order.
+   * The shortcut is registered only once per component instance and properly cleaned up.
+   */
+  ngOnInit(): void {
+    // Register the help overlay shortcut
+    // Since this component is used once at app level, duplicate registration is not a concern
+    // but we keep the check for defensive programming
     const alreadyRegistered = this.keyboardShortcuts.getAll().some((shortcut) => shortcut.id === 'help-overlay');
 
     if (!alreadyRegistered) {

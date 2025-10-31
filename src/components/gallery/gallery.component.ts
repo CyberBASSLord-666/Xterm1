@@ -136,7 +136,14 @@ export class GalleryComponent implements OnInit, OnDestroy {
     this.keyboardShortcuts.registerDefaultShortcuts({
       delete: () => {
         if (this.isSelecting() && this.selectedCount > 0) {
-          this.deleteSelected();
+          // Confirm before deleting to prevent accidental data loss
+          const itemText = this.selectedCount === 1 ? 'item' : 'items';
+          const confirmed = window.confirm(
+            `Are you sure you want to delete ${this.selectedCount} ${itemText}? This action cannot be undone.`
+          );
+          if (confirmed) {
+            this.deleteSelected();
+          }
         }
       },
       search: () => {

@@ -27,11 +27,17 @@ export class SettingsComponent implements OnInit, OnDestroy {
   importState = createLoadingState();
   isExporting = computed(() => this.exportState.loading());
 
+  // Constants for file validation
+  private readonly MAX_IMPORT_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+
   // Professional form validation for file import
   importFile = createFormField<File | null>(null, [
     (file: File | null): string | null => (file ? null : 'Please select a file'),
     (file: File | null): string | null => (file?.name.endsWith('.zip') ? null : 'Only .zip files are allowed'),
-    (file: File | null): string | null => (file && file.size <= 50 * 1024 * 1024 ? null : 'File must be under 50MB'),
+    (file: File | null): string | null =>
+      file && file.size <= this.MAX_IMPORT_FILE_SIZE
+        ? null
+        : `File must be under ${this.MAX_IMPORT_FILE_SIZE / (1024 * 1024)}MB`,
   ]);
 
   ngOnInit(): void {
@@ -179,6 +185,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
         let imported = 0;
         let skipped = 0;
+        let failed = 0;
 
         for (const meta of metadata) {
           try {
@@ -213,12 +220,19 @@ export class SettingsComponent implements OnInit, OnDestroy {
             // continue processing remaining items. This ensures one corrupted wallpaper
             // doesn't prevent importing other valid items from the ZIP archive.
             this.logger.error(`Failed to import ${meta.id}`, error, 'SettingsComponent');
+            failed++;
           }
         }
 
-        this.toastService.show(
-          `Import complete! Added ${imported} wallpaper(s). ${skipped > 0 ? `Skipped ${skipped} duplicate(s).` : ''}`
-        );
+        // Inform user about complete results including partial failures
+        const parts: string[] = [`Import complete! Added ${imported} wallpaper(s)`];
+        if (failed > 0) {
+          parts.push(`${failed} failed`);
+        }
+        if (skipped > 0) {
+          parts.push(`${skipped} skipped (duplicates)`);
+        }
+        this.toastService.show(parts.join(', ') + '.');
       } catch (error) {
         const err = error as Error;
         throw new Error(`Import failed: ${err.message || 'Unknown error'}`);
