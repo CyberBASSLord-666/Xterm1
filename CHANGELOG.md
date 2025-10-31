@@ -39,6 +39,17 @@ This unreleased version represents a comprehensive, ground-up transformation of 
 
 ### Added
 
+#### 0. Experience Enhancements
+
+- Converted the entire component suite (App, Gallery, Wizard, Editor, Settings, Feed, Collections, Toast) to Angular standalone components, enabling direct `bootstrapApplication` usage without NgModules.
+- Implemented end-to-end keyboard shortcut support with a global overlay (`Shift + ?`), scope-aware registrations, and new productivity accelerators (export, delete, focus search, undo/redo, escape handling).
+- Delivered ZIP-based gallery import that mirrors the existing export format, including metadata validation, IndexedDB persistence, and actionable error handling via `AppError`.
+- Introduced skeleton-loading states across the live feed and generation wizard to improve perceived performance while data streams or images render.
+- Centralized blob URL lifecycle management through `BlobUrlManagerService`, refactoring the editor, gallery, wizard, generation, and settings flows to guarantee timely revocation.
+- Hardened request caching and cleanup by adding deterministic interval management and wiring the wizard’s model loader through `RequestCacheService`.
+- Elevated error UX with friendly chunk-load messaging and targeted AppError usage so known failures surface actionable toasts.
+- Expanded unit coverage with new suites for loading-state utilities, generation pipeline blob hygiene, keyboard shortcut behaviors, and settings import edge cases.
+
 #### 1. Core Infrastructure & Build System
 
 **Dependency Management & Compatibility** ✅

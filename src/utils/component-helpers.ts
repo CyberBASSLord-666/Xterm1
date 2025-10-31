@@ -83,18 +83,18 @@ export function throttledSignal<T>(
 export interface LoadingState {
   loading: Signal<boolean>;
   error: Signal<Error | null>;
-  execute: <T>(promise: Promise<T>) => Promise<T>;
+  execute: <T>(operation: () => Promise<T>) => Promise<T>;
 }
 
 export function createLoadingState(): LoadingState {
   const loading = signal(false);
   const error = signal<Error | null>(null);
 
-  const execute = async <T>(promise: Promise<T>): Promise<T> => {
+  const execute = async <T>(operation: () => Promise<T>): Promise<T> => {
     loading.set(true);
     error.set(null);
     try {
-      const result = await promise;
+      const result = await operation();
       loading.set(false);
       return result;
     } catch (e) {

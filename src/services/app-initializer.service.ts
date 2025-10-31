@@ -176,6 +176,7 @@ export class AppInitializerService {
    */
   destroy(): void {
     this.logger.info('Application shutting down', undefined, 'AppInitializer');
+    this.requestCache.stopPeriodicCleanup();
     this.perfMonitor.logSummary();
   }
 }

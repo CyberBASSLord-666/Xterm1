@@ -31,7 +31,7 @@ describe('KeyboardShortcutsService', () => {
       enumerable: true,
       get: () => target ?? document.body,
     });
-    document.dispatchEvent(event);
+    window.dispatchEvent(event);
     return event;
   }
 
@@ -39,7 +39,7 @@ describe('KeyboardShortcutsService', () => {
     const handler = jest.fn();
     service.register('save', {
       key: 's',
-      ctrl: true,
+      commandOrControl: true,
       description: 'Save',
       handler,
       preventDefault: true,
@@ -53,7 +53,7 @@ describe('KeyboardShortcutsService', () => {
 
   it('ignores shortcuts when disabled', () => {
     const handler = jest.fn();
-    service.register('save', { key: 's', ctrl: true, description: 'Save', handler });
+    service.register('save', { key: 's', commandOrControl: true, description: 'Save', handler });
     service.setEnabled(false);
 
     dispatchKeydown({ key: 's', ctrlKey: true });
@@ -81,8 +81,14 @@ describe('KeyboardShortcutsService', () => {
 
   it('matches shortcuts using modifier combinations', () => {
     const variants: Array<{ config: ShortcutConfig; event: KeyboardEventInit }> = [
-      { config: { key: 'z', ctrl: true, shift: true, description: 'Redo', handler: jest.fn() }, event: { key: 'Z', ctrlKey: true, shiftKey: true } },
-      { config: { key: 'f', ctrl: true, alt: true, description: 'Search', handler: jest.fn() }, event: { key: 'f', ctrlKey: true, altKey: true } },
+      {
+        config: { key: 'z', commandOrControl: true, shift: true, description: 'Redo', handler: jest.fn() },
+        event: { key: 'Z', ctrlKey: true, shiftKey: true },
+      },
+      {
+        config: { key: 'f', commandOrControl: true, alt: true, description: 'Search', handler: jest.fn() },
+        event: { key: 'f', ctrlKey: true, altKey: true },
+      },
       { config: { key: 'Delete', description: 'Remove', handler: jest.fn(), preventDefault: true }, event: { key: 'Delete' } },
     ];
 

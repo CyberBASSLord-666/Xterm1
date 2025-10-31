@@ -95,11 +95,7 @@ export class PerformanceMonitorService {
    * @param metadata Optional metadata
    * @returns The result of the operation
    */
-  public async measureAsync<T>(
-    name: string,
-    operation: () => Promise<T>,
-    metadata?: Metadata
-  ): Promise<T> {
+  public async measureAsync<T>(name: string, operation: () => Promise<T>, metadata?: Metadata): Promise<T> {
     const id = this.startMeasure(name, metadata);
     try {
       return await operation();
@@ -174,15 +170,18 @@ export class PerformanceMonitorService {
     if ('PerformanceObserver' in window) {
       try {
         // Time to First Byte
-        const navigation = performance.getEntriesByType(
-          'navigation'
-        )[0] as PerformanceNavigationTimingExtended;
+        const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTimingExtended;
         if (navigation) {
-          if (navigation.responseStart && navigation.requestStart) {
-            vitals.ttfb = navigation.responseStart - navigation.requestStart;
+          const hasResponseTiming =
+            Number.isFinite(navigation.responseStart) && Number.isFinite(navigation.requestStart);
+          if (hasResponseTiming) {
+            vitals.ttfb = (navigation.responseStart ?? 0) - (navigation.requestStart ?? 0);
           }
-          if (navigation.domInteractive && navigation.fetchStart) {
-            vitals.tti = navigation.domInteractive - navigation.fetchStart;
+
+          const hasInteractiveTiming =
+            Number.isFinite(navigation.domInteractive) && Number.isFinite(navigation.fetchStart);
+          if (hasInteractiveTiming) {
+            vitals.tti = (navigation.domInteractive ?? 0) - (navigation.fetchStart ?? 0);
           }
         }
 

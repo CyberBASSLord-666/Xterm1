@@ -4,9 +4,9 @@ import {
   signal,
   OnInit,
   inject,
-  computed,
   effect,
   DestroyRef,
+  OnDestroy,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -23,14 +23,17 @@ import {
 } from '../../services/pollinations.client';
 import { FormsModule } from '@angular/forms';
 import { createLoadingState, createUndoRedo } from '../../utils';
+import { BlobUrlManagerService } from '../../services/blob-url-manager.service';
+import { KeyboardShortcutsService } from '../../services/keyboard-shortcuts.service';
 
 @Component({
   selector: 'pw-editor',
   templateUrl: './editor.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
   imports: [RouterLink, FormsModule],
 })
-export class EditorComponent implements OnInit {
+export class EditorComponent implements OnInit, OnDestroy {
   item = signal<GalleryItem | null>(null);
 
   // Professional undo/redo for restyle input
@@ -50,14 +53,8 @@ export class EditorComponent implements OnInit {
   });
 
   // Blob URL Management
-  itemUrl = computed(() => (this.item() ? URL.createObjectURL(this.item()!.blob) : null));
-  lineageUrls = computed(() => {
-    const urls = new Map<string, string>();
-    const l = this.lineage();
-    if (l.parent) urls.set(l.parent.id, URL.createObjectURL(l.parent.thumb));
-    l.children.forEach((c) => urls.set(c.id, URL.createObjectURL(c.thumb)));
-    return urls;
-  });
+  itemUrl = signal<string | null>(null);
+  lineageUrls = signal<Map<string, string>>(new Map());
 
   private route: ActivatedRoute = inject(ActivatedRoute);
   private router: Router = inject(Router);
@@ -66,17 +63,58 @@ export class EditorComponent implements OnInit {
   private settingsService = inject(SettingsService);
   private imageUtilService = inject(ImageUtilService);
   private destroyRef = inject(DestroyRef);
+  private blobUrlManager = inject(BlobUrlManagerService);
+  private keyboardShortcuts = inject(KeyboardShortcutsService);
+
+  private currentItemUrl: string | null = null;
+  private currentLineageUrls: string[] = [];
+  private disposeShortcuts: (() => void) | null = null;
 
   constructor() {
-    // Effect to clean up URLs when the signals change
-    effect((onCleanup) => {
-      const item = this.itemUrl();
-      const lineage = this.lineageUrls();
-      onCleanup(() => {
-        if (item) URL.revokeObjectURL(item);
-        lineage.forEach((url) => URL.revokeObjectURL(url));
-      });
+    effect(() => {
+      const currentItem = this.item();
+      if (this.currentItemUrl) {
+        this.blobUrlManager.revokeUrl(this.currentItemUrl);
+        this.currentItemUrl = null;
+      }
+      if (currentItem) {
+        this.currentItemUrl = this.blobUrlManager.createUrl(currentItem.blob);
+        this.itemUrl.set(this.currentItemUrl);
+      } else {
+        this.itemUrl.set(null);
+      }
     });
+
+    effect(() => {
+      const lineageSnapshot = this.lineage();
+      this.currentLineageUrls.forEach((url) => this.blobUrlManager.revokeUrl(url));
+      this.currentLineageUrls = [];
+      const urls = new Map<string, string>();
+      if (lineageSnapshot.parent) {
+        const url = this.blobUrlManager.createUrl(lineageSnapshot.parent.thumb);
+        urls.set(lineageSnapshot.parent.id, url);
+        this.currentLineageUrls.push(url);
+      }
+      lineageSnapshot.children.forEach((child) => {
+        const url = this.blobUrlManager.createUrl(child.thumb);
+        urls.set(child.id, url);
+        this.currentLineageUrls.push(url);
+      });
+      this.lineageUrls.set(urls);
+    });
+  }
+
+  public ngOnDestroy(): void {
+    if (this.currentItemUrl) {
+      this.blobUrlManager.revokeUrl(this.currentItemUrl);
+      this.currentItemUrl = null;
+    }
+    if (this.currentLineageUrls.length) {
+      this.blobUrlManager.revokeUrls([...this.currentLineageUrls]);
+      this.currentLineageUrls = [];
+    }
+    this.disposeShortcuts?.();
+    this.disposeShortcuts = null;
   }
 
   public ngOnInit(): void {
@@ -88,6 +126,25 @@ export class EditorComponent implements OnInit {
       }
       await this.loadItem(id);
     });
+
+    this.disposeShortcuts = this.keyboardShortcuts.registerScope('editor', [
+      {
+        key: 'z',
+        commandOrControl: true,
+        description: 'Undo restyle prompt change',
+        handler: () => this.undo(),
+        preventDefault: true,
+        guard: () => this.canUndo(),
+      },
+      {
+        key: 'y',
+        commandOrControl: true,
+        description: 'Redo restyle prompt change',
+        handler: () => this.redo(),
+        preventDefault: true,
+        guard: () => this.canRedo(),
+      },
+    ]);
   }
 
   public onRestyleInput(event: Event): void {
@@ -254,7 +311,7 @@ export class EditorComponent implements OnInit {
     }
   }
 
-  public previewAudio(): void {
+  public async previewAudio(): Promise<void> {
     const item = this.item();
     if (!item) return;
 
@@ -268,17 +325,22 @@ export class EditorComponent implements OnInit {
       return;
     }
 
-    this.audioState.execute(async () => {
-      return new Promise<void>((resolve, reject) => {
-        const utterance = textToSpeech(item.prompt);
-        utterance.onend = (): void => resolve();
-        utterance.onerror = (e): void => reject(new Error(e.error));
-        window.speechSynthesis.speak(utterance);
-      });
-    });
-
-    if (this.audioState.error()) {
-      this.toast.show(`Audio failed: ${this.audioState.error()}`);
+    try {
+      await this.audioState.execute(
+        () =>
+          new Promise<void>((resolve, reject) => {
+            const utterance = textToSpeech(item.prompt);
+            utterance.onend = (): void => resolve();
+            utterance.onerror = (e): void => reject(new Error(e.error));
+            window.speechSynthesis.speak(utterance);
+          })
+      );
+    } catch (error) {
+      this.toast.show(`Audio failed: ${(error as Error).message}`);
     }
+  }
+
+  public audioWorking(): boolean {
+    return this.audioState.loading();
   }
 }

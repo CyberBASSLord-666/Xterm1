@@ -5,12 +5,14 @@ import { ImageUtilService } from './image-util.service';
 import { createDeviceWallpaper, ImageOptions, DeviceInfo, SupportedResolutions } from './pollinations.client';
 import { GalleryItem } from './idb';
 import { UI_CONFIG, IMAGE_PRESETS, ERROR_MESSAGES } from '../constants';
+import { BlobUrlManagerService } from './blob-url-manager.service';
 
 @Injectable({ providedIn: 'root' })
 export class GenerationService {
   private galleryService = inject(GalleryService);
   private imageUtilService = inject(ImageUtilService);
   private toastService = inject(ToastService);
+  private blobUrlManager = inject(BlobUrlManagerService);
 
   readonly status = signal<'idle' | 'generating' | 'saving' | 'error' | 'success'>('idle');
   readonly statusMessage = signal('');
@@ -81,7 +83,7 @@ export class GenerationService {
 
       await this.galleryService.add(galleryItem);
 
-      const blobUrl = URL.createObjectURL(blob);
+      const blobUrl = this.blobUrlManager.createUrl(blob);
       this.currentGenerationResult.set({ galleryItem, blobUrl });
 
       this.status.set('success');
@@ -108,7 +110,7 @@ export class GenerationService {
     }
     const currentResult = this.currentGenerationResult();
     if (currentResult) {
-      URL.revokeObjectURL(currentResult.blobUrl);
+      this.blobUrlManager.revokeUrl(currentResult.blobUrl);
     }
     this.status.set('idle');
     this.statusMessage.set('');

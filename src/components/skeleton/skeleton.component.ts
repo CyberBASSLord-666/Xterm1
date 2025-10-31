@@ -5,7 +5,7 @@ import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
  * Provides consistent loading UI across the application.
  */
 @Component({
-  selector: 'app-skeleton',
+  selector: 'pw-skeleton',
   standalone: true,
   template: `
     <div

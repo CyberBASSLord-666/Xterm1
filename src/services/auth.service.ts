@@ -1,6 +1,10 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { ToastService } from './toast.service';
 
+/**
+ * Mock authentication service used for prototyping flows.
+ * Real authentication is out of scope for this app, so the service only emits toast notifications.
+ */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private toastService = inject(ToastService);

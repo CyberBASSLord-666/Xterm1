@@ -120,15 +120,17 @@ Build artifacts will be stored in the `dist/` directory.
 - **KeyboardShortcutsService**: Application-wide keyboard shortcuts
 - More improvements in progress...
 
-## 🔑 Keyboard Shortcuts (Planned)
+## 🔑 Keyboard Shortcuts
 
-- `Ctrl/Cmd + S` - Save current wallpaper
-- `Delete` - Delete selected item
-- `Ctrl/Cmd + Z` - Undo
-- `Ctrl/Cmd + Y` - Redo
-- `Ctrl/Cmd + F` - Search
-- `Shift + ?` - Show keyboard shortcuts help
-- `Escape` - Close dialog/cancel action
+PolliWall now ships with global shortcuts and an in-app help overlay (`Shift + ?`). Highlights include:
+
+- `Ctrl/Cmd + S` – Export the current gallery from the Settings view
+- `Delete` – Remove selected wallpapers when selection mode is active in the Gallery
+- `Ctrl/Cmd + F` – Focus search inputs where available (e.g., Gallery search, Wizard prompt composer)
+- `Ctrl/Cmd + Z` / `Ctrl/Cmd + Y` – Undo or redo restyle edits in the Editor
+- `Escape` – Close dialogs such as the keyboard shortcut overlay or exit selection mode
+
+The overlay lists every registered shortcut so power users can discover component-specific accelerators quickly.
 
 ## 📊 Performance Metrics
 

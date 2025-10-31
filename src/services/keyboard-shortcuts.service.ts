@@ -7,9 +7,11 @@ export interface ShortcutConfig {
   shift?: boolean;
   alt?: boolean;
   meta?: boolean;
+  commandOrControl?: boolean;
   description: string;
   handler: () => void;
   preventDefault?: boolean;
+  guard?: () => boolean;
 }
 
 /**
@@ -38,6 +40,22 @@ export class KeyboardShortcutsService {
       { key: config.key, description: config.description },
       'KeyboardShortcuts'
     );
+  }
+
+  /**
+   * Register a group of shortcuts associated with a logical scope. Returns a disposer that will
+   * automatically unregister the shortcuts when invoked (e.g. during component destroy).
+   */
+  registerScope(scopeId: string, configs: ShortcutConfig[]): () => void {
+    const ids: string[] = [];
+    configs.forEach((config, index) => {
+      const id = `${scopeId}:${config.key}:${index}`;
+      this.register(id, config);
+      ids.push(id);
+    });
+    return () => {
+      ids.forEach((id) => this.unregister(id));
+    };
   }
 
   /**
@@ -74,7 +92,7 @@ export class KeyboardShortcutsService {
    * Setup global keyboard event listener.
    */
   private setupGlobalListener(): void {
-    document.addEventListener('keydown', (event) => {
+    window.addEventListener('keydown', (event) => {
       if (!this.enabled) {
         return;
       }
@@ -91,6 +109,9 @@ export class KeyboardShortcutsService {
       // Find matching shortcut
       for (const [id, config] of this.shortcuts.entries()) {
         if (this.matchesShortcut(event, config)) {
+          if (config.guard && !config.guard()) {
+            continue;
+          }
           this.logger.debug(`Triggered shortcut: ${id}`, undefined, 'KeyboardShortcuts');
 
           if (config.preventDefault) {
@@ -123,17 +144,24 @@ export class KeyboardShortcutsService {
       return false;
     }
 
-    // Check modifiers
-    if (config.ctrl !== undefined && event.ctrlKey !== config.ctrl) {
-      return false;
+    if (config.commandOrControl) {
+      if (!(event.ctrlKey || event.metaKey)) {
+        return false;
+      }
+    } else {
+      if (config.ctrl !== undefined && event.ctrlKey !== config.ctrl) {
+        return false;
+      }
+      if (config.meta !== undefined && event.metaKey !== config.meta) {
+        return false;
+      }
     }
+
+    // Check modifiers
     if (config.shift !== undefined && event.shiftKey !== config.shift) {
       return false;
     }
     if (config.alt !== undefined && event.altKey !== config.alt) {
-      return false;
-    }
-    if (config.meta !== undefined && event.metaKey !== config.meta) {
       return false;
     }
 
@@ -155,7 +183,7 @@ export class KeyboardShortcutsService {
     if (handlers.save) {
       this.register('save', {
         key: 's',
-        ctrl: true,
+        commandOrControl: true,
         description: 'Save current item',
         handler: handlers.save,
         preventDefault: true,
@@ -174,7 +202,7 @@ export class KeyboardShortcutsService {
     if (handlers.undo) {
       this.register('undo', {
         key: 'z',
-        ctrl: true,
+        commandOrControl: true,
         description: 'Undo last action',
         handler: handlers.undo,
         preventDefault: true,
@@ -184,7 +212,7 @@ export class KeyboardShortcutsService {
     if (handlers.redo) {
       this.register('redo', {
         key: 'y',
-        ctrl: true,
+        commandOrControl: true,
         description: 'Redo last undone action',
         handler: handlers.redo,
         preventDefault: true,
@@ -194,7 +222,7 @@ export class KeyboardShortcutsService {
     if (handlers.search) {
       this.register('search', {
         key: 'f',
-        ctrl: true,
+        commandOrControl: true,
         description: 'Search',
         handler: handlers.search,
         preventDefault: true,

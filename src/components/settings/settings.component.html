@@ -187,6 +187,78 @@
             <span>Export My Gallery</span>
           }
         </button>
+        @if (exportError()) {
+          <p class="mt-2 text-sm text-danger font-semibold" role="alert">{{ exportError() }}</p>
+        }
+      </div>
+
+      <div class="border-t border-primary-border pt-6">
+        <label class="block text-sm font-medium text-primary-text">Import Gallery</label>
+        <p class="text-xs text-secondary-text mb-2">
+          Restore wallpapers from a PolliWall export ZIP. Your current gallery will remain intact.
+        </p>
+
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+          <label
+            class="inline-flex items-center justify-center px-4 py-2 rounded-md border border-primary-border bg-secondary-bg text-primary-text font-semibold cursor-pointer hover:border-accent focus-within:ring-2 focus-within:ring-accent"
+          >
+            <input
+              #importInput
+              type="file"
+              accept=".zip"
+              class="hidden"
+              (change)="onImportFileChange($event)"
+            />
+            <span>{{ selectedImportFileName() || 'Choose export ZIP' }}</span>
+          </label>
+
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              (click)="importGallery()"
+              [disabled]="isImporting() || !selectedImportFileName()"
+              class="px-4 py-2 rounded-md font-bold bg-accent-secondary text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              @if (isImporting()) {
+                <svg
+                  class="animate-spin -ml-1 h-5 w-5"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  ></circle>
+                  <path
+                    class="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                <span>Importing…</span>
+              } @else {
+                <span>Import Gallery</span>
+              }
+            </button>
+            <button
+              type="button"
+              (click)="clearImportSelection()"
+              [disabled]="isImporting() || !selectedImportFileName()"
+              class="px-3 py-2 text-sm rounded-md border border-primary-border text-secondary-text hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+
+        @if (importError()) {
+          <p class="mt-2 text-sm text-danger font-semibold" role="alert">{{ importError() }}</p>
+        }
       </div>
     </div>
   </div>

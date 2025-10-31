@@ -7,22 +7,29 @@ import {
   computed,
   OnDestroy,
   effect,
+  ViewChild,
+  ElementRef,
 } from '@angular/core';
 import { GalleryService } from '../../services/gallery.service';
 import { Collection, GalleryItem } from '../../services/idb';
 import { RouterLink } from '@angular/router';
 import { ToastService } from '../../services/toast.service';
 import { createSelectionState, createLoadingState } from '../../utils';
+import { BlobUrlManagerService } from '../../services/blob-url-manager.service';
+import { KeyboardShortcutsService } from '../../services/keyboard-shortcuts.service';
 
 @Component({
   selector: 'pw-gallery',
   templateUrl: './gallery.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
   imports: [RouterLink],
 })
 export class GalleryComponent implements OnInit, OnDestroy {
   private galleryService = inject(GalleryService);
   private toastService = inject(ToastService);
+  private blobUrlManager = inject(BlobUrlManagerService);
+  private keyboardShortcuts = inject(KeyboardShortcutsService);
 
   allItems = signal<GalleryItem[]>([]);
   collections = signal<Collection[]>([]);
@@ -42,6 +49,8 @@ export class GalleryComponent implements OnInit, OnDestroy {
   // Professional selection state management
   isSelecting = signal(false);
   selection = createSelectionState<string>();
+  @ViewChild('searchInput') private searchInput?: ElementRef<HTMLInputElement>;
+  private disposeShortcuts: (() => void) | null = null;
 
   filteredItems = computed(() => {
     const query = this.searchQuery().toLowerCase();
@@ -106,7 +115,7 @@ export class GalleryComponent implements OnInit, OnDestroy {
       this.revokeAllThumbUrls();
       const newUrls = new Map<string, string>();
       for (const item of this.allItems()) {
-        newUrls.set(item.id, URL.createObjectURL(item.thumb));
+        newUrls.set(item.id, this.blobUrlManager.createUrl(item.thumb));
       }
       this.thumbUrls = newUrls;
     });
@@ -122,10 +131,40 @@ export class GalleryComponent implements OnInit, OnDestroy {
       this.allItems.set(items);
       this.collections.set(collections);
     });
+
+    this.disposeShortcuts = this.keyboardShortcuts.registerScope('gallery', [
+      {
+        key: 'delete',
+        description: 'Delete selected wallpapers',
+        handler: () => void this.deleteSelected(),
+        preventDefault: true,
+        guard: () => this.isSelecting() && this.selection.selectedCount() > 0,
+      },
+      {
+        key: 'f',
+        commandOrControl: true,
+        description: 'Focus gallery search',
+        handler: () => this.focusSearchField(),
+        preventDefault: true,
+      },
+      {
+        key: 'escape',
+        description: 'Exit selection mode',
+        handler: () => {
+          if (this.isSelecting()) {
+            this.toggleSelectionMode();
+          }
+        },
+        preventDefault: false,
+        guard: () => this.isSelecting(),
+      },
+    ]);
   }
 
   public ngOnDestroy(): void {
     this.revokeAllThumbUrls();
+    this.disposeShortcuts?.();
+    this.disposeShortcuts = null;
   }
 
   // --- Type-safe event handlers ---
@@ -147,8 +186,16 @@ export class GalleryComponent implements OnInit, OnDestroy {
   // --- End of type-safe event handlers ---
 
   private revokeAllThumbUrls(): void {
-    this.thumbUrls.forEach((url) => URL.revokeObjectURL(url));
+    this.thumbUrls.forEach((url) => this.blobUrlManager.revokeUrl(url));
     this.thumbUrls.clear();
+  }
+
+  public loading(): boolean {
+    return this.loadingState.loading();
+  }
+
+  public selectedIds(): Set<string> {
+    return this.selection.selectedItems();
   }
 
   public async toggleFavorite(event: MouseEvent, id: string): Promise<void> {
@@ -179,6 +226,10 @@ export class GalleryComponent implements OnInit, OnDestroy {
 
   public deselectAll(): void {
     this.selection.deselectAll();
+  }
+
+  private focusSearchField(): void {
+    this.searchInput?.nativeElement.focus();
   }
 
   public isItemSelected(id: string): boolean {

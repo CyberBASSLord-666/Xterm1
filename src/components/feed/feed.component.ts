@@ -7,6 +7,7 @@ import {
   signal,
 } from '@angular/core';
 import { ToastService } from '../../services/toast.service';
+import { SkeletonComponent } from '../skeleton/skeleton.component';
 
 interface FeedImageEvent {
   prompt: string;
@@ -27,6 +28,8 @@ interface FeedTextEvent {
   selector: 'pw-feed',
   templateUrl: './feed.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [SkeletonComponent],
 })
 export class FeedComponent implements OnInit, OnDestroy {
   private toast = inject(ToastService);
@@ -35,6 +38,8 @@ export class FeedComponent implements OnInit, OnDestroy {
   textFeedItems = signal<FeedTextEvent[]>([]);
   feedMode = signal<'image' | 'text'>('image');
   isPaused = signal<boolean>(false);
+  imageStreamReady = signal<boolean>(false);
+  textStreamReady = signal<boolean>(false);
 
   private imageEventSource: EventSource | null = null;
   private textEventSource: EventSource | null = null;
@@ -51,10 +56,12 @@ export class FeedComponent implements OnInit, OnDestroy {
   connectImageFeed(): void {
     this.imageEventSource?.close();
     this.imageEventSource = new EventSource('https://image.pollinations.ai/feed');
+    this.imageStreamReady.set(false);
 
     this.imageEventSource.onopen = (): void => {
       // Reset delay on successful connection
       this.imageReconnectDelay = 2000;
+      this.imageStreamReady.set(true);
     };
 
     this.imageEventSource.onmessage = (event): void => {
@@ -62,6 +69,7 @@ export class FeedComponent implements OnInit, OnDestroy {
       try {
         const data: FeedImageEvent = JSON.parse(event.data);
         this.feedItems.update((list) => [data, ...list.slice(0, 99)]); // Keep list to 100 items
+        this.imageStreamReady.set(true);
       } catch {
         // eslint-disable-next-line no-console
         console.warn('Non-JSON image feed event:', event.data);
@@ -73,6 +81,7 @@ export class FeedComponent implements OnInit, OnDestroy {
       console.error('Image feed error, reconnecting...', err);
       this.toast.show(`Image feed disconnected. Retrying in ${this.imageReconnectDelay / 1000}s.`);
       this.imageEventSource?.close(); // Close the faulty source
+      this.imageStreamReady.set(false);
 
       setTimeout(() => {
         this.connectImageFeed();
@@ -86,10 +95,12 @@ export class FeedComponent implements OnInit, OnDestroy {
   connectTextFeed(): void {
     this.textEventSource?.close();
     this.textEventSource = new EventSource('https://text.pollinations.ai/feed');
+    this.textStreamReady.set(false);
 
     this.textEventSource.onopen = (): void => {
       // Reset delay on successful connection
       this.textReconnectDelay = 2000;
+      this.textStreamReady.set(true);
     };
 
     this.textEventSource.onmessage = (event): void => {
@@ -97,6 +108,7 @@ export class FeedComponent implements OnInit, OnDestroy {
       try {
         const data: FeedTextEvent = JSON.parse(event.data);
         this.textFeedItems.update((list) => [data, ...list.slice(0, 99)]);
+        this.textStreamReady.set(true);
       } catch {
         // eslint-disable-next-line no-console
         console.warn('Non-JSON text feed event:', event.data);
@@ -108,6 +120,7 @@ export class FeedComponent implements OnInit, OnDestroy {
       console.error('Text feed error, reconnecting...', err);
       this.toast.show(`Text feed disconnected. Retrying in ${this.textReconnectDelay / 1000}s.`);
       this.textEventSource?.close(); // Close the faulty source
+      this.textStreamReady.set(false);
 
       setTimeout(() => this.connectTextFeed(), this.textReconnectDelay);
 

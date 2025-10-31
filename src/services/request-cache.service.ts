@@ -23,6 +23,7 @@ export class RequestCacheService {
   private cache = new Map<string, CacheEntry<any>>(); // eslint-disable-line @typescript-eslint/no-explicit-any
   private pendingRequests = new Map<string, PendingRequest<any>>(); // eslint-disable-line @typescript-eslint/no-explicit-any
   private readonly defaultTTL = 5 * 60 * 1000; // 5 minutes
+  private cleanupInterval: number | null = null;
 
   /**
    * Execute a request with caching and deduplication.
@@ -191,6 +192,19 @@ export class RequestCacheService {
    * Start periodic cleanup (call in app initialization).
    */
   startPeriodicCleanup(intervalMs: number = 60000): void {
-    setInterval(() => this.cleanup(), intervalMs);
+    if (this.cleanupInterval !== null) {
+      clearInterval(this.cleanupInterval);
+    }
+    this.cleanupInterval = window.setInterval(() => this.cleanup(), intervalMs);
+  }
+
+  /**
+   * Stop periodic cleanup timer if running.
+   */
+  stopPeriodicCleanup(): void {
+    if (this.cleanupInterval !== null) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
   }
 }

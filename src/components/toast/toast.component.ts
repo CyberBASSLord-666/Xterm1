@@ -1,10 +1,11 @@
-import { Component, signal, OnDestroy, OnInit } from '@angular/core';
+import { Component, signal, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { UI_CONFIG } from '../../constants';
 
 @Component({
   selector: 'app-toast',
   templateUrl: './toast.component.html',
-  imports: [],
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ToastComponent implements OnInit, OnDestroy {
   message = signal<string | null>(null);

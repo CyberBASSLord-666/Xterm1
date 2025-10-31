@@ -5,6 +5,7 @@ import {
   inject,
   computed,
   OnInit,
+  OnDestroy,
   effect,
   ViewChild,
   ElementRef,
@@ -23,6 +24,10 @@ import {
   ImageOptions,
 } from '../../services/pollinations.client';
 import { FormsModule } from '@angular/forms';
+import { SkeletonComponent } from '../skeleton/skeleton.component';
+import { KeyboardShortcutsService } from '../../services/keyboard-shortcuts.service';
+import { RequestCacheService } from '../../services/request-cache.service';
+import { BlobUrlManagerService } from '../../services/blob-url-manager.service';
 
 interface StylePreset {
   name: string;
@@ -34,18 +39,22 @@ interface StylePreset {
   selector: 'pw-wizard',
   templateUrl: './wizard.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule],
+  standalone: true,
+  imports: [FormsModule, SkeletonComponent],
   host: {
     '(document:click)': 'onDocumentClick($event)',
   },
 })
-export class WizardComponent implements OnInit {
+export class WizardComponent implements OnInit, OnDestroy {
   // --- Injected Services ---
   deviceService = inject(DeviceService);
   toastService = inject(ToastService);
   galleryService = inject(GalleryService);
   settingsService = inject(SettingsService);
   generationService = inject(GenerationService);
+  private keyboardShortcuts = inject(KeyboardShortcutsService);
+  private requestCache = inject(RequestCacheService);
+  private blobUrlManager = inject(BlobUrlManagerService);
 
   // --- Local State ---
   process = signal<'compose' | null>(null);
@@ -59,6 +68,7 @@ export class WizardComponent implements OnInit {
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
   @ViewChild('historyButton') historyButton?: ElementRef<HTMLDivElement>;
   @ViewChild('historyDropdown') historyDropdown?: ElementRef<HTMLDivElement>;
+  @ViewChild('promptInput') promptInput?: ElementRef<HTMLTextAreaElement>;
 
   // --- Models & Settings ---
   availableModels = signal<string[]>([]);
@@ -198,6 +208,8 @@ export class WizardComponent implements OnInit {
   ];
 
   selectedPreset = signal<StylePreset>(this.presets[0]);
+  private disposeShortcuts: (() => void) | null = null;
+  private inspirationUrl: string | null = null;
 
   currentStyles = computed(() => [...this.selectedPreset().styles, ...this.baseQualityStyles]);
 
@@ -240,6 +252,32 @@ export class WizardComponent implements OnInit {
   ngOnInit(): void {
     this.loadHistory();
     this.loadModels();
+    this.disposeShortcuts = this.keyboardShortcuts.registerScope('wizard', [
+      {
+        key: 'f',
+        commandOrControl: true,
+        description: 'Focus prompt composer',
+        handler: () => this.focusPrompt(),
+        preventDefault: true,
+      },
+      {
+        key: 'escape',
+        description: 'Close history dropdown',
+        handler: () => this.isHistoryOpen.set(false),
+        preventDefault: false,
+        guard: () => this.isHistoryOpen(),
+      },
+    ]);
+  }
+
+  public ngOnDestroy(): void {
+    this.clearSourceImage();
+    this.disposeShortcuts?.();
+    this.disposeShortcuts = null;
+  }
+
+  private focusPrompt(): void {
+    this.promptInput?.nativeElement.focus();
   }
 
   onDocumentClick(event: Event): void {
@@ -317,7 +355,7 @@ export class WizardComponent implements OnInit {
 
   async loadModels(): Promise<void> {
     try {
-      const models = await listImageModels();
+      const models = await this.requestCache.execute('models:image', () => listImageModels(), 5 * 60 * 1000);
       this.availableModels.set(models);
       if (!models.includes(this.selectedModel())) {
         this.selectedModel.set(models.includes('flux') ? 'flux' : models[0] || '');
@@ -370,9 +408,9 @@ export class WizardComponent implements OnInit {
   }
 
   clearSourceImage(): void {
-    const currentUrl = this.sourceImageUrl();
-    if (currentUrl) {
-      URL.revokeObjectURL(currentUrl);
+    if (this.inspirationUrl) {
+      this.blobUrlManager.revokeUrl(this.inspirationUrl);
+      this.inspirationUrl = null;
     }
     this.sourceImageUrl.set(null);
     if (this.fileInput) {
@@ -386,8 +424,8 @@ export class WizardComponent implements OnInit {
       return;
     }
     this.clearSourceImage();
-    const url = URL.createObjectURL(file);
-    this.sourceImageUrl.set(url);
+    this.inspirationUrl = this.blobUrlManager.createUrl(file);
+    this.sourceImageUrl.set(this.inspirationUrl);
     this.toastService.show('Image loaded for inspiration.');
   }
 
