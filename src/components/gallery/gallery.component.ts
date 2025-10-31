@@ -1,4 +1,15 @@
-import { Component, ChangeDetectionStrategy, signal, OnInit, inject, computed, OnDestroy, effect } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  signal,
+  OnInit,
+  inject,
+  computed,
+  OnDestroy,
+  effect,
+  ViewChild,
+  ElementRef,
+} from '@angular/core';
 import { GalleryService } from '../../services/gallery.service';
 import { Collection, GalleryItem } from '../../services/idb';
 import { RouterLink } from '@angular/router';
@@ -17,6 +28,8 @@ export class GalleryComponent implements OnInit, OnDestroy {
   private galleryService = inject(GalleryService);
   private toastService = inject(ToastService);
   private keyboardShortcuts = inject(KeyboardShortcutsService);
+
+  @ViewChild('searchInput') searchInput?: ElementRef<HTMLInputElement>;
 
   allItems = signal<GalleryItem[]>([]);
   collections = signal<Collection[]>([]);
@@ -110,16 +123,14 @@ export class GalleryComponent implements OnInit, OnDestroy {
 
   public async ngOnInit(): Promise<void> {
     // Use professional loading state
-    await this.loadingState.execute(
-      (async (): Promise<void> => {
-        const [items, collections] = await Promise.all([
-          this.galleryService.list(),
-          this.galleryService.listCollections(),
-        ]);
-        this.allItems.set(items);
-        this.collections.set(collections);
-      })()
-    );
+    await this.loadingState.execute(async () => {
+      const [items, collections] = await Promise.all([
+        this.galleryService.list(),
+        this.galleryService.listCollections(),
+      ]);
+      this.allItems.set(items);
+      this.collections.set(collections);
+    });
 
     // Register keyboard shortcuts
     this.keyboardShortcuts.registerDefaultShortcuts({
@@ -129,9 +140,8 @@ export class GalleryComponent implements OnInit, OnDestroy {
         }
       },
       search: () => {
-        // Focus search input
-        const searchInput = document.querySelector<HTMLInputElement>('input[type="search"]');
-        searchInput?.focus();
+        // Focus search input using ViewChild
+        this.searchInput?.nativeElement.focus();
       },
     });
   }

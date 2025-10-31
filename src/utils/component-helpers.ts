@@ -11,10 +11,7 @@ import { Subject, Observable, fromEvent, takeUntil } from 'rxjs';
 /**
  * Reactive computed property that derives from multiple signals
  */
-export function computedFrom<T, R>(
-  sources: Signal<T>[],
-  computeFn: (...values: T[]) => R
-): Signal<R> {
+export function computedFrom<T, R>(sources: Signal<T>[], computeFn: (...values: T[]) => R): Signal<R> {
   return computed(() => {
     const values = sources.map((s) => s());
     return computeFn(...values);
@@ -24,10 +21,7 @@ export function computedFrom<T, R>(
 /**
  * Create a debounced signal that updates after a delay
  */
-export function debouncedSignal<T>(
-  source: Signal<T>,
-  delay: number = 300
-): Signal<T> {
+export function debouncedSignal<T>(source: Signal<T>, delay: number = 300): Signal<T> {
   const debounced = signal(source());
   let timeoutId: number | undefined;
 
@@ -47,10 +41,7 @@ export function debouncedSignal<T>(
 /**
  * Create a throttled signal that updates at most once per interval
  */
-export function throttledSignal<T>(
-  source: Signal<T>,
-  interval: number = 300
-): Signal<T> {
+export function throttledSignal<T>(source: Signal<T>, interval: number = 300): Signal<T> {
   const throttled = signal(source());
   let lastUpdate = 0;
   let timeoutId: number | undefined;
@@ -83,18 +74,18 @@ export function throttledSignal<T>(
 export interface LoadingState {
   loading: Signal<boolean>;
   error: Signal<Error | null>;
-  execute: <T>(promise: Promise<T>) => Promise<T>;
+  execute: <T>(fn: () => Promise<T>) => Promise<T>;
 }
 
 export function createLoadingState(): LoadingState {
   const loading = signal(false);
   const error = signal<Error | null>(null);
 
-  const execute = async <T>(promise: Promise<T>): Promise<T> => {
+  const execute = async <T>(fn: () => Promise<T>): Promise<T> => {
     loading.set(true);
     error.set(null);
     try {
-      const result = await promise;
+      const result = await fn();
       loading.set(false);
       return result;
     } catch (e) {
@@ -129,9 +120,7 @@ export interface PaginationState<T> {
   setItems: (items: T[]) => void;
 }
 
-export function createPaginationState<T>(
-  initialPageSize: number = 20
-): PaginationState<T> {
+export function createPaginationState<T>(initialPageSize: number = 20): PaginationState<T> {
   const items = signal<T[]>([]);
   const page = signal(1);
   const pageSize = signal(initialPageSize);
@@ -458,11 +447,7 @@ export function addEventListenerWithCleanup(
 /**
  * Observable to Signal converter with cleanup
  */
-export function toSignal<T>(
-  observable: Observable<T>,
-  initialValue: T,
-  destroyRef: DestroyRef
-): Signal<T> {
+export function toSignal<T>(observable: Observable<T>, initialValue: T, destroyRef: DestroyRef): Signal<T> {
   const sig = signal(initialValue);
   const destroy$ = new Subject<void>();
 
@@ -530,10 +515,7 @@ export interface ScrollState {
   atBottom: Signal<boolean>;
 }
 
-export function createScrollTracker(
-  element: HTMLElement | Window = window,
-  destroyRef: DestroyRef
-): ScrollState {
+export function createScrollTracker(element: HTMLElement | Window = window, destroyRef: DestroyRef): ScrollState {
   const scrollY = signal(0);
   const scrollX = signal(0);
   const previousY = signal(0);

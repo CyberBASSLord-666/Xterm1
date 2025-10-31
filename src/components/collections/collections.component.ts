@@ -39,11 +39,9 @@ export class CollectionsComponent implements OnInit {
   }
 
   public async loadCollections(): Promise<void> {
-    await this.loadingState.execute(
-      (async (): Promise<void> => {
-        this.collections.set(await this.galleryService.listCollections());
-      })()
-    );
+    await this.loadingState.execute(async () => {
+      this.collections.set(await this.galleryService.listCollections());
+    });
   }
 
   public async createCollection(): Promise<void> {
