@@ -45,7 +45,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.keyboardShortcuts.registerDefaultShortcuts({
       save: () => {
         if (!this.isExporting()) {
-          this.exportGallery();
+          // Fire-and-forget: exportGallery handles its own errors internally
+          void this.exportGallery();
         }
       },
     });

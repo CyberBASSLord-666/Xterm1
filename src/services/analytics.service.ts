@@ -168,11 +168,12 @@ export class AnalyticsService {
       return; // Timer already running
     }
 
+    // Use window.setInterval for consistency (returns number in browser environment)
     this.batchTimer = window.setInterval(() => {
       if (this.eventQueue.length > 0) {
         this.sendBatch();
       }
-    }, this.batchInterval);
+    }, this.batchInterval) as number;
 
     this.logger.debug('Batch timer started', { interval: this.batchInterval }, 'Analytics');
   }
@@ -210,7 +211,8 @@ export class AnalyticsService {
       return;
     }
 
-    // Set flag first, then splice to prevent race conditions
+    // Critical section: Set flag IMMEDIATELY after empty check and BEFORE splice
+    // to fully prevent race conditions between timer and threshold triggers
     this.isSendingBatch = true;
 
     // Take events to send (up to batchSize) immediately after setting the flag

@@ -142,7 +142,8 @@ export class GalleryComponent implements OnInit, OnDestroy {
             `Are you sure you want to delete ${this.selectedCount} ${itemText}? This action cannot be undone.`
           );
           if (confirmed) {
-            this.deleteSelected();
+            // Fire-and-forget: deleteSelected handles its own errors internally
+            void this.deleteSelected();
           }
         }
       },

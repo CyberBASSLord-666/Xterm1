@@ -71,10 +71,16 @@ export function throttledSignal<T>(source: Signal<T>, interval: number = 300): S
 /**
  * Track loading state for async operations
  *
- * @breaking-change The execute method signature changed to accept a function
+ * @breaking-change v2.0.0 - The execute method signature changed to accept a function
  * that returns a Promise, rather than accepting a Promise directly. This allows
- * for better control over when the async operation starts and provides cleaner
- * syntax: `execute(async () => { ... })` instead of `execute((async () => { ... })())`
+ * for better control over when the async operation starts and provides cleaner syntax.
+ *
+ * Migration Guide:
+ * - Old: `execute((async () => { ... })())`
+ * - New: `execute(async () => { ... })`
+ *
+ * All call sites in this codebase were updated in commit c5ccab5.
+ * External consumers should update their code when upgrading.
  */
 export interface LoadingState {
   loading: Signal<boolean>;
