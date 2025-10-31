@@ -1,5 +1,6 @@
 import { Component, ChangeDetectionStrategy, inject, OnInit, OnDestroy, signal } from '@angular/core';
 import { ToastService } from '../../services/toast.service';
+import { SkeletonComponent } from '../skeleton/skeleton.component';
 
 interface FeedImageEvent {
   prompt: string;
@@ -21,7 +22,7 @@ interface FeedTextEvent {
   standalone: true,
   templateUrl: './feed.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [],
+  imports: [SkeletonComponent],
 })
 export class FeedComponent implements OnInit, OnDestroy {
   private toast = inject(ToastService);

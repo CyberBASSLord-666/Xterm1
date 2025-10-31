@@ -23,6 +23,7 @@ import {
   ImageOptions,
 } from '../../services/pollinations.client';
 import { FormsModule } from '@angular/forms';
+import { SkeletonComponent } from '../skeleton/skeleton.component';
 
 interface StylePreset {
   name: string;
@@ -35,7 +36,7 @@ interface StylePreset {
   standalone: true,
   templateUrl: './wizard.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule],
+  imports: [FormsModule, SkeletonComponent],
   host: {
     '(document:click)': 'onDocumentClick($event)',
   },
