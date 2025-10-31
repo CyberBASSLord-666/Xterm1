@@ -197,25 +197,25 @@ export class AnalyticsService {
    * @private
    */
   private sendBatch(): void {
-    // Prevent concurrent batch sends
+    // Prevent concurrent batch sends - Set flag IMMEDIATELY to eliminate ALL race conditions
     if (this.isSendingBatch) {
       return;
     }
+    this.isSendingBatch = true;
 
+    // Early exit checks (after flag is set to prevent race conditions)
     if (this.eventQueue.length === 0) {
+      this.isSendingBatch = false;
       return;
     }
 
     const win = window as WindowWithAnalytics;
     if (!this.enabled || !win.gtag) {
+      this.isSendingBatch = false;
       return;
     }
 
-    // Critical section: Set flag IMMEDIATELY after empty check and BEFORE splice
-    // to fully prevent race conditions between timer and threshold triggers
-    this.isSendingBatch = true;
-
-    // Take events to send (up to batchSize) immediately after setting the flag
+    // Take events to send (up to batchSize)
     const eventsToSend = this.eventQueue.splice(0, this.batchSize);
 
     try {
