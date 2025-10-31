@@ -3,6 +3,7 @@ import { GalleryService } from '../../services/gallery.service';
 import { Collection, GalleryItem } from '../../services/idb';
 import { RouterLink } from '@angular/router';
 import { ToastService } from '../../services/toast.service';
+import { KeyboardShortcutsService } from '../../services/keyboard-shortcuts.service';
 import { createSelectionState, createLoadingState } from '../../utils';
 
 @Component({
@@ -15,6 +16,7 @@ import { createSelectionState, createLoadingState } from '../../utils';
 export class GalleryComponent implements OnInit, OnDestroy {
   private galleryService = inject(GalleryService);
   private toastService = inject(ToastService);
+  private keyboardShortcuts = inject(KeyboardShortcutsService);
 
   allItems = signal<GalleryItem[]>([]);
   collections = signal<Collection[]>([]);
@@ -118,10 +120,27 @@ export class GalleryComponent implements OnInit, OnDestroy {
         this.collections.set(collections);
       })()
     );
+
+    // Register keyboard shortcuts
+    this.keyboardShortcuts.registerDefaultShortcuts({
+      delete: () => {
+        if (this.isSelecting() && this.selectedCount > 0) {
+          this.deleteSelected();
+        }
+      },
+      search: () => {
+        // Focus search input
+        const searchInput = document.querySelector<HTMLInputElement>('input[type="search"]');
+        searchInput?.focus();
+      },
+    });
   }
 
   public ngOnDestroy(): void {
     this.revokeAllThumbUrls();
+    // Unregister shortcuts
+    this.keyboardShortcuts.unregister('delete');
+    this.keyboardShortcuts.unregister('search');
   }
 
   // --- Type-safe event handlers ---

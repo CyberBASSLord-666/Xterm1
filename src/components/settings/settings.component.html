@@ -8,9 +8,7 @@
     <div class="mt-4 bg-secondary-bg/50 p-6 rounded-lg border border-primary-border space-y-6">
       <div>
         <label for="referrer" class="block text-sm font-medium text-primary-text">Referrer</label>
-        <p class="text-xs text-secondary-text mb-1">
-          Used in Pollinations GET calls for attribution.
-        </p>
+        <p class="text-xs text-secondary-text mb-1">Used in Pollinations GET calls for attribution.</p>
         <input
           id="referrer"
           type="url"
@@ -42,9 +40,7 @@
               [checked]="settingsService.nologo()"
               (change)="onNologoChange($event)"
             />
-            <div
-              class="w-11 h-6 bg-gray-600 rounded-full transition-colors duration-300 peer-checked:bg-accent"
-            ></div>
+            <div class="w-11 h-6 bg-gray-600 rounded-full transition-colors duration-300 peer-checked:bg-accent"></div>
             <div
               class="absolute top-[2px] left-[2px] bg-white border-gray-300 border rounded-full h-5 w-5 transition-transform duration-300 peer-checked:translate-x-full peer-checked:border-white"
             ></div>
@@ -71,9 +67,7 @@
               [checked]="settingsService.private()"
               (change)="onPrivateChange($event)"
             />
-            <div
-              class="w-11 h-6 bg-gray-600 rounded-full transition-colors duration-300 peer-checked:bg-accent"
-            ></div>
+            <div class="w-11 h-6 bg-gray-600 rounded-full transition-colors duration-300 peer-checked:bg-accent"></div>
             <div
               class="absolute top-[2px] left-[2px] bg-white border-gray-300 border rounded-full h-5 w-5 transition-transform duration-300 peer-checked:translate-x-full peer-checked:border-white"
             ></div>
@@ -100,9 +94,7 @@
               [checked]="settingsService.safe()"
               (change)="onSafeChange($event)"
             />
-            <div
-              class="w-11 h-6 bg-gray-600 rounded-full transition-colors duration-300 peer-checked:bg-accent"
-            ></div>
+            <div class="w-11 h-6 bg-gray-600 rounded-full transition-colors duration-300 peer-checked:bg-accent"></div>
             <div
               class="absolute top-[2px] left-[2px] bg-white border-gray-300 border rounded-full h-5 w-5 transition-transform duration-300 peer-checked:translate-x-full peer-checked:border-white"
             ></div>
@@ -135,9 +127,7 @@
             [checked]="settingsService.themeDark()"
             (change)="onThemeChange($event)"
           />
-          <div
-            class="w-11 h-6 bg-gray-600 rounded-full transition-colors duration-300 peer-checked:bg-accent"
-          ></div>
+          <div class="w-11 h-6 bg-gray-600 rounded-full transition-colors duration-300 peer-checked:bg-accent"></div>
           <div
             class="absolute top-[2px] left-[2px] bg-white border-gray-300 border rounded-full h-5 w-5 transition-transform duration-300 peer-checked:translate-x-full peer-checked:border-white"
           ></div>
@@ -147,9 +137,7 @@
   </div>
 
   <div class="mt-8 border-t border-primary-border pt-8">
-    <h3 class="text-xl font-bold tracking-tight text-white sm:text-2xl mt-8 mb-2">
-      Data Management
-    </h3>
+    <h3 class="text-xl font-bold tracking-tight text-white sm:text-2xl mt-8 mb-2">Data Management</h3>
     <div class="mt-4 bg-secondary-bg/50 p-6 rounded-lg border border-primary-border space-y-6">
       <div>
         <label class="block text-sm font-medium text-primary-text">Export Gallery</label>
@@ -168,14 +156,7 @@
               fill="none"
               viewBox="0 0 24 24"
             >
-              <circle
-                class="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                stroke-width="4"
-              ></circle>
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
               <path
                 class="opacity-75"
                 fill="currentColor"
@@ -187,6 +168,36 @@
             <span>Export My Gallery</span>
           }
         </button>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-primary-text">Import Gallery</label>
+        <p class="text-xs text-secondary-text mb-2">
+          Upload a previously exported ZIP file to restore your wallpapers.
+        </p>
+        <div class="flex items-center gap-2">
+          <input
+            type="file"
+            accept=".zip"
+            (change)="importGallery($event)"
+            [disabled]="importState.loading()"
+            class="block w-full text-sm text-primary-text file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-accent file:text-white hover:file:bg-opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
+          />
+          @if (importState.loading()) {
+            <svg
+              class="animate-spin h-5 w-5 text-accent"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+          }
+        </div>
       </div>
     </div>
   </div>
