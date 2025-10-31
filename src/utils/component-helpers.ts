@@ -81,22 +81,28 @@ export function throttledSignal<T>(source: Signal<T>, interval: number = 300): S
  *
  * All call sites in this codebase were updated in commit c5ccab5.
  * External consumers should update their code when upgrading.
+ *
+ * Backward Compatibility (v2.x):
+ * Both patterns (Promise<T> and () => Promise<T>) are supported during the deprecation period.
+ * The old Promise<T> pattern will be removed in v3.0.0.
  */
 export interface LoadingState {
   loading: Signal<boolean>;
   error: Signal<Error | null>;
-  execute: <T>(fn: () => Promise<T>) => Promise<T>;
+  execute: <T>(fn: (() => Promise<T>) | Promise<T>) => Promise<T>;
 }
 
 export function createLoadingState(): LoadingState {
   const loading = signal(false);
   const error = signal<Error | null>(null);
 
-  const execute = async <T>(fn: () => Promise<T>): Promise<T> => {
+  const execute = async <T>(fn: (() => Promise<T>) | Promise<T>): Promise<T> => {
     loading.set(true);
     error.set(null);
     try {
-      const result = await fn();
+      // Support both function and promise for backward compatibility
+      const promise = typeof fn === 'function' ? fn() : fn;
+      const result = await promise;
       return result;
     } catch (e) {
       const err = e instanceof Error ? e : new Error(String(e));
