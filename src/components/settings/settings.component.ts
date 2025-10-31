@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, signal, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
 import { GalleryService } from '../../services/gallery.service';
 import { ToastService } from '../../services/toast.service';
 import { SettingsService } from '../../services/settings.service';
@@ -20,13 +20,13 @@ export class SettingsComponent {
   // Professional loading states
   exportState = createLoadingState();
   importState = createLoadingState();
+  isExporting = this.exportState.loading;
 
   // Professional form validation for file import
   importFile = createFormField<File | null>(null, [
-    (file: File | null) => (file ? null : 'Please select a file'),
-    (file: File | null) => (file?.name.endsWith('.zip') ? null : 'Only .zip files are allowed'),
-    (file: File | null) =>
-      file && file.size <= 50 * 1024 * 1024 ? null : 'File must be under 50MB',
+    (file: File | null): string | null => (file ? null : 'Please select a file'),
+    (file: File | null): string | null => (file?.name.endsWith('.zip') ? null : 'Only .zip files are allowed'),
+    (file: File | null): string | null => (file && file.size <= 50 * 1024 * 1024 ? null : 'File must be under 50MB'),
   ]);
 
   // --- Type-safe event handlers ---
@@ -64,39 +64,41 @@ export class SettingsComponent {
   // --- End of type-safe event handlers ---
 
   public async exportGallery(): Promise<void> {
-    await this.exportState.execute(async () => {
-      this.toastService.show('Preparing gallery for export...');
-      const items = await this.galleryService.list();
-      if (items.length === 0) {
-        this.toastService.show('Your gallery is empty.');
-        return;
-      }
+    await this.exportState.execute(
+      (async (): Promise<void> => {
+        this.toastService.show('Preparing gallery for export...');
+        const items = await this.galleryService.list();
+        if (items.length === 0) {
+          this.toastService.show('Your gallery is empty.');
+          return;
+        }
 
-      const zip = new JSZip();
-      const metadata = [];
+        const zip = new JSZip();
+        const metadata = [];
 
-      for (const item of items) {
-        const { blob, thumb, ...meta } = item;
-        metadata.push(meta);
-        zip.file(`images/${item.id}.jpg`, blob, { binary: true });
-        zip.file(`thumbnails/${item.id}.jpg`, thumb, { binary: true });
-      }
+        for (const item of items) {
+          const { blob, thumb, ...meta } = item;
+          metadata.push(meta);
+          zip.file(`images/${item.id}.jpg`, blob, { binary: true });
+          zip.file(`thumbnails/${item.id}.jpg`, thumb, { binary: true });
+        }
 
-      zip.file('metadata.json', JSON.stringify(metadata, null, 2));
+        zip.file('metadata.json', JSON.stringify(metadata, null, 2));
 
-      this.toastService.show('Generating ZIP file...');
-      const content = await zip.generateAsync({ type: 'blob' });
+        this.toastService.show('Generating ZIP file...');
+        const content = await zip.generateAsync({ type: 'blob' });
 
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(content);
-      link.download = `PolliWall_Export_${new Date().toISOString().split('T')[0]}.zip`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(content);
+        link.download = `PolliWall_Export_${new Date().toISOString().split('T')[0]}.zip`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
 
-      URL.revokeObjectURL(link.href);
-      this.toastService.show('Export complete!');
-    });
+        URL.revokeObjectURL(link.href);
+        this.toastService.show('Export complete!');
+      })()
+    );
 
     if (this.exportState.error()) {
       this.toastService.show(`Export failed: ${this.exportState.error()}`);

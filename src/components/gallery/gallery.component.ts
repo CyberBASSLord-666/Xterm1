@@ -1,13 +1,4 @@
-import {
-  Component,
-  ChangeDetectionStrategy,
-  signal,
-  OnInit,
-  inject,
-  computed,
-  OnDestroy,
-  effect,
-} from '@angular/core';
+import { Component, ChangeDetectionStrategy, signal, OnInit, inject, computed, OnDestroy, effect } from '@angular/core';
 import { GalleryService } from '../../services/gallery.service';
 import { Collection, GalleryItem } from '../../services/idb';
 import { RouterLink } from '@angular/router';
@@ -29,6 +20,7 @@ export class GalleryComponent implements OnInit, OnDestroy {
 
   // Professional loading state management
   loadingState = createLoadingState();
+  loading = this.loadingState.loading;
 
   // Thumbnail URL management to prevent memory leaks
   thumbUrls = new Map<string, string>();
@@ -42,6 +34,7 @@ export class GalleryComponent implements OnInit, OnDestroy {
   // Professional selection state management
   isSelecting = signal(false);
   selection = createSelectionState<string>();
+  selectedIds = this.selection.selectedItems;
 
   filteredItems = computed(() => {
     const query = this.searchQuery().toLowerCase();
@@ -114,14 +107,16 @@ export class GalleryComponent implements OnInit, OnDestroy {
 
   public async ngOnInit(): Promise<void> {
     // Use professional loading state
-    await this.loadingState.execute(async () => {
-      const [items, collections] = await Promise.all([
-        this.galleryService.list(),
-        this.galleryService.listCollections(),
-      ]);
-      this.allItems.set(items);
-      this.collections.set(collections);
-    });
+    await this.loadingState.execute(
+      (async (): Promise<void> => {
+        const [items, collections] = await Promise.all([
+          this.galleryService.list(),
+          this.galleryService.listCollections(),
+        ]);
+        this.allItems.set(items);
+        this.collections.set(collections);
+      })()
+    );
   }
 
   public ngOnDestroy(): void {
@@ -155,9 +150,7 @@ export class GalleryComponent implements OnInit, OnDestroy {
     event.preventDefault(); // prevent navigation
     event.stopPropagation();
     const isFav = await this.galleryService.toggleFavorite(id);
-    this.allItems.update((items) =>
-      items.map((i) => (i.id === id ? { ...i, isFavorite: isFav } : i))
-    );
+    this.allItems.update((items) => items.map((i) => (i.id === id ? { ...i, isFavorite: isFav } : i)));
     this.toastService.show(isFav ? 'Added to favorites.' : 'Removed from favorites.');
   }
 

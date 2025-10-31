@@ -43,6 +43,8 @@ export class EditorComponent implements OnInit {
   variantState = createLoadingState();
   restyleState = createLoadingState();
   audioState = createLoadingState();
+  working = computed(() => this.variantState.loading() || this.restyleState.loading() || this.audioState.loading());
+  audioWorking = this.audioState.loading;
 
   lineage = signal<{ parent: GalleryItem | null; children: GalleryItem[] }>({
     parent: null,
@@ -129,39 +131,41 @@ export class EditorComponent implements OnInit {
     const base = this.item();
     if (!base) return;
 
-    await this.variantState.execute(async () => {
-      const generationSettings = this.settingsService.getGenerationOptions();
-      const vprompt = await composeVariantPrompt(base.prompt, {
-        private: generationSettings.private,
-        referrer: generationSettings.referrer,
-      });
-      const { blob, width, height, aspect, mode } = await createDeviceWallpaper({
-        device: { width: base.width, height: base.height, dpr: 1 },
-        supported: { [base.aspect]: [{ w: base.width, h: base.height }] },
-        prompt: vprompt,
-        options: { ...generationSettings, model: base.model },
-      });
-      const id = crypto.randomUUID();
-      const createdAt = new Date().toISOString();
-      const thumb = await this.imageUtilService.makeThumbnail(blob);
-      await this.gs.add({
-        id,
-        createdAt,
-        width,
-        height,
-        aspect,
-        mode,
-        model: base.model,
-        prompt: vprompt,
-        blob,
-        thumb,
-        lineage: { parentId: base.id, kind: 'variant' },
-        isFavorite: false,
-        collectionId: base.collectionId,
-      });
-      this.toast.show('Variant added to gallery.');
-      await this.router.navigate(['/edit', id]);
-    });
+    await this.variantState.execute(
+      (async (): Promise<void> => {
+        const generationSettings = this.settingsService.getGenerationOptions();
+        const vprompt = await composeVariantPrompt(base.prompt, {
+          private: generationSettings.private,
+          referrer: generationSettings.referrer,
+        });
+        const { blob, width, height, aspect, mode } = await createDeviceWallpaper({
+          device: { width: base.width, height: base.height, dpr: 1 },
+          supported: { [base.aspect]: [{ w: base.width, h: base.height }] },
+          prompt: vprompt,
+          options: { ...generationSettings, model: base.model },
+        });
+        const id = crypto.randomUUID();
+        const createdAt = new Date().toISOString();
+        const thumb = await this.imageUtilService.makeThumbnail(blob);
+        await this.gs.add({
+          id,
+          createdAt,
+          width,
+          height,
+          aspect,
+          mode,
+          model: base.model,
+          prompt: vprompt,
+          blob,
+          thumb,
+          lineage: { parentId: base.id, kind: 'variant' },
+          isFavorite: false,
+          collectionId: base.collectionId,
+        });
+        this.toast.show('Variant added to gallery.');
+        await this.router.navigate(['/edit', id]);
+      })()
+    );
 
     if (this.variantState.error()) {
       this.toast.show(`Variant failed: ${this.variantState.error()}`);
@@ -172,39 +176,41 @@ export class EditorComponent implements OnInit {
     const base = this.item();
     if (!base) return;
 
-    await this.restyleState.execute(async () => {
-      const generationSettings = this.settingsService.getGenerationOptions();
-      const rprompt = await composeRestylePrompt(base.prompt, this.restyle(), {
-        private: generationSettings.private,
-        referrer: generationSettings.referrer,
-      });
-      const { blob, width, height, aspect, mode } = await createDeviceWallpaper({
-        device: { width: base.width, height: base.height, dpr: 1 },
-        supported: { [base.aspect]: [{ w: base.width, h: base.height }] },
-        prompt: rprompt,
-        options: { ...generationSettings, model: base.model },
-      });
-      const id = crypto.randomUUID();
-      const createdAt = new Date().toISOString();
-      const thumb = await this.imageUtilService.makeThumbnail(blob);
-      await this.gs.add({
-        id,
-        createdAt,
-        width,
-        height,
-        aspect,
-        mode,
-        model: base.model,
-        prompt: rprompt,
-        blob,
-        thumb,
-        lineage: { parentId: base.id, kind: 'restyle' },
-        isFavorite: false,
-        collectionId: base.collectionId,
-      });
-      this.toast.show('Restyle added to gallery.');
-      await this.router.navigate(['/edit', id]);
-    });
+    await this.restyleState.execute(
+      (async (): Promise<void> => {
+        const generationSettings = this.settingsService.getGenerationOptions();
+        const rprompt = await composeRestylePrompt(base.prompt, this.restyle(), {
+          private: generationSettings.private,
+          referrer: generationSettings.referrer,
+        });
+        const { blob, width, height, aspect, mode } = await createDeviceWallpaper({
+          device: { width: base.width, height: base.height, dpr: 1 },
+          supported: { [base.aspect]: [{ w: base.width, h: base.height }] },
+          prompt: rprompt,
+          options: { ...generationSettings, model: base.model },
+        });
+        const id = crypto.randomUUID();
+        const createdAt = new Date().toISOString();
+        const thumb = await this.imageUtilService.makeThumbnail(blob);
+        await this.gs.add({
+          id,
+          createdAt,
+          width,
+          height,
+          aspect,
+          mode,
+          model: base.model,
+          prompt: rprompt,
+          blob,
+          thumb,
+          lineage: { parentId: base.id, kind: 'restyle' },
+          isFavorite: false,
+          collectionId: base.collectionId,
+        });
+        this.toast.show('Restyle added to gallery.');
+        await this.router.navigate(['/edit', id]);
+      })()
+    );
 
     if (this.restyleState.error()) {
       this.toast.show(`Restyle failed: ${this.restyleState.error()}`);
@@ -268,14 +274,16 @@ export class EditorComponent implements OnInit {
       return;
     }
 
-    this.audioState.execute(async () => {
-      return new Promise<void>((resolve, reject) => {
-        const utterance = textToSpeech(item.prompt);
-        utterance.onend = (): void => resolve();
-        utterance.onerror = (e): void => reject(new Error(e.error));
-        window.speechSynthesis.speak(utterance);
-      });
-    });
+    this.audioState.execute(
+      (async (): Promise<void> => {
+        return new Promise<void>((resolve, reject) => {
+          const utterance = textToSpeech(item.prompt);
+          utterance.onend = (): void => resolve();
+          utterance.onerror = (e): void => reject(new Error(e.error));
+          window.speechSynthesis.speak(utterance);
+        });
+      })()
+    );
 
     if (this.audioState.error()) {
       this.toast.show(`Audio failed: ${this.audioState.error()}`);
