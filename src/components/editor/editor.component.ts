@@ -26,6 +26,7 @@ import { createLoadingState, createUndoRedo } from '../../utils';
 
 @Component({
   selector: 'pw-editor',
+  standalone: true,
   templateUrl: './editor.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, FormsModule],

@@ -7,6 +7,7 @@ import { createLoadingState, createFormField } from '../../utils';
 
 @Component({
   selector: 'pw-collections',
+  standalone: true,
   templateUrl: './collections.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule],

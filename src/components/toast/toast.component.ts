@@ -3,6 +3,7 @@ import { UI_CONFIG } from '../../constants';
 
 @Component({
   selector: 'app-toast',
+  standalone: true,
   templateUrl: './toast.component.html',
   imports: [],
 })

@@ -8,6 +8,7 @@ import { createLoadingState, createFormField } from '../../utils';
 
 @Component({
   selector: 'pw-settings',
+  standalone: true,
   templateUrl: './settings.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule],

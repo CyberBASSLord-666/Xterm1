@@ -7,6 +7,7 @@ import { createSelectionState, createLoadingState } from '../../utils';
 
 @Component({
   selector: 'pw-gallery',
+  standalone: true,
   templateUrl: './gallery.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink],
