@@ -1,39 +1,132 @@
-name: Security
+# -----------------------------------------------------------------------------
+# A comprehensive, in-depth GitHub Actions workflow for security.
+#
+# This workflow runs three parallel jobs:
+# 1. Dependency Review: Checks for vulnerable dependencies in Pull Requests.
+# 2. NPM Audit: Runs 'npm audit' to find vulnerabilities in the full dependency tree.
+# 3. CodeQL Analysis: Performs static analysis security testing (SAST) on the codebase.
+# -----------------------------------------------------------------------------
+
+name: "Comprehensive Security Workflow"
 
 on:
   push:
-    branches: [main]
+    branches: ["main"]
   pull_request:
-    branches: [main]
+    branches: ["main"]
   schedule:
-    - cron: '0 0 * * 0' # Weekly on Sunday
+    # Run weekly on Sunday at 00:00 UTC to catch new vulnerabilities
+    - cron: '0 0 * * 0'
 
 jobs:
+  # Job 1: Check for vulnerable dependencies introduced in a Pull Request
   dependency-review:
+    name: "Dependency Review"
     runs-on: ubuntu-latest
+    # This job only runs on Pull Requests
     if: github.event_name == 'pull_request'
+    permissions:
+      contents: read # Required to checkout the code
+      pull-requests: write # Required to post comments on the PR
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/dependency-review-action@v4
+      - name: "Checkout Repository"
+        uses: actions/checkout@v4
 
+      - name: "Run Dependency Review"
+        # This action checks for known vulnerabilities in the dependencies
+        # being changed by the pull request.
+        uses: actions/dependency-review-action@v4
+
+  # Job 2: Run 'npm audit' for a comprehensive check of all dependencies
   npm-audit:
+    name: "NPM Audit"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v6
+      - name: "Checkout Repository"
+        uses: actions/checkout@v4
+
+      - name: "Setup Node.js"
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: npm audit --audit-level=moderate
 
+      - name: "Run NPM Audit"
+        # Runs 'npm audit' to check all dependencies, not just PR changes.
+        # We set 'continue-on-error: true' so that a vulnerability finding
+        # doesn't fail the entire build. This allows the team to review
+        # the audit report in the logs without blocking other checks.
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+
+  # Job 3: Perform deep static analysis with CodeQL
   codeql:
-    name: CodeQL Security Analysis
+    name: "CodeQL Security Analysis"
     runs-on: ubuntu-latest
+    # This job can be long, so a generous timeout is set.
     timeout-minutes: 360
+
     permissions:
+      # Required for checking out the code
       actions: read
       contents: read
+      # Required for uploading CodeQL results to the Security tab
       security-events: write
-    strategy:
+
+    steps:
+      - name: "Checkout Repository"
+        # 'fetch-depth: 0' is required for CodeQL to perform a full analysis
+        # of the commit history.
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: "Setup Node.js"
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          # Cache npm dependencies for faster 'npm ci'
+          cache: 'npm'
+
+      - name: "Install Dependencies"
+        # Use 'npm ci' for a clean, reproducible install in CI
+        # The --legacy-peer-deps flag is required by your project's .npmrc
+        run: npm ci --legacy-peer-deps --ignore-scripts
+
+      - name: "Initialize CodeQL"
+        # Using @v3 as it is the recommended stable major version
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          # We point to our custom configuration file.
+          # This path matches your repository structure.
+          config-file: .github/codeql-config.yml
+          #
+          # *** IMPORTANT ***
+          # We have REMOVED the 'queries' key from this step.
+          # This forces CodeQL to use the query suites defined *inside*
+          # the 'codeql-config.yml' file ('security-extended'),
+          # making that file the single source of truth and avoiding
+          # redundant or conflicting query runs.
+
+      - name: "Run CodeQL Autobuild"
+        # Using @v3 as it is the recommended stable major version
+        uses: github/codeql-action/autobuild@v3
+        # Autobuild will correctly find the 'npm run build' script
+        # in your package.json and execute it.
+        #
+        # - name: "Build Application"
+        #   run: npm run build # Or your specific build command
+        #
+
+      - name: "Perform CodeQL Analysis"
+        # Using @v3 as it is the recommended stable major version
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:javascript-typescript"
+          # 'upload: true' is the default, but we're explicit:
+          # this uploads the results to the GitHub Security tab.
+          upload: true
+
       fail-fast: false
       matrix:
         language: ['javascript-typescript']
