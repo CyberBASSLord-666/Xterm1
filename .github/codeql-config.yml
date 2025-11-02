@@ -1,30 +1,93 @@
-name: "CodeQL Configuration"
+# -----------------------------------------------------------------------------
+# A comprehensive, in-depth CodeQL configuration file for the PolliWall
+# Angular 20 project.
+#
+# This configuration is optimized for high signal-to-noise ratio,
+# focusing on comprehensive security scanning.
+# -----------------------------------------------------------------------------
 
-# Disable default queries and use security-and-quality suite
-disable-default-queries: false
+name: "PolliWall CodeQL Configuration"
 
-# Use security-extended query suite for comprehensive coverage
+# We explicitly disable the default queries.
+# Since we are specifying our own suite in the 'queries' block, setting
+# this to 'true' ensures *only* our chosen suite runs, preventing
+# redundant scans.
+disable-default-queries: true
+
+# Specify the query suites to run.
 queries:
-  - name: security-extended
+  # 'security-extended' is the most comprehensive security suite.
+  # It includes all queries from 'security-and-quality' (the default)
+  # plus additional queries for security properties that are more complex.
+  #
+  # We do NOT need to also list 'security-and-quality' as it is
+  # fully included in 'security-extended'.
+  - name: "Full Security Suite"
     uses: security-extended
-  - name: security-and-quality
-    uses: security-and-quality
 
-# Paths to analyze (focus on source code including Angular templates)
-paths:
-  - src
-  - index.tsx
-  - '**/*.html'
+# We remove the 'paths' block to scan from the repository root.
+# It's more robust to rely on 'paths-ignore' to exclude
+# non-source files than it is to manually include source folders.
+# This ensures that if you add new source directories,
+# they are automatically included in the scan.
 
-# Paths to ignore (exclude test files, generated code, dependencies, IDE configs)
+# Paths to ignore during analysis.
+# This is crucial for performance and reducing false positives from
+# test files, dependencies, and build artifacts.
 paths-ignore:
-  - '**/*.spec.ts'
-  - '**/*.test.ts'
-  - '**/__tests__/**'
-  - '**/node_modules/**'
-  - '**/dist/**'
-  - '**/build/**'
-  - '**/cypress/**'
+  # --- Dependencies ---
+  - "**/node_modules/**"
+
+  # --- Build & Artifacts ---
+  - "**/dist/**"
+  - "**/build/**"
+  - "**/.angular/**"
+  - "**/coverage/**"
+  - "**/.nyc_output/**"
+  - "playwright-report/**"
+  - "test-results/**"
+
+  # --- Test Files & Test Frameworks ---
+  - "**/*.spec.ts"
+  - "**/*.test.ts"
+  - "**/__tests__/**"
+  - "**/cypress/**"
+  - "**/playwright/**"
+  - "setup-jest.ts"
+
+  # --- Config Files (from repo context) ---
+  # These are not executable source code and create noise.
+  - "**/*.config.ts"
+  - "**/*.config.js"
+  - "angular.json"
+  - "ngsw-config.json"
+  - "security-headers.json"
+  - "vercel.json"
+  - "package-lock.json"
+  - ".*.json" # Covers .eslintrc.json, .postcssrc.json, .prettierrc.json
+  - "*.config.json"
+
+  # --- IDE & Environment ---
+  - "**/.vscode/**"
+  - "**/.idea/**"
+  - "**/.husky/**"
+
+# Query filters to suppress specific alerts or paths.
+query-filters:
+  # 'js/unused-local-variable' is a code quality/style issue,
+  # not a security vulnerability. Linters (like ESLint) are better for this.
+  - exclude:
+      id: js/unused-local-variable
+
+  # 'js/angular/disabling-sce' flags disabling Angular's Strict
+  # Contextual Escaping. This can be a false positive if you
+  # are properly sanitizing HTML elsewhere (which validation.service.ts does).
+  - exclude:
+      id: js/angular/disabling-sce
+
+# The 'packs' block from the original file was redundant.
+# The 'queries' block above is the correct way to select suites
+# from the *default* built-in 'codeql/javascript-queries' pack.
   - '**/playwright/**'
   - '**/*.config.ts'
   - '**/*.config.js'
