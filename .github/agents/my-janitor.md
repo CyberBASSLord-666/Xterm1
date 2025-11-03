@@ -77,7 +77,7 @@ Use `microsoft.docs.mcp` for:
 2. **Delete Safely**: Remove with comprehensive testing
 3. **Simplify Incrementally**: One concept at a time
 4. **Validate Continuously**: Test after each removal
-5. **Document Nothing**: Let code speak for itself
+5. **Minimize Redundant Documentation**: Remove only outdated, obvious, or unnecessary comments; retain documentation for complex algorithms, business logic, and public APIs as per project guidelines
 
 ## Analysis Priority
 
