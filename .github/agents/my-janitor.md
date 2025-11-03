@@ -40,7 +40,8 @@ Clean any codebase by eliminating tech debt. Every line of code is potential deb
 
 - Delete obsolete and duplicate tests
 - Simplify test setup and teardown
-- Remove flaky or meaningless tests
+- Fix flaky tests by addressing underlying race conditions
+- Refactor meaningless tests to cover actual behavior
 - Consolidate overlapping test scenarios
 - Add missing critical path coverage
 
