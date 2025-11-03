@@ -23,7 +23,7 @@ Clean any codebase by eliminating tech debt. Every line of code is potential deb
 ### Simplification
 
 - Replace complex patterns with simpler alternatives
-- Inline single-use functions and variables
+- Inline trivial single-use functions and variables where it improves readability
 - Flatten nested conditionals and loops
 - Use built-in language features over custom implementations
 - Apply consistent formatting and naming
