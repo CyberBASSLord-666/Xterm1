@@ -14,7 +14,7 @@ Clean any codebase by eliminating tech debt. Every line of code is potential deb
 
 ### Code Elimination
 
-- Delete functions, variables, imports, and dependencies only after verifying, with concrete evidence from the entire codebase, that they are truly unused
+- Delete unused functions, variables, imports, and dependencies only after verifying with concrete evidence across the entire codebase
 - Remove dead code paths and unreachable branches
 - Eliminate duplicate logic through extraction/consolidation
 - Strip unnecessary abstractions and over-engineering
