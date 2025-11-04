@@ -22,7 +22,7 @@ Tasks:
   - Replace obsolete logic with clean, simple alternatives.
   - Standardize naming and format.
   - Verify tests and update dependencies only with confirmation.
-Use repository conventions and the guidelines in KNOWLEDGE_BASE.md.
+Use repository conventions and the guidelines in ARCHITECTURE.md and DEVELOPMENT.md.
 
 ## Execution Strategy
 1. **MeaSure First**: Run a full scan of the repos.
