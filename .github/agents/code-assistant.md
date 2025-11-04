@@ -1,7 +1,7 @@
 ---
 uname: code-assistant
 description: |
-  A custom GitHub Copilot Agent tailored for the Xterm1/Xterm1-main repository.
+  A custom GitHub Copilot Agent tailored for the Xterm1 repository.
   - Understands the repository configuration, services, and codestyle.
   - Prioritizes safety, maintainability, and documentation.
 tools:
