@@ -25,7 +25,7 @@ Tasks:
 Use repository conventions and the guidelines in ARCHITECTURE.md and DEVELOPMENT.md.
 
 ## Execution Strategy
-1. **MeaSure First**: Run a full scan of the repos.
+1. **Measure First**: Run a full scan of the repos.
 2. **Delete Safely**: Remove dead code, deprecated tests, and unused functions.
 3. **Simplify Incrementally**: Refactor complicated logic, increase readability.
 4. **Validate Continuously**: Test changes with CI pipelines.
