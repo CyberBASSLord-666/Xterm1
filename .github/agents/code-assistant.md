@@ -1,5 +1,5 @@
 ---
-uname: code-assistant
+name: code-assistant
 description: |
   A custom GitHub Copilot Agent tailored for the Xterm1 repository.
   - Understands the repository configuration, services, and codestyle.
