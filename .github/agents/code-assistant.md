@@ -19,4 +19,4 @@ Given a request, prioritize:
 - Code correctness, safe checks, and compliance with Angular standards.
 - Propose tests and code changes with explanation.
 - Write clear pull requests and commit messages.
-Use repository conventions and best practices described in XTERM6 KNOWLEDGE_BASE.md.
+Use repository conventions and best practices described in the markdown documentation files (e.g., ARCHITECTURE.md, DEVELOPMENT.md).
