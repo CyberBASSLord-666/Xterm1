@@ -4,7 +4,7 @@
       <h2 class="text-3xl font-bold tracking-wider text-primary-text sm:text-4xl font-mono">Community Feed</h2>
       <p class="text-secondary-text mt-1">A live stream of public creations from Pollinations.ai</p>
     </div>
-    <div class="flex items-center gap-2">
+    <div class="flex flex-col sm:flex-row sm:items-center gap-2">
       <div class="isolate inline-flex rounded-md shadow-sm">
         <button
           (click)="toggleFeedMode('image')"
@@ -29,20 +29,118 @@
           Texts
         </button>
       </div>
-      <button
-        (click)="togglePause()"
-        class="px-4 py-2 rounded-md font-bold transition-colors bg-secondary-bg hover:bg-opacity-80 text-primary-text border border-primary-border"
-      >
-        {{ isPaused() ? 'Resume' : 'Pause' }}
-      </button>
+      <div class="flex items-center gap-2">
+        <button
+          (click)="togglePause()"
+          class="px-4 py-2 rounded-md font-bold transition-colors bg-secondary-bg hover:bg-opacity-80 text-primary-text border border-primary-border"
+        >
+          {{ pauseButtonLabel() }}
+        </button>
+        @if (activeStatus() === 'error' || activeStatus() === 'offline') {
+          <button
+            (click)="retryActive()"
+            class="px-4 py-2 rounded-md font-bold transition-colors bg-rose-500/10 hover:bg-rose-500/20 text-rose-200 border border-rose-500/40"
+          >
+            Reconnect
+          </button>
+        }
+      </div>
     </div>
   </div>
 
+  <div class="mt-4 flex flex-col gap-4">
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex flex-wrap items-center gap-3">
+        <span
+          class="inline-flex items-center px-3 py-1 rounded-full border text-xs font-semibold tracking-wide uppercase"
+          [ngClass]="activeStatusClasses()"
+        >
+          {{ activeStatusLabel() }}
+        </span>
+        <span
+          class="inline-flex items-center px-3 py-1 rounded-full border text-xs font-semibold tracking-wide uppercase"
+          [ngClass]="healthBadgeClasses()"
+        >
+          {{ healthBadgeLabel() }}
+        </span>
+        <span class="text-xs text-secondary-text"
+          >Last update: <span class="font-semibold text-primary-text">{{ lastUpdatedLabel() }}</span></span
+        >
+        <span class="text-xs text-secondary-text"
+          >Uptime: <span class="font-semibold text-primary-text">{{ uptimeLabel() }}</span></span
+        >
+        <span class="text-xs text-secondary-text"
+          >Last failure: <span class="font-semibold text-primary-text">{{ lastFailureLabel() }}</span></span
+        >
+        @if (isPaused() && activeMetrics().buffered > 0) {
+          <span class="text-xs text-amber-300 font-semibold"> Buffering {{ activeMetrics().buffered }} events </span>
+        }
+      </div>
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-secondary-text">
+        <span class="flex items-center gap-1">
+          <span class="font-mono text-primary-text">{{ activeMetrics().received }}</span>
+          <span>received</span>
+        </span>
+        <span class="flex items-center gap-1">
+          <span class="font-mono text-primary-text">{{ activeMetrics().dropped }}</span>
+          <span>deduped</span>
+        </span>
+        <span class="flex items-center gap-1">
+          <span class="font-mono text-primary-text">{{ activeMetrics().skippedWhilePaused }}</span>
+          <span>buffered while paused</span>
+        </span>
+        <span class="flex items-center gap-1">
+          <span class="font-mono text-primary-text">{{ eventsPerMinuteLabel() }}</span>
+          <span>events/min</span>
+        </span>
+        <span class="flex items-center gap-1">
+          <span class="font-mono text-primary-text">{{ averageIntervalLabel() }}</span>
+          <span>avg interval</span>
+        </span>
+        @if (activeMetrics().reconnectAttempts > 0) {
+          <span class="flex items-center gap-1">
+            <span class="font-mono text-primary-text">{{ activeMetrics().reconnectAttempts }}</span>
+            <span>reconnects</span>
+          </span>
+        }
+        @if (activeDiagnostics().consecutiveErrors > 0) {
+          <span class="flex items-center gap-1 text-rose-300">
+            <span class="font-mono text-rose-200">{{ activeDiagnostics().consecutiveErrors }}</span>
+            <span>recent errors</span>
+          </span>
+        }
+      </div>
+    </div>
+
+    @if (activeDiagnostics().stalled) {
+      <div class="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-amber-100 text-sm">
+        Throughput monitoring detected a stall (no events for {{ stallDurationLabel() }}). We will continue buffering
+        and attempt recovery automatically.
+      </div>
+    }
+  </div>
+
+  @if (activeError()) {
+    <div
+      class="mt-4 rounded-lg border border-rose-500/40 bg-rose-500/10 text-rose-100 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+    >
+      <p class="text-sm">{{ activeError() }}</p>
+      <div class="flex items-center gap-2">
+        <button
+          (click)="retryActive()"
+          class="px-3 py-1.5 text-sm font-semibold rounded-md border border-rose-500/60 bg-rose-500/20 hover:bg-rose-500/30 transition-colors"
+        >
+          Retry now
+        </button>
+      </div>
+    </div>
+  }
+
   <div class="mt-8">
     @if (feedMode() === 'image') {
-      @if (feedItems().length > 0) {
+      @if (imageFeedItems().length > 0) {
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          @for (item of feedItems(); track item.imageURL + item.prompt) {
+          @for (item of imageFeedItems(); track item.imageURL + item.prompt) {
             <div class="relative group border border-primary-border rounded-lg overflow-hidden animate-fade-in-up">
               <img
                 [src]="item.imageURL"

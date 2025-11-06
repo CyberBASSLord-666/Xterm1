@@ -95,11 +95,7 @@ export class PerformanceMonitorService {
    * @param metadata Optional metadata
    * @returns The result of the operation
    */
-  public async measureAsync<T>(
-    name: string,
-    operation: () => Promise<T>,
-    metadata?: Metadata
-  ): Promise<T> {
+  public async measureAsync<T>(name: string, operation: () => Promise<T>, metadata?: Metadata): Promise<T> {
     const id = this.startMeasure(name, metadata);
     try {
       return await operation();
@@ -173,17 +169,34 @@ export class PerformanceMonitorService {
 
     if ('PerformanceObserver' in window) {
       try {
-        // Time to First Byte
-        const navigation = performance.getEntriesByType(
-          'navigation'
-        )[0] as PerformanceNavigationTimingExtended;
+        // Time to First Byte / Time to Interactive
+        const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTimingExtended;
+
+        let responseStart: number | undefined;
+        let requestStart: number | undefined;
+        let domInteractive: number | undefined;
+        let fetchStart: number | undefined;
+
         if (navigation) {
-          if (navigation.responseStart && navigation.requestStart) {
-            vitals.ttfb = navigation.responseStart - navigation.requestStart;
-          }
-          if (navigation.domInteractive && navigation.fetchStart) {
-            vitals.tti = navigation.domInteractive - navigation.fetchStart;
-          }
+          responseStart = navigation.responseStart ?? responseStart;
+          requestStart = navigation.requestStart ?? requestStart;
+          domInteractive = navigation.domInteractive ?? domInteractive;
+          fetchStart = navigation.fetchStart ?? fetchStart;
+        }
+
+        const legacyTiming = (performance as Performance & { timing?: PerformanceTiming }).timing;
+        if (legacyTiming) {
+          responseStart = legacyTiming.responseStart ?? responseStart;
+          requestStart = legacyTiming.requestStart ?? requestStart;
+          domInteractive = legacyTiming.domInteractive ?? domInteractive;
+          fetchStart = legacyTiming.fetchStart ?? fetchStart;
+        }
+
+        if (responseStart !== undefined && requestStart !== undefined) {
+          vitals.ttfb = responseStart - requestStart;
+        }
+        if (domInteractive !== undefined && fetchStart !== undefined) {
+          vitals.tti = domInteractive - fetchStart;
         }
 
         // First Contentful Paint

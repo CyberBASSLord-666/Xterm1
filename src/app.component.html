@@ -12,38 +12,20 @@
           </a>
         </div>
         <div class="flex items-center">
-          <nav class="hidden md:flex items-center space-x-1">
-            <a
-              routerLink="/"
-              routerLinkActive="font-bold text-accent"
-              [routerLinkActiveOptions]="{ exact: true }"
-              class="px-3 py-2 rounded-md text-sm font-medium text-secondary-text hover:text-accent transition-colors"
-              >Create</a
-            >
-            <a
-              routerLink="/gallery"
-              routerLinkActive="font-bold text-accent"
-              class="px-3 py-2 rounded-md text-sm font-medium text-secondary-text hover:text-accent transition-colors"
-              >Gallery</a
-            >
-            <a
-              routerLink="/collections"
-              routerLinkActive="font-bold text-accent"
-              class="px-3 py-2 rounded-md text-sm font-medium text-secondary-text hover:text-accent transition-colors"
-              >Collections</a
-            >
-            <a
-              routerLink="/feed"
-              routerLinkActive="font-bold text-accent"
-              class="px-3 py-2 rounded-md text-sm font-medium text-secondary-text hover:text-accent transition-colors"
-              >Feed</a
-            >
-            <a
-              routerLink="/settings"
-              routerLinkActive="font-bold text-accent"
-              class="px-3 py-2 rounded-md text-sm font-medium text-secondary-text hover:text-accent transition-colors"
-              >Settings</a
-            >
+          <nav class="hidden md:flex items-center space-x-1" aria-label="Primary navigation">
+            @for (item of navigationItems; track item.path) {
+              <a
+                [routerLink]="item.path"
+                routerLinkActive="font-bold text-accent"
+                #desktopLink="routerLinkActive"
+                [routerLinkActiveOptions]="item.exact ? { exact: true } : undefined"
+                [attr.data-analytics-id]="item.analyticsId || null"
+                [attr.aria-current]="desktopLink.isActive ? 'page' : null"
+                [ngClass]="desktopNavLinkClass"
+              >
+                {{ item.label }}
+              </a>
+            }
           </nav>
           <div class="flex items-center ml-4">
             <button
@@ -127,43 +109,21 @@
     <!-- Mobile menu, show/hide based on menu state. -->
     @if (isMobileMenuOpen()) {
       <div class="md:hidden animate-slide-down" id="mobile-menu">
-        <nav class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-          <a
-            (click)="closeMobileMenu()"
-            routerLink="/"
-            routerLinkActive="bg-accent text-white"
-            [routerLinkActiveOptions]="{ exact: true }"
-            class="block px-3 py-2 rounded-md text-base font-medium text-secondary-text hover:text-accent hover:bg-secondary-bg transition-colors"
-            >Create</a
-          >
-          <a
-            (click)="closeMobileMenu()"
-            routerLink="/gallery"
-            routerLinkActive="bg-accent text-white"
-            class="block px-3 py-2 rounded-md text-base font-medium text-secondary-text hover:text-accent hover:bg-secondary-bg transition-colors"
-            >Gallery</a
-          >
-          <a
-            (click)="closeMobileMenu()"
-            routerLink="/collections"
-            routerLinkActive="bg-accent text-white"
-            class="block px-3 py-2 rounded-md text-base font-medium text-secondary-text hover:text-accent hover:bg-secondary-bg transition-colors"
-            >Collections</a
-          >
-          <a
-            (click)="closeMobileMenu()"
-            routerLink="/feed"
-            routerLinkActive="bg-accent text-white"
-            class="block px-3 py-2 rounded-md text-base font-medium text-secondary-text hover:text-accent hover:bg-secondary-bg transition-colors"
-            >Feed</a
-          >
-          <a
-            (click)="closeMobileMenu()"
-            routerLink="/settings"
-            routerLinkActive="bg-accent text-white"
-            class="block px-3 py-2 rounded-md text-base font-medium text-secondary-text hover:text-accent hover:bg-secondary-bg transition-colors"
-            >Settings</a
-          >
+        <nav class="px-2 pt-2 pb-3 space-y-1 sm:px-3" aria-label="Mobile primary navigation">
+          @for (item of navigationItems; track item.path) {
+            <a
+              (click)="handleMobileNavigation()"
+              [routerLink]="item.path"
+              routerLinkActive="bg-accent text-white"
+              #mobileLink="routerLinkActive"
+              [routerLinkActiveOptions]="item.exact ? { exact: true } : undefined"
+              [attr.data-analytics-id]="item.analyticsId || null"
+              [attr.aria-current]="mobileLink.isActive ? 'page' : null"
+              [ngClass]="mobileNavLinkClass"
+            >
+              {{ item.label }}
+            </a>
+          }
         </nav>
       </div>
     }
