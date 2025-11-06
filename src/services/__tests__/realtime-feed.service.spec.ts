@@ -332,4 +332,50 @@ describe('RealtimeFeedService', () => {
       }
     }
   });
+
+  it('skips stall monitoring when the document is hidden before the feed connects', () => {
+    const originalDescriptor = Object.getOwnPropertyDescriptor(document, 'visibilityState');
+    let visibilityState = 'hidden';
+
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => visibilityState as DocumentVisibilityState,
+    });
+
+    const internalState = service as unknown as { lastVisibilityState?: DocumentVisibilityState };
+    const previousVisibility = internalState.lastVisibilityState;
+    internalState.lastVisibilityState = 'hidden';
+
+    try {
+      service.start('image', { reset: true });
+      const source = sources.get('image');
+      expect(source).toBeDefined();
+      source?.emitOpen();
+
+      jest.advanceTimersByTime(60000);
+
+      expect(service.diagnosticsSignal('image')().stalled).toBe(false);
+
+      visibilityState = 'prerender';
+      document.dispatchEvent(new Event('visibilitychange'));
+
+      jest.advanceTimersByTime(60000);
+
+      expect(service.diagnosticsSignal('image')().stalled).toBe(false);
+
+      visibilityState = 'visible';
+      document.dispatchEvent(new Event('visibilitychange'));
+
+      jest.advanceTimersByTime(5000);
+
+      expect(service.diagnosticsSignal('image')().stalled).toBe(true);
+    } finally {
+      if (originalDescriptor) {
+        Object.defineProperty(document, 'visibilityState', originalDescriptor);
+      } else {
+        delete (document as { visibilityState?: string }).visibilityState;
+      }
+      internalState.lastVisibilityState = previousVisibility;
+    }
+  });
 });

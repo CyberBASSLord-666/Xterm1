@@ -795,6 +795,20 @@ export class RealtimeFeedService implements OnDestroy {
     }
 
     this.stopMonitoring(state);
+
+    if (this.isVisibilityHidden(this.lastVisibilityState)) {
+      state.monitoringSuspendedForVisibility = true;
+      const diagnostics = state.diagnostics();
+      if (diagnostics.stalled || diagnostics.stallDurationMs !== 0) {
+        this.updateDiagnostics(state, (snapshot) => ({
+          ...snapshot,
+          stalled: false,
+          stallDurationMs: 0,
+        }));
+      }
+      return;
+    }
+
     state.monitoringSuspendedForVisibility = false;
 
     this.ngZone.runOutsideAngular(() => {
@@ -902,7 +916,7 @@ export class RealtimeFeedService implements OnDestroy {
   }
 
   private isVisibilityHidden(visibility: DocumentVisibilityState | undefined): boolean {
-    return visibility === 'hidden';
+    return visibility !== undefined && visibility !== 'visible';
   }
 
   private handleVisibilityChange(): void {
