@@ -72,15 +72,9 @@ class AnalyticsServiceStub {
 describe('AppInitializerService', () => {
   const originalProduction = environment.production;
   const originalBootstrapConfig = { ...(environment as any).bootstrapConfig };
-  let originalLocation: Location;
 
   beforeEach(() => {
     jest.restoreAllMocks();
-    originalLocation = window.location;
-    Object.defineProperty(window, 'location', {
-      writable: true,
-      value: { protocol: 'https:', hostname: 'prod.polliwall.test', reload: jest.fn() },
-    });
     (environment as any).bootstrapConfig = {
       meta: { geminiApiKey: 'gemini-api-key', analyticsMeasurementId: 'analytics-measurement-id' },
       failOnMissingGeminiKey: true,
@@ -91,13 +85,9 @@ describe('AppInitializerService', () => {
   afterEach(() => {
     environment.production = originalProduction;
     (environment as any).bootstrapConfig = originalBootstrapConfig;
-    Object.defineProperty(window, 'location', {
-      writable: true,
-      value: originalLocation,
-    });
-    document.head.querySelectorAll('meta[name="gemini-api-key"], meta[name="analytics-measurement-id"]').forEach(meta =>
-      meta.remove()
-    );
+    document.head
+      .querySelectorAll('meta[name="gemini-api-key"], meta[name="analytics-measurement-id"]')
+      .forEach((meta) => meta.remove());
     delete (window as any).__POLLIWALL_RUNTIME_CONFIG__;
     (initializeGeminiClient as jest.Mock).mockReset();
   });
