@@ -504,6 +504,7 @@ export class RealtimeFeedService implements OnDestroy {
 
     this.pushEvent(state, event, key);
   }
+
   private enqueuePaused<TEvent extends FeedEvent>(state: FeedState<TEvent>, key: string, event: TEvent): void {
     if (state.pausedBufferKeys.has(key) || state.seenKeys.has(key)) {
       this.updateMetrics(state, (metrics) => ({ ...metrics, dropped: metrics.dropped + 1 }));
