@@ -1,12 +1,7 @@
 # Deployment Security Guide
 
-This document provides comprehensive security guidelines for deploying the PolliWall application to production environments with industry-leading security practices.
-
-## 🔒 Critical Security Requirements
-
-### 1. HTTPS Enforcement
-
-**Requirement**: All production traffic MUST use HTTPS.
+<!-- This file will be regenerated during Operation Bedrock Phase 1.2 -->
+<!-- Agent: security-specialist + devops-engineer + technical-scribe -->
 
 **Implementation**:
 - Configure your web server to redirect all HTTP traffic to HTTPS

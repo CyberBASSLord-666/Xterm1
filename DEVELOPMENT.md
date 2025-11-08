@@ -1,12 +1,7 @@
 # Developer Setup Guide
 
-## Prerequisites
-
-### Required Software
-
-- **Node.js**: Version 18.x or higher
-  - Download from [nodejs.org](https://nodejs.org/)
-  - Verify installation: `node --version`
+<!-- This file will be regenerated during Operation Bedrock Phase 1.2 -->
+<!-- Agent: code-assistant + technical-scribe -->
 
 - **npm**: Version 9.x or higher (comes with Node.js)
   - Verify installation: `npm --version`

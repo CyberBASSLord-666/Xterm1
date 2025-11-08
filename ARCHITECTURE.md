@@ -1,13 +1,7 @@
 # PolliWall Architecture Documentation
 
-## Overview
-
-PolliWall is an AI-powered wallpaper generation application built with Angular 20, leveraging the Pollinations AI API for image generation and Google Gemini for prompt enhancement.
-
-## Technology Stack
-
-- **Frontend Framework**: Angular 20.x
-- **Language**: TypeScript 5.8.x
+<!-- This file will be regenerated during Operation Bedrock Phase 1.2 -->
+<!-- Agent: lead-architect + technical-scribe -->
 - **Styling**: Tailwind CSS 4.x
 - **State Management**: Angular Signals
 - **Storage**: IndexedDB (via idb library)

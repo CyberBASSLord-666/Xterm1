@@ -1,12 +1,7 @@
 # Test Coverage Documentation
 
-## Overview
-This project has comprehensive test coverage using Jest for unit tests and Playwright for end-to-end tests.
-
-## Test Structure
-
-### Unit Tests (Jest)
-Located in `__tests__` directories throughout the codebase:
+<!-- This file will be regenerated during Operation Bedrock Phase 1.2 -->
+<!-- Agent: qa-engineer + technical-scribe -->
 
 #### Application Component Tests
 - **`src/__tests__/app.spec.ts`**

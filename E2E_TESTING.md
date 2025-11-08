@@ -1,13 +1,7 @@
 # E2E Testing Guide
 
-This document explains the comprehensive E2E testing setup for PolliWall, including the firewall workaround solution.
-
-## Overview
-
-The project supports **two E2E testing frameworks**:
-
-1. **Playwright** (Primary, Production-Ready) ✅ RECOMMENDED
-2. **Cypress** (Alternative, requires firewall configuration)
+<!-- This file will be regenerated during Operation Bedrock Phase 1.2 -->
+<!-- Agent: qa-engineer + technical-scribe -->
 
 ## Firewall Issue & Solution
 

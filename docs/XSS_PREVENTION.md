@@ -1,12 +1,7 @@
 # XSS Prevention Strategy
 
-## Overview
-
-PolliWall implements a comprehensive, defense-in-depth approach to XSS (Cross-Site Scripting) prevention using multiple layers of security controls.
-
-## Architecture
-
-### Multi-Layer Security Model
+<!-- This file will be regenerated during Operation Bedrock Phase 1.2 -->
+<!-- Agent: security-specialist + technical-scribe -->
 
 The sanitization approach uses **5 layers of defense** to prevent XSS attacks:
 

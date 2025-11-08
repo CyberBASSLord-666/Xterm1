@@ -1,12 +1,7 @@
 # Deployment Guide - PolliWall
 
-This guide explains how to deploy PolliWall to GitHub Pages and other hosting platforms.
-
-## 🚀 GitHub Pages Deployment (Automated)
-
-The application is configured for automatic deployment to GitHub Pages when changes are pushed to the `main` branch.
-
-### Setup GitHub Pages
+<!-- This file will be regenerated during Operation Bedrock Phase 1.2 -->
+<!-- Agent: devops-engineer + technical-scribe -->
 
 1. Go to your repository settings on GitHub
 2. Navigate to **Settings** → **Pages**
