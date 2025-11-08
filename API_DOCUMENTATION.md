@@ -1,53 +1,7 @@
 # API Documentation
 
-## Table of Contents
+<!-- This file will be regenerated during Operation Bedrock Phase 1.2 -->
 
-1. [Services](#services)
-2. [Types](#types)
-3. [Components](#components)
-4. [Directives](#directives)
-
-## Services
-
-### Pollinations Client Service
-
-**File**: `src/services/pollinations.client.ts`
-
-Main API client for interacting with the Pollinations AI service.
-
-#### Functions
-
-##### `initializeGeminiClient(apiKey: string): void`
-
-Initialize the Gemini AI client with an API key.
-
-**Parameters**:
-- `apiKey` (string): The Gemini API key
-
-**Example**:
-```typescript
-import { initializeGeminiClient } from './services/pollinations.client';
-
-initializeGeminiClient('your-api-key-here');
-```
-
-##### `generateImage(prompt: string, width: number, height: number, options?: ImageOptions): Promise<Blob>`
-
-Generate an image using the Pollinations AI API.
-
-**Parameters**:
-- `prompt` (string): The text description of the desired image
-- `width` (number): Image width in pixels
-- `height` (number): Image height in pixels
-- `options` (ImageOptions): Optional generation parameters
-
-**Returns**: Promise<Blob> - The generated image as a blob
-
-**Example**:
-```typescript
-const blob = await generateImage(
-  'A beautiful sunset over mountains',
-  1920,
   1080,
   { model: 'flux', seed: 42 }
 );
