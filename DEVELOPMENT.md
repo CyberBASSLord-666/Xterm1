@@ -1,7 +1,768 @@
 # Developer Setup Guide
 
-<!-- This file will be regenerated during Operation Bedrock Phase 1.2 -->
-<!-- Agent: code-assistant + technical-scribe -->
+> **Regenerated during Operation Bedrock Phase 1.2**  
+> **Code Assistant + Technical Scribe**  
+> **Date**: 2025-11-10
+
+---
+
+## Executive Summary
+
+This comprehensive guide covers setting up a complete development environment for PolliWall, from initial prerequisites through advanced workflows. Whether you're a new contributor or experienced developer, this guide provides everything needed to build, test, and contribute to PolliWall.
+
+**Time to Setup**: 15-30 minutes  
+**Skill Level**: Intermediate TypeScript/Angular knowledge recommended
+
+---
+
+## Prerequisites
+
+### Required Software
+
+| Software | Minimum Version | Recommended | Purpose |
+|----------|----------------|-------------|---------|
+| **Node.js** | 18.x | 20.x LTS | JavaScript runtime |
+| **npm** | 9.x | 10.x | Package manager |
+| **Git** | 2.x | Latest | Version control |
+| **VS Code** | Latest | Latest | IDE (recommended) |
+
+### Operating System
+
+**Supported**:
+- ✅ macOS 12+ (Monterey or later)
+- ✅ Windows 10/11 with WSL2
+- ✅ Ubuntu 22.04 LTS
+- ✅ Debian 11+
+- ✅ Fedora 38+
+
+---
+
+## Installation
+
+### 1. Install Node.js
+
+#### macOS (Homebrew)
+```bash
+brew install node@20
+```
+
+#### Windows (Official Installer)
+```bash
+# Download from https://nodejs.org/
+# Install LTS version (20.x)
+```
+
+#### Linux (NodeSource)
+```bash
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+```
+
+#### Verify Installation
+```bash
+node --version    # Should show v20.x.x
+npm --version     # Should show 10.x.x
+```
+
+### 2. Install Git
+
+#### macOS
+```bash
+# Included with Xcode Command Line Tools
+xcode-select --install
+```
+
+#### Windows
+```bash
+# Download from https://git-scm.com/
+# Use Git Bash for command line
+```
+
+#### Linux
+```bash
+sudo apt-get update
+sudo apt-get install git
+```
+
+#### Verify Installation
+```bash
+git --version     # Should show 2.x.x
+```
+
+### 3. Install VS Code
+
+#### All Platforms
+Download from: https://code.visualstudio.com/
+
+#### Recommended Extensions
+```bash
+# Install via VS Code Extensions marketplace:
+- Angular Language Service
+- ESLint
+- Prettier - Code formatter
+- TypeScript Vue Plugin (Volar)
+- GitLens
+- Jest Runner
+- Playwright Test for VSCode
+```
+
+---
+
+## Repository Setup
+
+### 1. Clone Repository
+
+```bash
+# Clone via HTTPS
+git clone https://github.com/CyberBASSLord-666/Xterm1.git
+
+# Or clone via SSH (recommended for contributors)
+git clone git@github.com:CyberBASSLord-666/Xterm1.git
+
+# Navigate to directory
+cd Xterm1
+```
+
+### 2. Install Dependencies
+
+```bash
+# Install all project dependencies
+npm ci --legacy-peer-deps
+
+# Why --legacy-peer-deps?
+# Required for Angular 20 compatibility with some dependencies
+```
+
+**Note**: Use `npm ci` (not `npm install`) for consistent installations matching package-lock.json.
+
+### 3. Environment Configuration
+
+#### Create Local Environment File
+
+```bash
+# Create .env.local (NOT committed to Git)
+touch .env.local
+```
+
+#### Add API Keys (Optional)
+
+**File**: `.env.local`
+
+```bash
+# Google Gemini API Key (for prompt enhancement)
+GEMINI_API_KEY=your-api-key-here
+
+# Analytics ID (optional)
+ANALYTICS_ID=your-analytics-id
+```
+
+**Note**: Application works without API keys (Gemini features disabled).
+
+---
+
+## Development Server
+
+### Start Development Server
+
+```bash
+# Start dev server
+npm start
+
+# Or with ng serve directly
+ng serve
+
+# Access application
+# http://localhost:4200
+```
+
+**Output**:
+```
+✔ Browser application bundle generation complete.
+Initial chunk files   | Names         | Raw size
+main.js               | main          | 1.2 MB
+polyfills.js          | polyfills     | 90 KB
+styles.css            | styles        | 5 KB
+
+Build at: 2025-11-10T08:00:00.000Z - Hash: abc123def456
+** Angular Live Development Server is listening on localhost:4200 **
+✔ Compiled successfully.
+```
+
+### Development Server Options
+
+```bash
+# Specific port
+ng serve --port 4201
+
+# Open browser automatically
+ng serve --open
+
+# Production mode (for testing)
+ng serve --configuration=production
+
+# Disable live reload
+ng serve --live-reload=false
+
+# Custom host (for network access)
+ng serve --host 0.0.0.0
+```
+
+---
+
+## Project Structure
+
+### Directory Layout
+
+```
+Xterm1/
+├── .github/                 # GitHub Actions workflows
+│   ├── workflows/          # CI/CD pipelines
+│   │   ├── ci.yml         # Continuous integration
+│   │   ├── deploy.yml     # Deployment automation
+│   │   ├── eslint.yml     # Linting checks
+│   │   ├── security.yml   # Security scanning
+│   │   └── bundle-size.yml # Bundle size monitoring
+│   ├── dependabot.yml     # Dependency updates
+│   └── AGENT_WORKFLOW.md  # Development workflow
+│
+├── src/                    # Source code
+│   ├── app.component.ts   # Root component
+│   ├── app.routes.ts      # Route definitions
+│   ├── main.ts            # Bootstrap entry point
+│   │
+│   ├── components/        # Feature components
+│   │   ├── wizard/       # Image generation wizard
+│   │   ├── gallery/      # User gallery
+│   │   ├── collections/  # Collection management
+│   │   ├── feed/         # Community feed
+│   │   ├── editor/       # Image editor
+│   │   ├── settings/     # App settings
+│   │   ├── toast/        # Notifications
+│   │   └── shortcuts-help/ # Keyboard help
+│   │
+│   ├── services/          # Business logic services (21 total)
+│   │   ├── logger.service.ts
+│   │   ├── error-handler.service.ts
+│   │   ├── validation.service.ts
+│   │   ├── analytics.service.ts
+│   │   ├── gallery.service.ts
+│   │   ├── generation.service.ts
+│   │   └── ... (15 more)
+│   │
+│   ├── directives/        # Custom directives
+│   │   └── lazy-image.directive.ts
+│   │
+│   ├── utils/             # Utility functions
+│   │   ├── component-helpers.ts
+│   │   ├── reactive-patterns.ts
+│   │   └── type-guards.ts
+│   │
+│   ├── types/             # TypeScript types
+│   ├── constants/         # App constants
+│   └── environments/      # Environment configs
+│
+├── playwright/            # E2E tests
+│   └── e2e/              # Test files
+│
+├── dist/                  # Build output (gitignored)
+├── node_modules/          # Dependencies (gitignored)
+│
+├── angular.json           # Angular CLI configuration
+├── package.json           # Dependencies and scripts
+├── tsconfig.json          # TypeScript configuration
+├── jest.config.ts         # Jest testing configuration
+├── playwright.config.ts   # Playwright E2E configuration
+├── tailwind.config.js     # Tailwind CSS configuration
+├── eslint.config.js       # ESLint linting rules
+└── .prettierrc            # Prettier formatting rules
+```
+
+---
+
+## Available Scripts
+
+### Development
+
+```bash
+# Start development server
+npm start                     # Alias for ng serve
+
+# Build for development
+npm run build                 # Development build
+
+# Build for production
+npm run build -- --configuration=production
+
+# Generate production build with base-href
+npm run build -- --configuration=production --base-href=/Xterm1/
+```
+
+### Testing
+
+```bash
+# Run unit tests (Jest)
+npm test                      # Run all tests
+npm run test:watch           # Watch mode
+npm run test:coverage        # With coverage report
+
+# Run E2E tests (Playwright)
+npm run e2e                  # Interactive UI mode
+npm run e2e:headless         # Headless mode (CI)
+
+# Run specific test
+npx jest logger.service.spec.ts
+npx playwright test wizard.spec.ts
+```
+
+### Code Quality
+
+```bash
+# Run linter
+npm run lint                 # Check for issues
+npm run lint:fix             # Fix auto-fixable issues
+
+# Format code
+npm run format               # Format all files
+npm run format:check         # Check formatting
+
+# Type checking
+npx tsc --noEmit            # Check TypeScript types
+```
+
+### Utilities
+
+```bash
+# Health check
+npm run health-check         # Verify setup
+
+# Clear caches
+rm -rf node_modules package-lock.json
+npm ci --legacy-peer-deps
+
+# Update dependencies
+npm update
+npm audit fix
+```
+
+---
+
+## Development Workflow
+
+### 1. Create Feature Branch
+
+```bash
+# Update main branch
+git checkout main
+git pull origin main
+
+# Create feature branch
+git checkout -b feature/your-feature-name
+
+# Or bugfix branch
+git checkout -b fix/bug-description
+```
+
+### 2. Make Changes
+
+```typescript
+// Example: Create new service
+ng generate service services/my-feature
+
+// Example: Create new component
+ng generate component components/my-feature --standalone
+
+// Make your changes...
+```
+
+### 3. Test Changes
+
+```bash
+# Run tests
+npm test
+
+# Run specific test
+npx jest my-feature.service.spec.ts
+
+# Check linting
+npm run lint
+
+# Format code
+npm run format
+```
+
+### 4. Commit Changes
+
+```bash
+# Stage changes
+git add .
+
+# Commit with conventional commit message
+git commit -m "feat(my-feature): add new feature"
+
+# Or for fixes
+git commit -m "fix(component): resolve issue with X"
+```
+
+**Commit Message Format**:
+```
+<type>(<scope>): <description>
+
+[optional body]
+
+[optional footer]
+```
+
+**Types**:
+- `feat`: New feature
+- `fix`: Bug fix
+- `docs`: Documentation only
+- `style`: Code style (formatting, etc.)
+- `refactor`: Code refactoring
+- `test`: Adding/updating tests
+- `chore`: Maintenance tasks
+
+### 5. Push and Create PR
+
+```bash
+# Push branch
+git push origin feature/your-feature-name
+
+# Create PR on GitHub
+# Go to: https://github.com/CyberBASSLord-666/Xterm1/pulls
+# Click "New Pull Request"
+```
+
+---
+
+## Testing
+
+### Unit Tests (Jest)
+
+#### Run Tests
+
+```bash
+# All tests
+npm test
+
+# Watch mode (auto-rerun on changes)
+npm run test:watch
+
+# Coverage report
+npm run test:coverage
+
+# Specific test file
+npx jest logger.service.spec.ts
+
+# Test name pattern
+npx jest --testNamePattern="should log"
+```
+
+#### Write Tests
+
+**Example Service Test**:
+```typescript
+import { TestBed } from '@angular/core/testing';
+import { MyService } from './my.service';
+
+describe('MyService', () => {
+  let service: MyService;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({});
+    service = TestBed.inject(MyService);
+  });
+
+  it('should be created', () => {
+    expect(service).toBeTruthy();
+  });
+
+  it('should perform action', () => {
+    const result = service.performAction();
+    expect(result).toBe('expected value');
+  });
+});
+```
+
+**Example Component Test**:
+```typescript
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { MyComponent } from './my.component';
+
+describe('MyComponent', () => {
+  let component: MyComponent;
+  let fixture: ComponentFixture<MyComponent>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [MyComponent] // Standalone component
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(MyComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+});
+```
+
+#### Coverage Reports
+
+```bash
+# Generate coverage
+npm run test:coverage
+
+# View HTML report
+open coverage/lcov-report/index.html
+```
+
+### E2E Tests (Playwright)
+
+#### Run Tests
+
+```bash
+# Interactive mode (recommended for development)
+npm run e2e
+
+# Headless mode (for CI)
+npm run e2e:headless
+
+# Specific browser
+npx playwright test --project=chromium
+
+# Specific test file
+npx playwright test wizard.spec.ts
+
+# Debug mode
+npx playwright test --debug
+```
+
+#### Write E2E Tests
+
+**Example**:
+```typescript
+import { test, expect } from '@playwright/test';
+
+test.describe('Wizard Component', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/');
+  });
+
+  test('should generate image', async ({ page }) => {
+    // Fill prompt
+    await page.fill('[data-testid="prompt-input"]', 'A sunset over mountains');
+
+    // Click generate
+    await page.click('[data-testid="generate-button"]');
+
+    // Wait for result
+    await expect(page.locator('[data-testid="image-result"]')).toBeVisible();
+  });
+});
+```
+
+---
+
+## Debugging
+
+### VS Code Debugging
+
+#### Launch Configuration
+
+**File**: `.vscode/launch.json`
+
+```json
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "chrome",
+      "request": "launch",
+      "name": "Debug Angular App",
+      "url": "http://localhost:4200",
+      "webRoot": "${workspaceFolder}",
+      "sourceMapPathOverrides": {
+        "webpack:/*": "${webRoot}/*"
+      }
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Jest Tests",
+      "program": "${workspaceFolder}/node_modules/.bin/jest",
+      "args": ["--runInBand"],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    }
+  ]
+}
+```
+
+### Browser DevTools
+
+```typescript
+// Add breakpoints in code
+debugger;
+
+// Log to console
+console.log('Debug value:', value);
+
+// Use Angular DevTools extension
+// Chrome: https://chrome.google.com/webstore/detail/angular-devtools/
+```
+
+---
+
+## Code Style
+
+### Linting (ESLint)
+
+**Configuration**: `eslint.config.js`
+
+```bash
+# Check for issues
+npm run lint
+
+# Auto-fix issues
+npm run lint:fix
+```
+
+### Formatting (Prettier)
+
+**Configuration**: `.prettierrc`
+
+```bash
+# Format all files
+npm run format
+
+# Check formatting
+npm run format:check
+```
+
+### Editor Integration
+
+**VS Code** (auto-format on save):
+
+**File**: `.vscode/settings.json`
+
+```json
+{
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true
+  }
+}
+```
+
+---
+
+## Troubleshooting
+
+### Common Issues
+
+#### Port Already in Use
+
+**Error**: `Port 4200 is already in use`
+
+**Solution**:
+```bash
+# Kill process on port 4200
+lsof -ti:4200 | xargs kill -9
+
+# Or use different port
+ng serve --port 4201
+```
+
+#### Module Not Found
+
+**Error**: `Cannot find module '@angular/core'`
+
+**Solution**:
+```bash
+# Reinstall dependencies
+rm -rf node_modules package-lock.json
+npm ci --legacy-peer-deps
+```
+
+#### TypeScript Errors
+
+**Error**: Type errors in IDE
+
+**Solution**:
+```bash
+# Restart TypeScript server (VS Code)
+# Cmd+Shift+P → "TypeScript: Restart TS Server"
+
+# Or rebuild
+npm run build
+```
+
+#### Build Failures
+
+**Error**: Build fails with memory error
+
+**Solution**:
+```bash
+# Increase Node memory
+NODE_OPTIONS=--max_old_space_size=4096 npm run build
+```
+
+---
+
+## Best Practices
+
+### DO
+
+✅ **Use Angular CLI** for generating code
+✅ **Write tests** for new features
+✅ **Run linter** before committing
+✅ **Format code** with Prettier
+✅ **Use Signals** for state management
+✅ **Follow TypeScript strict** mode
+✅ **Use OnPush** change detection
+✅ **Write standalone** components
+
+### DON'T
+
+❌ **Commit** `node_modules` or `dist`
+❌ **Use `any`** type without justification
+❌ **Skip tests** for new features
+❌ **Commit** API keys or secrets
+❌ **Modify** `package-lock.json` manually
+❌ **Use `console.log`** (use LoggerService)
+❌ **Skip code** review
+
+---
+
+## Additional Resources
+
+### Documentation
+
+- [ARCHITECTURE.md](./ARCHITECTURE.md) - System architecture
+- [API_DOCUMENTATION.md](./API_DOCUMENTATION.md) - API reference
+- [E2E_TESTING.md](./E2E_TESTING.md) - E2E testing guide
+- [DEPLOYMENT.md](./DEPLOYMENT.md) - Deployment guide
+
+### External Links
+
+- [Angular Documentation](https://angular.io/docs)
+- [TypeScript Handbook](https://www.typescriptlang.org/docs/)
+- [Tailwind CSS](https://tailwindcss.com/docs)
+- [Jest Documentation](https://jestjs.io/docs/getting-started)
+- [Playwright Documentation](https://playwright.dev/)
+
+### Community
+
+- [GitHub Issues](https://github.com/CyberBASSLord-666/Xterm1/issues)
+- [Pull Requests](https://github.com/CyberBASSLord-666/Xterm1/pulls)
+
+---
+
+*This development guide is the definitive reference for setting up and contributing to PolliWall.*  
+*Last Updated: 2025-11-10 | Operation Bedrock Phase 1.2*
 
 - **npm**: Version 9.x or higher (comes with Node.js)
   - Verify installation: `npm --version`
