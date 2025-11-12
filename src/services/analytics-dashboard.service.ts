@@ -27,25 +27,25 @@ const initialState: DashboardState = {
   loading: false,
   error: null,
   lastUpdated: 0,
-  dateRange: '24h'
+  dateRange: '24h',
 };
 
 /**
  * AnalyticsDashboardService
- * 
+ *
  * Manages analytics dashboard data by aggregating metrics from PerformanceMonitorService
  * and AnalyticsService. Provides Signal-based state management for real-time updates.
- * 
+ *
  * Core Services Integration:
  * - LoggerService: All operations logged
  * - ErrorHandlerService: Comprehensive error handling
  * - PerformanceMonitorService: Performance metrics source
  * - AnalyticsService: Event tracking metrics source
- * 
+ *
  * @since 2.0.0 (Operation Bedrock Phase 1.4 - Production Line)
  */
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class AnalyticsDashboardService {
   private readonly logger = inject(LoggerService);
@@ -56,7 +56,8 @@ export class AnalyticsDashboardService {
 
   // Signal-based state management
   private readonly _state = signal<DashboardState>(initialState);
-  
+  private requestSequence = 0;
+
   // Public readonly signals
   readonly state = this._state.asReadonly();
   readonly metrics = computed(() => this._state().metrics);
@@ -66,22 +67,16 @@ export class AnalyticsDashboardService {
   readonly dateRange = computed(() => this._state().dateRange);
 
   // Computed metrics by category
-  readonly performanceMetrics = computed(() => 
-    this.metrics().filter(m => m.category === 'performance')
-  );
-  readonly engagementMetrics = computed(() => 
-    this.metrics().filter(m => m.category === 'engagement')
-  );
-  readonly usageMetrics = computed(() => 
-    this.metrics().filter(m => m.category === 'usage')
-  );
+  readonly performanceMetrics = computed(() => this.metrics().filter((m) => m.category === 'performance'));
+  readonly engagementMetrics = computed(() => this.metrics().filter((m) => m.category === 'engagement'));
+  readonly usageMetrics = computed(() => this.metrics().filter((m) => m.category === 'usage'));
 
   private refreshInterval: number | null = null;
 
   constructor() {
     this.logger.info('AnalyticsDashboardService initialized');
     this.startAutoRefresh();
-    
+
     // Cleanup on destroy
     this.destroyRef.onDestroy(() => {
       this.stopAutoRefresh();
@@ -93,37 +88,66 @@ export class AnalyticsDashboardService {
    * Load dashboard metrics
    */
   async loadMetrics(): Promise<void> {
-    this.logger.info('Loading analytics dashboard metrics', { 
-      dateRange: this._state().dateRange 
+    const requestId = ++this.requestSequence;
+    const requestedRange = this._state().dateRange;
+
+    this.logger.info('Loading analytics dashboard metrics', {
+      dateRange: requestedRange,
+      requestId,
     });
 
-    this._state.update(s => ({ ...s, loading: true, error: null }));
+    this._state.update((s) => ({ ...s, loading: true, error: null }));
 
     try {
       const metrics = await this.aggregateMetrics();
-      
-      this._state.update(s => ({
+
+      if (requestId !== this.requestSequence) {
+        this.logger.debug('Discarding stale analytics dashboard metrics response', {
+          requestId,
+          latestRequestId: this.requestSequence,
+        });
+        return;
+      }
+
+      if (requestedRange !== this._state().dateRange) {
+        this.logger.debug('Discarding metrics for outdated date range', {
+          requestId,
+          requestedRange,
+          currentRange: this._state().dateRange,
+        });
+        return;
+      }
+
+      this._state.update((s) => ({
         ...s,
         metrics,
         loading: false,
-        lastUpdated: Date.now()
+        lastUpdated: Date.now(),
       }));
 
-      this.logger.info('Analytics dashboard metrics loaded successfully', { 
-        count: metrics.length 
+      this.logger.info('Analytics dashboard metrics loaded successfully', {
+        count: metrics.length,
       });
     } catch (error) {
-      this.logger.error('Failed to load analytics dashboard metrics', { 
-        error 
+      if (requestId !== this.requestSequence || requestedRange !== this._state().dateRange) {
+        this.logger.debug('Ignoring error from stale analytics dashboard request', {
+          requestId,
+          requestedRange,
+        });
+        return;
+      }
+
+      this.logger.error('Failed to load analytics dashboard metrics', {
+        error,
       });
-      
+
       const errorMessage = 'Failed to load analytics metrics. Please try again.';
-      this._state.update(s => ({ 
-        ...s, 
-        loading: false, 
-        error: errorMessage 
+      this._state.update((s) => ({
+        ...s,
+        loading: false,
+        error: errorMessage,
       }));
-      
+
       this.errorHandler.handleError(error, errorMessage);
     }
   }
@@ -133,8 +157,8 @@ export class AnalyticsDashboardService {
    */
   setDateRange(dateRange: '24h' | '7d' | '30d'): void {
     this.logger.info('Changing analytics date range', { dateRange });
-    
-    this._state.update(s => ({ ...s, dateRange }));
+
+    this._state.update((s) => ({ ...s, dateRange }));
     void this.loadMetrics();
   }
 
@@ -217,7 +241,7 @@ export class AnalyticsDashboardService {
         unit: 'ms',
         trend: 'down',
         change: -12,
-        category: 'performance'
+        category: 'performance',
       },
       {
         id: 'api-response-time',
@@ -226,8 +250,8 @@ export class AnalyticsDashboardService {
         unit: 'ms',
         trend: 'down',
         change: -8,
-        category: 'performance'
-      }
+        category: 'performance',
+      },
     ];
   }
 
@@ -245,7 +269,7 @@ export class AnalyticsDashboardService {
         unit: '',
         trend: 'up',
         change: 18,
-        category: 'engagement'
+        category: 'engagement',
       },
       {
         id: 'total-events',
@@ -254,8 +278,8 @@ export class AnalyticsDashboardService {
         unit: '',
         trend: 'up',
         change: 24,
-        category: 'engagement'
-      }
+        category: 'engagement',
+      },
     ];
   }
 
@@ -271,7 +295,7 @@ export class AnalyticsDashboardService {
         unit: '',
         trend: 'up',
         change: 15,
-        category: 'usage'
+        category: 'usage',
       },
       {
         id: 'collections-created',
@@ -280,8 +304,8 @@ export class AnalyticsDashboardService {
         unit: '',
         trend: 'up',
         change: 22,
-        category: 'usage'
-      }
+        category: 'usage',
+      },
     ];
   }
 }
