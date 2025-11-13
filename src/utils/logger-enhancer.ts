@@ -29,6 +29,12 @@ export interface EnhancedLogEntry {
   source?: string;
 }
 
+interface PerformanceMemory {
+  usedJSHeapSize: number;
+  totalJSHeapSize: number;
+  jsHeapSizeLimit: number;
+}
+
 /**
  * Enhanced logger with stack trace analysis and better error messages
  */
@@ -199,11 +205,6 @@ export class LoggerEnhancer {
    * Memory usage logging helper
    */
   static logMemoryUsage(context?: string): void {
-    interface PerformanceMemory {
-      usedJSHeapSize: number;
-      totalJSHeapSize: number;
-      jsHeapSizeLimit: number;
-    }
     if (this.isDevelopment && performance && 'memory' in performance) {
       const memory = (performance as { memory: PerformanceMemory }).memory;
       const usedMB = (memory.usedJSHeapSize / 1024 / 1024).toFixed(2);
