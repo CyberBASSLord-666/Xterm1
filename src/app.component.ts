@@ -13,6 +13,14 @@ interface AppNavigationItem {
   readonly analyticsId?: string;
 }
 
+const APP_NAVIGATION_ITEMS: readonly AppNavigationItem[] = [
+  { label: 'Create', path: '/', exact: true, analyticsId: 'nav-create' },
+  { label: 'Gallery', path: '/gallery', analyticsId: 'nav-gallery' },
+  { label: 'Collections', path: '/collections', analyticsId: 'nav-collections' },
+  { label: 'Feed', path: '/feed', analyticsId: 'nav-feed' },
+  { label: 'Settings', path: '/settings', analyticsId: 'nav-settings' },
+] as const;
+
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
@@ -24,13 +32,7 @@ export class AppComponent {
   private toastService = inject(ToastService);
   private doc = inject(DOCUMENT, { optional: true });
 
-  readonly navigationItems: readonly AppNavigationItem[] = [
-    { label: 'Create', path: '/', exact: true, analyticsId: 'nav-create' },
-    { label: 'Gallery', path: '/gallery', analyticsId: 'nav-gallery' },
-    { label: 'Collections', path: '/collections', analyticsId: 'nav-collections' },
-    { label: 'Feed', path: '/feed', analyticsId: 'nav-feed' },
-    { label: 'Settings', path: '/settings', analyticsId: 'nav-settings' },
-  ];
+  readonly navigationItems = APP_NAVIGATION_ITEMS;
 
   isDarkTheme = this.settingsService.themeDark;
   isMobileMenuOpen = signal(false);

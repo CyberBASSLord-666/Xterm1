@@ -11,6 +11,9 @@ import {
   FeedHealth,
 } from '../../services/realtime-feed.service';
 
+const CLOCK_UPDATE_INTERVAL_MS = 1000;
+const JUST_NOW_THRESHOLD_MS = 5000;
+
 @Component({
   selector: 'pw-feed',
   standalone: true,
@@ -165,7 +168,7 @@ export class FeedComponent implements OnInit, OnDestroy {
       if (typeof window === 'undefined') {
         return;
       }
-      const timer = window.setInterval(() => this.now.set(Date.now()), 1000);
+      const timer = window.setInterval(() => this.now.set(Date.now()), CLOCK_UPDATE_INTERVAL_MS);
       onCleanup(() => window.clearInterval(timer));
     });
 
@@ -208,7 +211,7 @@ export class FeedComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.feed.start('image', { reset: true });
+    this.feed.start(this.feedMode(), { reset: true });
   }
 
   ngOnDestroy(): void {
@@ -250,7 +253,7 @@ export class FeedComponent implements OnInit, OnDestroy {
     if (diff < 0) {
       return '—';
     }
-    if (diff < 5000) {
+    if (diff < JUST_NOW_THRESHOLD_MS) {
       return 'Just now';
     }
     const seconds = Math.floor(diff / 1000);

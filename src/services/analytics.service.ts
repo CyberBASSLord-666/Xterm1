@@ -173,7 +173,7 @@ export class AnalyticsService {
       if (this.eventQueue.length > 0) {
         this.sendBatch();
       }
-    }, this.batchInterval) as number;
+    }, this.batchInterval);
 
     this.logger.debug('Batch timer started', { interval: this.batchInterval }, 'Analytics');
   }
