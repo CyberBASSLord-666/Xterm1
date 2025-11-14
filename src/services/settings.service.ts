@@ -94,6 +94,13 @@ export class SettingsService implements OnDestroy {
   /**
    * Toggles the theme between dark and light mode.
    * Marks the theme as explicitly set by the user.
+   * 
+   * @breaking-change v0.2.0 - New method introduced for explicit theme control.
+   * Previously, theme was managed by directly mutating themeDark signal.
+   * Migration: Change `settingsService.themeDark.set(!settingsService.themeDark())` 
+   * to `settingsService.toggleTheme()`.
+   * All internal call sites updated in commit bdc7c2a.
+   * 
    * @returns The new theme state (true for dark, false for light)
    */
   toggleTheme(): boolean {
@@ -105,6 +112,12 @@ export class SettingsService implements OnDestroy {
   /**
    * Sets the theme to the specified mode.
    * Marks the theme as explicitly set by the user.
+   * 
+   * @breaking-change v0.2.0 - New method introduced for explicit theme control.
+   * Previously, theme was managed by directly mutating themeDark signal.
+   * Migration: Change `settingsService.themeDark.set(true)` to `settingsService.setTheme(true)`.
+   * All internal call sites updated in commit bdc7c2a.
+   * 
    * @param dark - True for dark mode, false for light mode
    */
   setTheme(dark: boolean): void {
@@ -115,6 +128,12 @@ export class SettingsService implements OnDestroy {
   /**
    * Resets the theme preference to follow the system setting.
    * Clears any explicit user preference and re-applies system detection.
+   * 
+   * @breaking-change v0.2.0 - New method introduced to reset theme to system preference.
+   * Previously, no explicit method existed to revert to system theme detection.
+   * Migration: New functionality - use `settingsService.resetThemeToSystemPreference()` 
+   * to clear explicit theme preference and follow system settings.
+   * All internal call sites updated in commit bdc7c2a.
    */
   resetThemeToSystemPreference(): void {
     this.hasExplicitThemePreference = false;
