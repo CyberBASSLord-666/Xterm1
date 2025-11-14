@@ -172,24 +172,17 @@ export class PerformanceMonitorService {
         // Time to First Byte / Time to Interactive
         const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTimingExtended;
 
-        let responseStart: number | undefined;
-        let requestStart: number | undefined;
-        let domInteractive: number | undefined;
-        let fetchStart: number | undefined;
-
-        if (navigation) {
-          responseStart = navigation.responseStart ?? responseStart;
-          requestStart = navigation.requestStart ?? requestStart;
-          domInteractive = navigation.domInteractive ?? domInteractive;
-          fetchStart = navigation.fetchStart ?? fetchStart;
-        }
+        let responseStart = navigation?.responseStart;
+        let requestStart = navigation?.requestStart;
+        let domInteractive = navigation?.domInteractive;
+        let fetchStart = navigation?.fetchStart;
 
         const legacyTiming = (performance as Performance & { timing?: PerformanceTiming }).timing;
         if (legacyTiming) {
-          responseStart = legacyTiming.responseStart ?? responseStart;
-          requestStart = legacyTiming.requestStart ?? requestStart;
-          domInteractive = legacyTiming.domInteractive ?? domInteractive;
-          fetchStart = legacyTiming.fetchStart ?? fetchStart;
+          responseStart = responseStart ?? legacyTiming.responseStart;
+          requestStart = requestStart ?? legacyTiming.requestStart;
+          domInteractive = domInteractive ?? legacyTiming.domInteractive;
+          fetchStart = fetchStart ?? legacyTiming.fetchStart;
         }
 
         if (responseStart !== undefined && requestStart !== undefined) {

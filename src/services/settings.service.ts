@@ -1,4 +1,5 @@
-import { Injectable, OnDestroy, WritableSignal, EffectRef, computed, effect, signal } from '@angular/core';
+import { Injectable, OnDestroy, WritableSignal, EffectRef, computed, effect, signal, inject } from '@angular/core';
+import { LoggerService } from './logger.service';
 
 export interface AppSettings {
   referrer: string;
@@ -12,6 +13,7 @@ type StoredSettings = Partial<AppSettings> | null;
 
 @Injectable({ providedIn: 'root' })
 export class SettingsService implements OnDestroy {
+  private readonly logger = inject(LoggerService);
   private readonly settingsKey = 'polliwall_settings';
   private readonly isBrowser = typeof window !== 'undefined' && typeof document !== 'undefined';
 
@@ -89,17 +91,31 @@ export class SettingsService implements OnDestroy {
     this.systemThemeListenerCleanup = null;
   }
 
+  /**
+   * Toggles the theme between dark and light mode.
+   * Marks the theme as explicitly set by the user.
+   * @returns The new theme state (true for dark, false for light)
+   */
   toggleTheme(): boolean {
     const next = !this.themeDarkState();
     this.setTheme(next);
     return next;
   }
 
+  /**
+   * Sets the theme to the specified mode.
+   * Marks the theme as explicitly set by the user.
+   * @param dark - True for dark mode, false for light mode
+   */
   setTheme(dark: boolean): void {
     this.hasExplicitThemePreference = true;
     this.themeDarkState.set(dark);
   }
 
+  /**
+   * Resets the theme preference to follow the system setting.
+   * Clears any explicit user preference and re-applies system detection.
+   */
   resetThemeToSystemPreference(): void {
     this.hasExplicitThemePreference = false;
     this.themeDarkState.set(this.detectSystemDarkMode());
@@ -148,7 +164,7 @@ export class SettingsService implements OnDestroy {
       }
       return parsed;
     } catch (error) {
-      console.error('Failed to read persisted settings', error);
+      this.logger.error('Failed to read persisted settings', error, 'Settings');
       return null;
     }
   }
@@ -161,7 +177,7 @@ export class SettingsService implements OnDestroy {
     try {
       window.localStorage.setItem(this.settingsKey, JSON.stringify(settings));
     } catch (error) {
-      console.error('Failed to persist settings', error);
+      this.logger.error('Failed to persist settings', error, 'Settings');
     }
   }
 
@@ -186,7 +202,7 @@ export class SettingsService implements OnDestroy {
       this.suppressPersistence = true;
       this.applySettings({ ...this.defaultSettings, referrer: this.detectDefaultReferrer(), ...parsed }, true);
     } catch (error) {
-      console.error('Failed to synchronise settings from storage event', error);
+      this.logger.error('Failed to synchronise settings from storage event', error, 'Settings');
     } finally {
       this.suppressPersistence = false;
     }
