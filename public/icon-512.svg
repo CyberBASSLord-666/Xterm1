@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Background with theme color and rounded corners -->
+  <rect width="512" height="512" rx="128" fill="#3b82f6"/>
+  
+  <!-- Material Symbol: auto_awesome (sparkle/AI magic) - scaled for 512x512 -->
+  <g transform="translate(256, 256)">
+    <!-- Large central star -->
+    <path d="M0-128L17.6-80L64-80L28.8-51.2L41.6 0L0-32L-41.6 0L-28.8-51.2L-64-80L-17.6-80L0-128Z" 
+          fill="#ffffff" stroke="#ffffff" stroke-width="4" stroke-linejoin="round"/>
+    
+    <!-- Central circle -->
+    <circle cx="0" cy="0" r="20" fill="#ffffff"/>
+    
+    <!-- Medium stars around -->
+    <path d="M0-64L8.8-40L32-40L14.4-25.6L20.8 0L0-16L-20.8 0L-14.4-25.6L-32-40L-8.8-40L0-64Z" 
+          fill="#ffffff" opacity="0.9"/>
+    
+    <!-- Small decorative stars -->
+    <g opacity="0.7">
+      <path d="M64 32L72.8 56L96 56L78.4 70.4L84.8 96L64 80L43.2 96L49.6 70.4L32 56L55.2 56L64 32Z" 
+            fill="#ffffff" transform="scale(0.9)"/>
+      <path d="M-64 32L-55.2 56L-32 56L-49.6 70.4L-43.2 96L-64 80L-84.8 96L-78.4 70.4L-96 56L-72.8 56L-64 32Z" 
+            fill="#ffffff" transform="scale(0.9)"/>
+    </g>
+    
+    <!-- Tiny accent stars -->
+    <g opacity="0.5">
+      <circle cx="96" cy="-64" r="6" fill="#ffffff"/>
+      <circle cx="-96" cy="-64" r="6" fill="#ffffff"/>
+      <circle cx="96" cy="96" r="6" fill="#ffffff"/>
+      <circle cx="-96" cy="96" r="6" fill="#ffffff"/>
+    </g>
+    
+    <!-- Additional sparkle effects -->
+    <g opacity="0.6">
+      <path d="M48-96L51.2-84L64-84L54.4-76.8L57.6-64L48-72L38.4-64L41.6-76.8L32-84L44.8-84L48-96Z" 
+            fill="#ffffff"/>
+      <path d="M-48-96L-44.8-84L-32-84L-41.6-76.8L-38.4-64L-48-72L-57.6-64L-54.4-76.8L-64-84L-51.2-84L-48-96Z" 
+            fill="#ffffff"/>
+    </g>
+  </g>
+</svg>

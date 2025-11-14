@@ -1,7 +1,7 @@
 /**
  * Logger Enhancer - Quality of Life Improvements for Development
  * Provides enhanced logging with stack traces, source maps, and actionable suggestions
- * 
+ *
  * NOTE: This is a lower-level logging enhancer that augments console output.
  * It intentionally uses direct console methods because:
  * 1. LoggerService itself may use this enhancer (avoid circular dependencies)
@@ -27,6 +27,12 @@ export interface EnhancedLogEntry {
   stack?: string;
   timestamp: number;
   source?: string;
+}
+
+interface PerformanceMemory {
+  usedJSHeapSize: number;
+  totalJSHeapSize: number;
+  jsHeapSizeLimit: number;
 }
 
 /**
@@ -166,7 +172,7 @@ export class LoggerEnhancer {
       formatted.push(`\n💡 ${suggestion}`);
     }
 
-    // Console output with appropriate method
+    // Console output with appropriate method based on log level
     const consoleMethod =
       level === 'error'
         ? console.error
@@ -175,7 +181,6 @@ export class LoggerEnhancer {
           : level === 'info'
             ? console.info
             : console.debug;
-
     // eslint-disable-next-line no-console
     consoleMethod(...formatted);
   }
@@ -197,9 +202,8 @@ export class LoggerEnhancer {
    * Memory usage logging helper
    */
   static logMemoryUsage(context?: string): void {
-    if (this.isDevelopment && performance && (performance as any).memory) {
-      // eslint-disable-line @typescript-eslint/no-explicit-any
-      const memory = (performance as any).memory; // eslint-disable-line @typescript-eslint/no-explicit-any
+    if (this.isDevelopment && performance && 'memory' in performance) {
+      const memory = (performance as { memory: PerformanceMemory }).memory;
       const usedMB = (memory.usedJSHeapSize / 1024 / 1024).toFixed(2);
       const totalMB = (memory.totalJSHeapSize / 1024 / 1024).toFixed(2);
       const limitMB = (memory.jsHeapSizeLimit / 1024 / 1024).toFixed(2);

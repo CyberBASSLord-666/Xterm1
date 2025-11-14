@@ -33,7 +33,7 @@ export class AnalyticsService {
   private enabled: boolean = environment.production && FEATURE_FLAGS.ENABLE_ANALYTICS;
   private eventQueue: AnalyticsEvent[] = [];
   private readonly maxQueueSize = PERFORMANCE_CONFIG.MAX_ANALYTICS_QUEUE;
-  private batchTimer: ReturnType<typeof setInterval> | null = null;
+  private batchTimer: number | null = null;
   private readonly batchInterval = 5000; // Send batch every 5 seconds
   private readonly batchSize = 10; // Maximum events per batch
   private isSendingBatch = false; // Prevents concurrent batch sends

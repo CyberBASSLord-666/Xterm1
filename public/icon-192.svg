@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <!-- Background circle with theme color -->
+  <rect width="192" height="192" rx="48" fill="#3b82f6"/>
+  
+  <!-- Material Symbol: auto_awesome (sparkle/AI magic) -->
+  <!-- Scaled and centered for 192x192 canvas -->
+  <g transform="translate(96, 96)">
+    <path d="M0-48L6.6-30L24-30L10.8-19.2L15.6 0L0-12L-15.6 0L-10.8-19.2L-24-30L-6.6-30L0-48Z" 
+          fill="#ffffff" stroke="#ffffff" stroke-width="1.5" stroke-linejoin="round"/>
+    <circle cx="0" cy="0" r="8" fill="#ffffff"/>
+    <path d="M0-24L3.3-15L12-15L5.4-9.6L7.8 0L0-6L-7.8 0L-5.4-9.6L-12-15L-3.3-15L0-24Z" 
+          fill="#ffffff" opacity="0.8"/>
+    <path d="M24 12L27.3 21L36 21L29.4 26.4L31.8 36L24 30L16.2 36L18.6 26.4L12 21L20.7 21L24 12Z" 
+          fill="#ffffff" opacity="0.6" transform="scale(0.7)"/>
+    <path d="M-24 12L-20.7 21L-12 21L-18.6 26.4L-16.2 36L-24 30L-31.8 36L-29.4 26.4L-36 21L-27.3 21L-24 12Z" 
+          fill="#ffffff" opacity="0.6" transform="scale(0.7)"/>
+  </g>
+</svg>

@@ -24,11 +24,15 @@
             },
             "assets": [
               "favicon.ico",
-              "manifest.webmanifest"
+              "favicon.svg",
+              "manifest.webmanifest",
+              {
+                "glob": "**/*",
+                "input": "public",
+                "output": "/public"
+              }
             ],
-            "styles": [
-              "styles.css"
-            ]
+            "styles": ["styles.css"]
           },
           "configurations": {
             "production": {
