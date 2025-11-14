@@ -6,9 +6,10 @@ import * as sanitizeHtmlLib from 'sanitize-html';
 
 type SanitizeHtmlOptions = Record<string, unknown>;
 type SanitizeHtmlFn = (html: string, options: SanitizeHtmlOptions) => string;
+// Handle both ESM (with default export) and CJS module formats
 const sanitizeHtmlFn: SanitizeHtmlFn =
-  (sanitizeHtmlLib as { default?: SanitizeHtmlFn } & SanitizeHtmlFn).default ??
-  (sanitizeHtmlLib as { default?: SanitizeHtmlFn } & SanitizeHtmlFn);
+  (sanitizeHtmlLib as { default?: SanitizeHtmlFn }).default ??
+  (sanitizeHtmlLib as SanitizeHtmlFn);
 
 /** Single source of truth for base URL in URL parsing across CSR/SSR. */
 const DEFAULT_BASE_URL = 'http://localhost';
