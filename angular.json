@@ -24,6 +24,7 @@
             },
             "assets": [
               "favicon.ico",
+              "favicon.svg",
               "manifest.webmanifest",
               {
                 "glob": "**/*",

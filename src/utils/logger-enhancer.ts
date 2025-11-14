@@ -173,19 +173,16 @@ export class LoggerEnhancer {
     }
 
     // Console output with appropriate method based on log level
-    if (level === 'error') {
-      // eslint-disable-next-line no-console
-      console.error(...formatted);
-    } else if (level === 'warn') {
-      // eslint-disable-next-line no-console
-      console.warn(...formatted);
-    } else if (level === 'info') {
-      // eslint-disable-next-line no-console
-      console.info(...formatted);
-    } else {
-      // eslint-disable-next-line no-console
-      console.debug(...formatted);
-    }
+    const consoleMethod =
+      level === 'error'
+        ? console.error
+        : level === 'warn'
+          ? console.warn
+          : level === 'info'
+            ? console.info
+            : console.debug;
+    // eslint-disable-next-line no-console
+    consoleMethod(...formatted);
   }
 
   /**
