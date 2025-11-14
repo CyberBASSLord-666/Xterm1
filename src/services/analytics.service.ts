@@ -184,7 +184,7 @@ export class AnalyticsService {
    */
   private stopBatchTimer(): void {
     if (this.batchTimer !== null) {
-      window.clearInterval(this.batchTimer);
+      clearInterval(this.batchTimer);
       this.batchTimer = null;
       this.logger.debug('Batch timer stopped', undefined, 'Analytics');
     }
