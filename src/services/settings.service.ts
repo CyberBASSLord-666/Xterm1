@@ -99,7 +99,7 @@ export class SettingsService implements OnDestroy {
    * Previously, theme was managed by directly mutating themeDark signal.
    * Migration: Change `settingsService.themeDark.set(!settingsService.themeDark())` 
    * to `settingsService.toggleTheme()`.
-   * All internal call sites updated in commit bdc7c2a.
+   * All internal call sites have been updated.
    * 
    * @returns The new theme state (true for dark, false for light)
    */
@@ -116,7 +116,7 @@ export class SettingsService implements OnDestroy {
    * @breaking-change v0.2.0 - New method introduced for explicit theme control.
    * Previously, theme was managed by directly mutating themeDark signal.
    * Migration: Change `settingsService.themeDark.set(true)` to `settingsService.setTheme(true)`.
-   * All internal call sites updated in commit bdc7c2a.
+   * All internal call sites have been updated.
    * 
    * @param dark - True for dark mode, false for light mode
    */
@@ -133,7 +133,7 @@ export class SettingsService implements OnDestroy {
    * Previously, no explicit method existed to revert to system theme detection.
    * Migration: New functionality - use `settingsService.resetThemeToSystemPreference()` 
    * to clear explicit theme preference and follow system settings.
-   * All internal call sites updated in commit bdc7c2a.
+   * All internal call sites have been updated.
    */
   resetThemeToSystemPreference(): void {
     this.hasExplicitThemePreference = false;
