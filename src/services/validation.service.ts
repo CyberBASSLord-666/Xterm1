@@ -7,8 +7,8 @@ import * as sanitizeHtmlLib from 'sanitize-html';
 type SanitizeHtmlOptions = Record<string, unknown>;
 type SanitizeHtmlFn = (html: string, options: SanitizeHtmlOptions) => string;
 const sanitizeHtmlFn: SanitizeHtmlFn =
-  (sanitizeHtmlLib as unknown as { default?: SanitizeHtmlFn }).default ??
-  (sanitizeHtmlLib as unknown as SanitizeHtmlFn);
+  (sanitizeHtmlLib as { default?: SanitizeHtmlFn } & SanitizeHtmlFn).default ??
+  (sanitizeHtmlLib as { default?: SanitizeHtmlFn } & SanitizeHtmlFn);
 
 /** Single source of truth for base URL in URL parsing across CSR/SSR. */
 const DEFAULT_BASE_URL = 'http://localhost';
