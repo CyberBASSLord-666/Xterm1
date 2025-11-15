@@ -138,8 +138,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
         return;
       }
 
-      // Create blob and download
-      const content = new Blob([zipData], { type: 'application/zip' });
+      // Create blob and download (type assertion needed for fflate Uint8Array compatibility)
+      const content = new Blob([zipData] as BlobPart[], { type: 'application/zip' });
       const link = this.document.createElement('a');
       const url = URL.createObjectURL(content);
       link.href = url;
@@ -240,9 +240,9 @@ export class SettingsComponent implements OnInit, OnDestroy {
               throw new Error(`Missing image files for ${meta.id}`);
             }
 
-            // Convert Uint8Array to Blob
-            const imageBlob = new Blob([imageData], { type: 'image/jpeg' });
-            const thumbBlob = new Blob([thumbData], { type: 'image/jpeg' });
+            // Convert Uint8Array to Blob (type assertion needed for fflate compatibility)
+            const imageBlob = new Blob([imageData] as BlobPart[], { type: 'image/jpeg' });
+            const thumbBlob = new Blob([thumbData] as BlobPart[], { type: 'image/jpeg' });
 
             // Add to gallery
             await this.galleryService.add({
