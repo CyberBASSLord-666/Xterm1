@@ -241,8 +241,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
             }
 
             // Convert Uint8Array to Blob
-            const imageBlob = new Blob([imageData as BlobPart], { type: 'image/jpeg' });
-            const thumbBlob = new Blob([thumbData as BlobPart], { type: 'image/jpeg' });
+            const imageBlob = new Blob([imageData], { type: 'image/jpeg' });
+            const thumbBlob = new Blob([thumbData], { type: 'image/jpeg' });
 
             // Add to gallery
             await this.galleryService.add({
