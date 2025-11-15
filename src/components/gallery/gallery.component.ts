@@ -15,6 +15,7 @@ import { Collection, GalleryItem } from '../../services/idb';
 import { RouterLink } from '@angular/router';
 import { ToastService } from '../../services/toast.service';
 import { KeyboardShortcutsService } from '../../services/keyboard-shortcuts.service';
+import { PlatformService } from '../../services/platform.service';
 import { createSelectionState, createLoadingState } from '../../utils';
 
 @Component({
@@ -28,6 +29,7 @@ export class GalleryComponent implements OnInit, OnDestroy {
   private galleryService = inject(GalleryService);
   private toastService = inject(ToastService);
   private keyboardShortcuts = inject(KeyboardShortcutsService);
+  private platformService = inject(PlatformService);
 
   @ViewChild('searchInput') searchInput?: ElementRef<HTMLInputElement>;
 
@@ -113,6 +115,11 @@ export class GalleryComponent implements OnInit, OnDestroy {
       // This effect runs whenever allItems changes.
       // It cleans up old URLs and creates new ones.
       this.revokeAllThumbUrls();
+
+      if (!this.platformService.isBrowser) {
+        return; // Skip URL creation in SSR
+      }
+
       const newUrls = new Map<string, string>();
       for (const item of this.allItems()) {
         newUrls.set(item.id, URL.createObjectURL(item.thumb));
@@ -138,7 +145,7 @@ export class GalleryComponent implements OnInit, OnDestroy {
         if (this.isSelecting() && this.selectedCount > 0) {
           // Confirm before deleting to prevent accidental data loss
           const itemText = this.selectedCount === 1 ? 'item' : 'items';
-          const confirmed = window.confirm(
+          const confirmed = this.platformService.confirm(
             `Are you sure you want to delete ${this.selectedCount} ${itemText}? This action cannot be undone.`
           );
           if (confirmed) {
@@ -180,6 +187,9 @@ export class GalleryComponent implements OnInit, OnDestroy {
   // --- End of type-safe event handlers ---
 
   private revokeAllThumbUrls(): void {
+    if (!this.platformService.isBrowser) {
+      return; // Skip URL revocation in SSR
+    }
     this.thumbUrls.forEach((url) => URL.revokeObjectURL(url));
     this.thumbUrls.clear();
   }
@@ -223,7 +233,7 @@ export class GalleryComponent implements OnInit, OnDestroy {
   public async deleteSelected(): Promise<void> {
     const ids = Array.from(this.selection.selectedItems());
     const count = this.selection.selectedCount();
-    if (confirm(`Are you sure you want to delete ${count} item(s)?`)) {
+    if (this.platformService.confirm(`Are you sure you want to delete ${count} item(s)?`)) {
       await this.galleryService.bulkRemove(ids);
       this.allItems.update((items) => items.filter((i) => !ids.includes(i.id)));
       this.toggleSelectionMode();

@@ -3,6 +3,7 @@ import { LoggerService } from './logger.service';
 import { ErrorHandlerService } from './error-handler.service';
 import { PerformanceMonitorService } from './performance-monitor.service';
 import { AnalyticsService } from './analytics.service';
+import { PlatformService } from './platform.service';
 
 export interface AnalyticsMetric {
   id: string;
@@ -52,6 +53,7 @@ export class AnalyticsDashboardService {
   private readonly errorHandler = inject(ErrorHandlerService);
   private readonly performanceMonitor = inject(PerformanceMonitorService);
   private readonly analytics = inject(AnalyticsService);
+  private readonly platformService = inject(PlatformService);
   private readonly destroyRef = inject(DestroyRef);
 
   // Signal-based state management
@@ -176,9 +178,10 @@ export class AnalyticsDashboardService {
   private startAutoRefresh(): void {
     if (this.refreshInterval !== null) return;
 
-    this.refreshInterval = window.setInterval(() => {
-      void this.loadMetrics();
-    }, 30000); // 30 seconds
+    this.refreshInterval =
+      this.platformService.setInterval(() => {
+        void this.loadMetrics();
+      }, 30000) ?? null; // 30 seconds
 
     this.logger.info('Auto-refresh started', { interval: '30s' });
   }
@@ -188,7 +191,7 @@ export class AnalyticsDashboardService {
    */
   private stopAutoRefresh(): void {
     if (this.refreshInterval !== null) {
-      window.clearInterval(this.refreshInterval);
+      this.platformService.clearInterval(this.refreshInterval);
       this.refreshInterval = null;
       this.logger.info('Auto-refresh stopped');
     }

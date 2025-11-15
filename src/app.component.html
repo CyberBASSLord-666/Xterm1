@@ -126,7 +126,7 @@
 
     <!-- Mobile menu, show/hide based on menu state. -->
     @if (isMobileMenuOpen()) {
-      <div class="md:hidden animate-slide-down" id="mobile-menu">
+      <div class="md:hidden overflow-hidden animate-slide-down" id="mobile-menu">
         <nav class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
           <a
             (click)="closeMobileMenu()"
