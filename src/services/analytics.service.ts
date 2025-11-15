@@ -193,12 +193,13 @@ export class AnalyticsService {
     }
 
     // Use platform service for SSR-safe timer
-    this.batchTimer =
-      this.platformService.setInterval(() => {
-        if (this.eventQueue.length > 0) {
-          this.sendBatch();
-        }
-      }, this.batchInterval) ?? null;
+    // Ensure batchTimer is always number | null (never undefined)
+    const timerId = this.platformService.setInterval(() => {
+      if (this.eventQueue.length > 0) {
+        this.sendBatch();
+      }
+    }, this.batchInterval);
+    this.batchTimer = timerId ?? null;
 
     this.logger.debug('Batch timer started', { interval: this.batchInterval }, 'Analytics');
   }
