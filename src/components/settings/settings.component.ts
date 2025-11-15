@@ -139,7 +139,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
       }
 
       // Create blob and download
-      const content = new Blob([zipData as BlobPart], { type: 'application/zip' });
+      const content = new Blob([zipData], { type: 'application/zip' });
       const link = this.document.createElement('a');
       const url = URL.createObjectURL(content);
       link.href = url;
