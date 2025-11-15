@@ -1,6 +1,18 @@
 import { GoogleGenAI } from '@google/genai';
 import { API_CONFIG } from '../constants';
 
+// Simple logger utility for client module - can be mocked in tests
+const logger = {
+  warn: (message: string, ...args: unknown[]): void => {
+    // eslint-disable-next-line no-console
+    console.warn(message, ...args);
+  },
+  error: (message: string, ...args: unknown[]): void => {
+    // eslint-disable-next-line no-console
+    console.error(message, ...args);
+  },
+};
+
 export type DeviceInfo = { width: number; height: number; dpr: number };
 export type ExactFitTarget = {
   width: number;
@@ -36,7 +48,7 @@ const geminiModel = 'gemini-2.0-flash-exp';
  */
 export function initializeGeminiClient(apiKey: string): void {
   if (!apiKey || apiKey.trim().length === 0) {
-    console.warn('Gemini API key is empty. AI features will not be available.');
+    logger.warn('Gemini API key is empty. AI features will not be available.');
     return;
   }
   ai = new GoogleGenAI({ apiKey });
@@ -47,19 +59,14 @@ export function initializeGeminiClient(apiKey: string): void {
  */
 function ensureGeminiClient(): GoogleGenAI {
   if (!ai) {
-    throw new Error(
-      'Gemini API client is not initialized. Please configure your API key in settings.'
-    );
+    throw new Error('Gemini API client is not initialized. Please configure your API key in settings.');
   }
   return ai;
 }
 
 type RequestFn<T> = () => Promise<T>;
 
-async function fetchWithRetries(
-  url: string,
-  options: { timeout: number; retries: number }
-): Promise<Response> {
+async function fetchWithRetries(url: string, options: { timeout: number; retries: number }): Promise<Response> {
   const { timeout, retries } = options;
   let lastError: Error | undefined;
 
@@ -83,14 +90,13 @@ async function fetchWithRetries(
       } else {
         // Handle other client errors (4xx) by attempting to parse a meaningful message
         const errorText = await response.text();
-        console.error('Raw API Error:', errorText);
+        logger.error('Raw API Error:', errorText);
 
         let errorMessage;
         try {
           const errorJson = JSON.parse(errorText);
           if (errorJson.details?.error?.code === 'content_filter') {
-            errorMessage =
-              'Your prompt was blocked by the content safety filter. Please rephrase it.';
+            errorMessage = 'Your prompt was blocked by the content safety filter. Please rephrase it.';
           } else if (errorJson.details?.error?.message) {
             errorMessage = errorJson.details.error.message;
           } else if (errorJson.error && typeof errorJson.error === 'string') {
@@ -194,8 +200,7 @@ class RequestQueue {
       const result = await requestFn();
       resolve(result);
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Queue request failed:', error);
+      logger.error('Queue request failed:', error);
       reject(error as Error);
     } finally {
       setTimeout(() => {
@@ -247,10 +252,7 @@ export function generateTextGet(prompt: string, options: TextOptions = {}): Prom
   });
 }
 
-export function computeExactFitTarget(
-  device: DeviceInfo,
-  supported: SupportedResolutions
-): ExactFitTarget {
+export function computeExactFitTarget(device: DeviceInfo, supported: SupportedResolutions): ExactFitTarget {
   const deviceRatio = device.width / device.height;
 
   let bestRatioKey = '';
@@ -327,7 +329,7 @@ export function listImageModels(): Promise<string[]> {
     const usableModels = allModels.filter((m) => USABLE_IMAGE_MODELS.includes(m));
 
     if (usableModels.length === 0 && allModels.length > 0) {
-      console.warn("Image model whitelist may be outdated. Falling back to default 'flux'.");
+      logger.warn("Image model whitelist may be outdated. Falling back to default 'flux'.");
       return allModels.includes('flux') ? ['flux'] : [];
     }
 
@@ -402,10 +404,7 @@ Generate a prompt that strictly adheres to these rules and embodies the user's p
   return response.text.trim();
 }
 
-export async function composeVariantPrompt(
-  basePrompt: string,
-  _options: TextOptions = {}
-): Promise<string> {
+export async function composeVariantPrompt(basePrompt: string, _options: TextOptions = {}): Promise<string> {
   const systemPrompt = `You are a prompt refinement expert. Your task is to generate a subtle variation of the following hyperrealistic image prompt.
 
 **Rules for Variation:**

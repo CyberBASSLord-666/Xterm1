@@ -28,6 +28,10 @@ jest.mock('@google/genai', () => {
 const { GoogleGenAI, __mocks } = jest.requireMock('@google/genai');
 const generateContentMock: jest.Mock = __mocks.generateContentMock;
 
+// Mock console methods to suppress test output noise
+const originalConsoleWarn = console.warn;
+const originalConsoleError = console.error;
+
 describe('pollinations.client integration', () => {
   beforeEach(() => {
     generateContentMock.mockReset().mockResolvedValue({ text: 'Generated prompt' });
@@ -35,11 +39,19 @@ describe('pollinations.client integration', () => {
       (globalThis as any).fetch = jest.fn();
     }
     (globalThis.fetch as jest.Mock).mockReset();
+
+    // Suppress console noise during tests
+    console.warn = jest.fn();
+    console.error = jest.fn();
   });
 
   afterEach(() => {
     delete (window as any).speechSynthesis;
     delete (window as any).SpeechSynthesisUtterance;
+
+    // Restore console methods
+    console.warn = originalConsoleWarn;
+    console.error = originalConsoleError;
   });
 
   it('initializes the Gemini client and composes prompts', async () => {
@@ -59,7 +71,7 @@ describe('pollinations.client integration', () => {
     generateContentMock.mockResolvedValueOnce({ text: 'Restyled prompt' });
     const restyledPrompt = await composeRestylePrompt('Base prompt', 'Golden hour');
     expect(restyledPrompt).toBe('Restyled prompt');
-    expect((GoogleGenAI as jest.Mock)).toHaveBeenCalledWith({ apiKey: 'api-key' });
+    expect(GoogleGenAI as jest.Mock).toHaveBeenCalledWith({ apiKey: 'api-key' });
   });
 
   it('queues image generation requests and returns blobs', async () => {
@@ -73,7 +85,7 @@ describe('pollinations.client integration', () => {
 
     const result = await generateImage('sunset', 512, 512);
     expect(result).toBe(blob);
-    expect((globalThis.fetch as jest.Mock)).toHaveBeenCalledWith(expect.stringContaining('sunset'), expect.any(Object));
+    expect(globalThis.fetch as jest.Mock).toHaveBeenCalledWith(expect.stringContaining('sunset'), expect.any(Object));
   });
 
   it('retries transient failures when generating text content', async () => {
@@ -83,7 +95,7 @@ describe('pollinations.client integration', () => {
 
     const text = await generateTextGet('status report');
     expect(text).toBe('completed');
-    expect((globalThis.fetch as jest.Mock)).toHaveBeenCalledTimes(2);
+    expect(globalThis.fetch as jest.Mock).toHaveBeenCalledTimes(2);
   });
 
   it('throws informative errors for non-image responses', async () => {
@@ -113,7 +125,6 @@ describe('pollinations.client integration', () => {
     await expect(promise).rejects.toThrow('Invalid prompt');
     jest.useRealTimers();
   });
-
 
   it('computes exact fit targets and creates device wallpapers', async () => {
     (globalThis.fetch as jest.Mock).mockImplementation(() =>
