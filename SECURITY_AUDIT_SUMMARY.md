@@ -66,9 +66,9 @@ This document summarizes the security audit results and documents acceptable ris
 **Status**: ACCEPTABLE WITH PLAN - Performance Target Not Security Issue
 
 **Details**:
-- Current bundle: 812.45 KB (raw) / 178.34 KB (gzipped)  <!-- Update these numbers to actual measured values -->
+- Current bundle: 983.39 KB (raw) / 216.42 KB (gzipped)
 - Budget: 500 KB (raw)
-- Exceedance: 312.45 KB
+- Exceedance: 483.39 KB
 
 **Rationale for Acceptance**:
 - This is a performance target, not a security vulnerability
