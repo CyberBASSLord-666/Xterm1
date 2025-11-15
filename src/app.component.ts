@@ -1,9 +1,11 @@
-import { Component, ChangeDetectionStrategy, inject, effect, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, effect, signal, Renderer2 } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { ToastComponent } from './components/toast/toast.component';
 import { ShortcutsHelpComponent } from './components/shortcuts-help/shortcuts-help.component';
 import { SettingsService } from './services/settings.service';
 import { ToastService } from './services/toast.service';
+import { PlatformService } from './services/platform.service';
 
 @Component({
   selector: 'app-root',
@@ -14,6 +16,9 @@ import { ToastService } from './services/toast.service';
 export class AppComponent {
   private settingsService = inject(SettingsService);
   private toastService = inject(ToastService);
+  private renderer = inject(Renderer2);
+  private platformService = inject(PlatformService);
+  private document = inject(DOCUMENT);
 
   isDarkTheme = this.settingsService.themeDark.asReadonly();
   isMobileMenuOpen = signal(false);
@@ -21,11 +26,18 @@ export class AppComponent {
   constructor() {
     effect(() => {
       // This effect reacts to theme changes and applies the CSS class to the root <html> element.
+      // Only manipulate DOM in browser context for SSR safety
+      if (!this.platformService.isBrowser) {
+        return;
+      }
+
       const isDark = this.settingsService.themeDark();
+      const documentElement = this.document.documentElement;
+
       if (isDark) {
-        document.documentElement.classList.add('dark');
+        this.renderer.addClass(documentElement, 'dark');
       } else {
-        document.documentElement.classList.remove('dark');
+        this.renderer.removeClass(documentElement, 'dark');
       }
     });
   }
