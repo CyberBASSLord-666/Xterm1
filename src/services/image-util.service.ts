@@ -34,7 +34,8 @@ export class ImageUtilService {
    */
   async makeThumbnail(blob: Blob, options: ThumbnailOptions = {}): Promise<Blob> {
     if (!this.platformService.isBrowser) {
-      throw new Error('Image processing is not available in SSR context');
+      // SSR guard: return rejected promise instead of throwing synchronously
+      return Promise.reject(new Error('Image processing is not available in SSR context'));
     }
 
     const { size = IMAGE_PRESETS.THUMBNAIL_SIZE, quality = IMAGE_PRESETS.THUMBNAIL_QUALITY } = options;
