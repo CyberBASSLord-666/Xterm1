@@ -6,7 +6,7 @@ import { SettingsService } from '../../services/settings.service';
 import { KeyboardShortcutsService } from '../../services/keyboard-shortcuts.service';
 import { LoggerService } from '../../services/logger.service';
 import { PlatformService } from '../../services/platform.service';
-import JSZip from 'jszip';
+import { zip, unzip, strToU8, strFromU8 } from 'fflate';
 import { FormsModule } from '@angular/forms';
 import { createLoadingState, createFormField } from '../../utils';
 
@@ -104,26 +104,42 @@ export class SettingsComponent implements OnInit, OnDestroy {
         return;
       }
 
-      const zip = new JSZip();
+      // Prepare files for fflate
+      const files: Record<string, Uint8Array> = {};
       const metadata = [];
 
       for (const item of items) {
         const { blob, thumb, ...meta } = item;
         metadata.push(meta);
-        zip.file(`images/${item.id}.jpg`, blob, { binary: true });
-        zip.file(`thumbnails/${item.id}.jpg`, thumb, { binary: true });
+
+        // Convert blobs to Uint8Array
+        const imageBuffer = new Uint8Array(await blob.arrayBuffer());
+        const thumbBuffer = new Uint8Array(await thumb.arrayBuffer());
+
+        files[`images/${item.id}.jpg`] = imageBuffer;
+        files[`thumbnails/${item.id}.jpg`] = thumbBuffer;
       }
 
-      zip.file('metadata.json', JSON.stringify(metadata, null, 2));
+      // Add metadata as JSON
+      files['metadata.json'] = strToU8(JSON.stringify(metadata, null, 2));
 
       this.toastService.show('Generating ZIP file...');
-      const content = await zip.generateAsync({ type: 'blob' });
+
+      // Create ZIP using fflate
+      const zipData = await new Promise<Uint8Array>((resolve, reject) => {
+        zip(files, { level: 6 }, (err, data) => {
+          if (err) reject(err);
+          else resolve(data);
+        });
+      });
 
       if (!this.platformService.isBrowser) {
         this.toastService.show('Export is not available in server-side rendering context.');
         return;
       }
 
+      // Create blob and download
+      const content = new Blob([zipData as BlobPart], { type: 'application/zip' });
       const link = this.document.createElement('a');
       const url = URL.createObjectURL(content);
       link.href = url;
@@ -163,15 +179,24 @@ export class SettingsComponent implements OnInit, OnDestroy {
       this.toastService.show('Reading ZIP file...');
 
       try {
-        const zip = await JSZip.loadAsync(file);
+        // Read file as ArrayBuffer
+        const arrayBuffer = await file.arrayBuffer();
+        const zipData = new Uint8Array(arrayBuffer);
+
+        // Unzip using fflate
+        const unzipped = await new Promise<Record<string, Uint8Array>>((resolve, reject) => {
+          unzip(zipData, (err, data) => {
+            if (err) reject(err);
+            else resolve(data);
+          });
+        });
 
         // Read metadata.json
-        const metadataFile = zip.file('metadata.json');
-        if (!metadataFile) {
+        if (!unzipped['metadata.json']) {
           throw new Error('Invalid format: metadata.json not found.');
         }
 
-        const metadataText = await metadataFile.async('text');
+        const metadataText = strFromU8(unzipped['metadata.json']);
         const metadata = JSON.parse(metadataText) as Array<{
           id: string;
           createdAt: string;
@@ -208,15 +233,16 @@ export class SettingsComponent implements OnInit, OnDestroy {
             }
 
             // Read image files
-            const imageFile = zip.file(`images/${meta.id}.jpg`);
-            const thumbFile = zip.file(`thumbnails/${meta.id}.jpg`);
+            const imageData = unzipped[`images/${meta.id}.jpg`];
+            const thumbData = unzipped[`thumbnails/${meta.id}.jpg`];
 
-            if (!imageFile || !thumbFile) {
+            if (!imageData || !thumbData) {
               throw new Error(`Missing image files for ${meta.id}`);
             }
 
-            const imageBlob = await imageFile.async('blob');
-            const thumbBlob = await thumbFile.async('blob');
+            // Convert Uint8Array to Blob
+            const imageBlob = new Blob([imageData as BlobPart], { type: 'image/jpeg' });
+            const thumbBlob = new Blob([thumbData as BlobPart], { type: 'image/jpeg' });
 
             // Add to gallery
             await this.galleryService.add({
