@@ -1,5 +1,6 @@
 import { Component, ChangeDetectionStrategy, inject, OnInit, OnDestroy, signal } from '@angular/core';
 import { ToastService } from '../../services/toast.service';
+import { PlatformService } from '../../services/platform.service';
 import { SkeletonComponent } from '../skeleton/skeleton.component';
 
 interface FeedImageEvent {
@@ -26,6 +27,7 @@ interface FeedTextEvent {
 })
 export class FeedComponent implements OnInit, OnDestroy {
   private toast = inject(ToastService);
+  private platformService = inject(PlatformService);
 
   feedItems = signal<FeedImageEvent[]>([]);
   textFeedItems = signal<FeedTextEvent[]>([]);
@@ -41,10 +43,17 @@ export class FeedComponent implements OnInit, OnDestroy {
   private readonly maxReconnectDelay = 30000; // 30 seconds
 
   ngOnInit(): void {
+    if (!this.platformService.isBrowser) {
+      return; // Skip EventSource initialization in SSR
+    }
     this.connectImageFeed();
   }
 
   connectImageFeed(): void {
+    if (!this.platformService.isBrowser) {
+      return;
+    }
+
     this.imageEventSource?.close();
     this.imageEventSource = new EventSource('https://image.pollinations.ai/feed');
 
@@ -70,7 +79,7 @@ export class FeedComponent implements OnInit, OnDestroy {
       this.toast.show(`Image feed disconnected. Retrying in ${this.imageReconnectDelay / 1000}s.`);
       this.imageEventSource?.close(); // Close the faulty source
 
-      setTimeout(() => {
+      this.platformService.setTimeout(() => {
         this.connectImageFeed();
       }, this.imageReconnectDelay);
 
@@ -80,6 +89,10 @@ export class FeedComponent implements OnInit, OnDestroy {
   }
 
   connectTextFeed(): void {
+    if (!this.platformService.isBrowser) {
+      return;
+    }
+
     this.textEventSource?.close();
     this.textEventSource = new EventSource('https://text.pollinations.ai/feed');
 
@@ -105,7 +118,7 @@ export class FeedComponent implements OnInit, OnDestroy {
       this.toast.show(`Text feed disconnected. Retrying in ${this.textReconnectDelay / 1000}s.`);
       this.textEventSource?.close(); // Close the faulty source
 
-      setTimeout(() => this.connectTextFeed(), this.textReconnectDelay);
+      this.platformService.setTimeout(() => this.connectTextFeed(), this.textReconnectDelay);
 
       // Increase delay for the next attempt
       this.textReconnectDelay = Math.min(this.textReconnectDelay * 2, this.maxReconnectDelay);

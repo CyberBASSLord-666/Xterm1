@@ -1,9 +1,11 @@
 import { Component, ChangeDetectionStrategy, inject, OnInit, OnDestroy, computed } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { GalleryService } from '../../services/gallery.service';
 import { ToastService } from '../../services/toast.service';
 import { SettingsService } from '../../services/settings.service';
 import { KeyboardShortcutsService } from '../../services/keyboard-shortcuts.service';
 import { LoggerService } from '../../services/logger.service';
+import { PlatformService } from '../../services/platform.service';
 import JSZip from 'jszip';
 import { FormsModule } from '@angular/forms';
 import { createLoadingState, createFormField } from '../../utils';
@@ -21,6 +23,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
   private toastService = inject(ToastService);
   private keyboardShortcuts = inject(KeyboardShortcutsService);
   private logger = inject(LoggerService);
+  private platformService = inject(PlatformService);
+  private document = inject(DOCUMENT);
 
   // Professional loading states
   exportState = createLoadingState();
@@ -115,14 +119,20 @@ export class SettingsComponent implements OnInit, OnDestroy {
       this.toastService.show('Generating ZIP file...');
       const content = await zip.generateAsync({ type: 'blob' });
 
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(content);
-      link.download = `PolliWall_Export_${new Date().toISOString().split('T')[0]}.zip`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      if (!this.platformService.isBrowser) {
+        this.toastService.show('Export is not available in server-side rendering context.');
+        return;
+      }
 
-      URL.revokeObjectURL(link.href);
+      const link = this.document.createElement('a');
+      const url = URL.createObjectURL(content);
+      link.href = url;
+      link.download = `PolliWall_Export_${new Date().toISOString().split('T')[0]}.zip`;
+      this.document.body.appendChild(link);
+      link.click();
+      this.document.body.removeChild(link);
+
+      URL.revokeObjectURL(url);
       this.toastService.show('Export complete!');
     });
 

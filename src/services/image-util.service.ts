@@ -1,5 +1,7 @@
 import { Injectable, inject } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { LoggerService } from './logger.service';
+import { PlatformService } from './platform.service';
 import { IMAGE_PRESETS } from '../constants';
 
 export interface CompressionOptions {
@@ -21,6 +23,8 @@ export interface ThumbnailOptions {
 @Injectable({ providedIn: 'root' })
 export class ImageUtilService {
   private logger = inject(LoggerService);
+  private platformService = inject(PlatformService);
+  private document = inject(DOCUMENT);
 
   /**
    * Create a thumbnail from a blob with configurable size and quality.
@@ -29,12 +33,17 @@ export class ImageUtilService {
    * @returns A promise that resolves to the thumbnail blob
    */
   async makeThumbnail(blob: Blob, options: ThumbnailOptions = {}): Promise<Blob> {
+    if (!this.platformService.isBrowser) {
+      throw new Error('Image processing is not available in SSR context');
+    }
+
     const { size = IMAGE_PRESETS.THUMBNAIL_SIZE, quality = IMAGE_PRESETS.THUMBNAIL_QUALITY } = options;
-    const startTime = performance.now();
+    const performance = this.platformService.getPerformance();
+    const startTime = performance ? performance.now() : Date.now();
 
     try {
       const bitmap = await createImageBitmap(blob);
-      const canvas = document.createElement('canvas');
+      const canvas = this.document.createElement('canvas');
       const scale = size / Math.max(bitmap.width, bitmap.height);
 
       canvas.width = Math.round(bitmap.width * scale);
@@ -53,7 +62,7 @@ export class ImageUtilService {
         canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Canvas toBlob failed'))), 'image/jpeg', quality);
       });
 
-      const duration = performance.now() - startTime;
+      const duration = performance ? performance.now() - startTime : Date.now() - startTime;
       this.logger.debug(
         `Thumbnail created: ${blob.size} bytes -> ${result.size} bytes (${duration.toFixed(2)}ms)`,
         { originalSize: blob.size, thumbnailSize: result.size, duration },
@@ -74,6 +83,10 @@ export class ImageUtilService {
    * @returns A promise that resolves to the compressed blob
    */
   async compressImage(blob: Blob, options: CompressionOptions = {}): Promise<Blob> {
+    if (!this.platformService.isBrowser) {
+      throw new Error('Image processing is not available in SSR context');
+    }
+
     const {
       maxWidth = IMAGE_PRESETS.MAX_IMAGE_WIDTH,
       maxHeight = IMAGE_PRESETS.MAX_IMAGE_HEIGHT,
@@ -81,7 +94,8 @@ export class ImageUtilService {
       format = 'image/jpeg',
     } = options;
 
-    const startTime = performance.now();
+    const performance = this.platformService.getPerformance();
+    const startTime = performance ? performance.now() : Date.now();
 
     try {
       const bitmap = await createImageBitmap(blob);
@@ -95,7 +109,7 @@ export class ImageUtilService {
         height = Math.round(height * scale);
       }
 
-      const canvas = document.createElement('canvas');
+      const canvas = this.document.createElement('canvas');
       canvas.width = width;
       canvas.height = height;
 
@@ -110,7 +124,7 @@ export class ImageUtilService {
         canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Canvas toBlob failed'))), format, quality);
       });
 
-      const duration = performance.now() - startTime;
+      const duration = performance ? performance.now() - startTime : Date.now() - startTime;
       const compressionRatio = ((1 - result.size / blob.size) * 100).toFixed(1);
 
       this.logger.debug(
@@ -132,6 +146,10 @@ export class ImageUtilService {
    * @returns A promise that resolves to the image dimensions
    */
   async getImageDimensions(blob: Blob): Promise<{ width: number; height: number }> {
+    if (!this.platformService.isBrowser) {
+      throw new Error('Image processing is not available in SSR context');
+    }
+
     const bitmap = await createImageBitmap(blob);
     const dimensions = { width: bitmap.width, height: bitmap.height };
     bitmap.close();
@@ -150,8 +168,12 @@ export class ImageUtilService {
     format: 'image/jpeg' | 'image/png' | 'image/webp',
     quality: number = 0.9
   ): Promise<Blob> {
+    if (!this.platformService.isBrowser) {
+      throw new Error('Image processing is not available in SSR context');
+    }
+
     const bitmap = await createImageBitmap(blob);
-    const canvas = document.createElement('canvas');
+    const canvas = this.document.createElement('canvas');
     canvas.width = bitmap.width;
     canvas.height = bitmap.height;
 
@@ -170,8 +192,12 @@ export class ImageUtilService {
    * @returns A promise that resolves to a tiny blurred preview
    */
   async createPlaceholder(blob: Blob): Promise<Blob> {
+    if (!this.platformService.isBrowser) {
+      throw new Error('Image processing is not available in SSR context');
+    }
+
     const bitmap = await createImageBitmap(blob);
-    const canvas = document.createElement('canvas');
+    const canvas = this.document.createElement('canvas');
 
     // Create a very small preview (20px on the longest side)
     const scale = 20 / Math.max(bitmap.width, bitmap.height);
