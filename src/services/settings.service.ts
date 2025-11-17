@@ -94,6 +94,8 @@ export class SettingsService implements OnDestroy {
   /**
    * Toggles the theme between dark and light mode.
    * Marks the theme as explicitly set by the user.
+   * 
+   * @since v0.2.0
    * @returns The new theme state (true for dark, false for light)
    */
   toggleTheme(): boolean {
@@ -105,6 +107,8 @@ export class SettingsService implements OnDestroy {
   /**
    * Sets the theme to the specified mode.
    * Marks the theme as explicitly set by the user.
+   * 
+   * @since v0.2.0
    * @param dark - True for dark mode, false for light mode
    */
   setTheme(dark: boolean): void {
@@ -115,6 +119,8 @@ export class SettingsService implements OnDestroy {
   /**
    * Resets the theme preference to follow the system setting.
    * Clears any explicit user preference and re-applies system detection.
+   * 
+   * @since v0.2.0
    */
   resetThemeToSystemPreference(): void {
     this.hasExplicitThemePreference = false;

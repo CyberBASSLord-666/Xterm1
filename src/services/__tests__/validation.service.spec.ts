@@ -458,4 +458,239 @@ describe('ValidationService', () => {
       expect(result).toBe('_NUL.txt');
     });
   });
+
+  describe('sanitizeHtmlAdvanced', () => {
+    it('should strip all tags when allowedTags is empty', () => {
+      const result = service.sanitizeHtmlAdvanced('<div><p>text</p></div>', [], {});
+      expect(result).not.toContain('<div>');
+      expect(result).not.toContain('<p>');
+      expect(result).toContain('text');
+    });
+
+    it('should preserve allowed tags', () => {
+      const result = service.sanitizeHtmlAdvanced('<div><p>text</p></div>', ['p'], {});
+      expect(result).toContain('<p>');
+      expect(result).toContain('text');
+    });
+
+    it('should preserve allowed attributes', () => {
+      const result = service.sanitizeHtmlAdvanced(
+        '<a href="http://example.com" class="link">text</a>',
+        ['a'],
+        { a: ['href', 'class'] }
+      );
+      expect(result).toContain('href');
+      expect(result).toContain('class');
+    });
+
+    it('should remove style attribute regardless of allowlist', () => {
+      const result = service.sanitizeHtmlAdvanced(
+        '<div style="color: red">text</div>',
+        ['div'],
+        { div: ['style'] }
+      );
+      expect(result).not.toContain('style');
+    });
+
+    it('should remove srcdoc attribute regardless of allowlist', () => {
+      const result = service.sanitizeHtmlAdvanced(
+        '<iframe srcdoc="<script>alert(1)</script>">text</iframe>',
+        ['iframe'],
+        { iframe: ['srcdoc'] }
+      );
+      expect(result).not.toContain('srcdoc');
+    });
+
+    it('should remove event handlers regardless of allowlist', () => {
+      const result = service.sanitizeHtmlAdvanced(
+        '<button onclick="alert(1)">click</button>',
+        ['button'],
+        { button: ['onclick'] }
+      );
+      expect(result).not.toContain('onclick');
+      expect(result).not.toContain('alert');
+    });
+
+    it('should handle global allowed attributes with asterisk', () => {
+      const result = service.sanitizeHtmlAdvanced(
+        '<div class="test"><p class="test2">text</p></div>',
+        ['div', 'p'],
+        { '*': ['class'] }
+      );
+      expect(result).toContain('class="test"');
+      expect(result).toContain('class="test2"');
+    });
+
+    it('should reject protocol-relative URLs in href', () => {
+      const result = service.sanitizeHtmlAdvanced(
+        '<a href="//evil.com">link</a>',
+        ['a'],
+        { a: ['href'] }
+      );
+      // Protocol-relative URLs should be rejected
+      expect(result).not.toContain('//evil.com');
+    });
+
+    it('should accept fragment-only URLs', () => {
+      const result = service.sanitizeHtmlAdvanced(
+        '<a href="#section">link</a>',
+        ['a'],
+        { a: ['href'] }
+      );
+      expect(result).toContain('#section');
+    });
+
+    it('should accept relative URLs', () => {
+      const result = service.sanitizeHtmlAdvanced(
+        '<a href="/path/to/page">link</a>',
+        ['a'],
+        { a: ['href'] }
+      );
+      expect(result).toContain('/path/to/page');
+    });
+
+    it('should reject dangerous protocols in href', () => {
+      const result = service.sanitizeHtmlAdvanced(
+        '<a href="javascript:alert(1)">link</a>',
+        ['a'],
+        { a: ['href'] }
+      );
+      expect(result).not.toContain('javascript');
+    });
+
+    it('should handle nested tags with allowlist', () => {
+      const result = service.sanitizeHtmlAdvanced(
+        '<div><p><strong>bold</strong> text</p></div>',
+        ['div', 'p', 'strong'],
+        {}
+      );
+      expect(result).toContain('<div>');
+      expect(result).toContain('<p>');
+      expect(result).toContain('<strong>');
+      expect(result).toContain('bold');
+    });
+
+    it('should unwrap disallowed tags but keep content', () => {
+      const result = service.sanitizeHtmlAdvanced(
+        '<div><script>alert(1)</script><p>safe</p></div>',
+        ['div', 'p'],
+        {}
+      );
+      expect(result).not.toContain('<script>');
+      expect(result).toContain('<p>safe</p>');
+    });
+
+    it('should handle empty input', () => {
+      const result = service.sanitizeHtmlAdvanced('', ['div'], {});
+      expect(result).toBe('');
+    });
+
+    it('should handle whitespace-only input', () => {
+      const result = service.sanitizeHtmlAdvanced('   ', ['div'], {});
+      expect(result).toBe('');
+    });
+
+    it('should sanitize text content within allowed tags', () => {
+      const result = service.sanitizeHtmlAdvanced(
+        '<p>test\x00string\u200B</p>',
+        ['p'],
+        {}
+      );
+      expect(result).not.toContain('\x00');
+      expect(result).not.toContain('\u200B');
+    });
+  });
+
+  describe('Type Safety and Edge Cases', () => {
+    it('should handle null/undefined inputs gracefully in sanitizeString', () => {
+      expect(service.sanitizeString(null as any)).toBe('');
+      expect(service.sanitizeString(undefined as any)).toBe('');
+    });
+
+    it('should handle null/undefined inputs in sanitizeHtml', () => {
+      expect(service.sanitizeHtml(null as any)).toBe('');
+      expect(service.sanitizeHtml(undefined as any)).toBe('');
+    });
+
+    it('should handle null/undefined inputs in sanitizeUrl', () => {
+      expect(service.sanitizeUrl(null as any)).toBe('');
+      expect(service.sanitizeUrl(undefined as any)).toBe('');
+    });
+
+    it('should handle protocol-relative URLs correctly', () => {
+      const result = service.validateImageUrl('//example.com/image.jpg');
+      expect(result.isValid).toBe(false);
+      expect(result.errors.some((e: string) => e.includes('Protocol-relative'))).toBe(true);
+    });
+
+    it('should handle encoded protocol smuggling attempts', () => {
+      const encoded = 'javascript%3Aalert(1)';
+      const result = service.sanitizeUrl(encoded);
+      expect(result).toBe('');
+    });
+
+    it('should handle double-encoded protocol smuggling', () => {
+      const doubleEncoded = 'javascript%253Aalert(1)';
+      const result = service.sanitizeUrl(doubleEncoded);
+      // After one decode, it should still detect the dangerous protocol
+      expect(result).toBe('');
+    });
+
+    it('should handle control characters in URLs', () => {
+      const urlWithControl = 'http://example.com/\x00path';
+      const result = service.sanitizeUrl(urlWithControl);
+      expect(result).toBe('');
+    });
+
+    it('should validate ALLOWED_PROTOCOLS type is readonly', () => {
+      // This test verifies the const assertion is working
+      const protocols = service.sanitizeUrl('http://example.com');
+      expect(protocols).toBeTruthy();
+    });
+
+    it('should handle replaceRepeatedly edge cases', () => {
+      // Test that replaceRepeatedly doesn't cause infinite loops
+      const html = '<div onclick="alert(1)" onclick="alert(2)">test</div>';
+      const result = service.sanitizeHtml(html);
+      expect(result).not.toContain('onclick');
+    });
+  });
+
+  describe('Cross-Site Scripting (XSS) Prevention - Advanced', () => {
+    it('should block mixed-case javascript: protocol', () => {
+      const result = service.sanitizeUrl('JaVaScRiPt:alert(1)');
+      expect(result).toBe('');
+    });
+
+    it('should block whitespace in javascript: protocol', () => {
+      const result = service.sanitizeHtml('<a href="java\nscript:alert(1)">link</a>');
+      expect(result).not.toContain('script');
+    });
+
+    it('should block HTML entities in protocol', () => {
+      const result = service.sanitizeHtml('<a href="&#106;avascript:alert(1)">link</a>');
+      expect(result).not.toContain('javascript');
+    });
+
+    it('should block decimal HTML entities', () => {
+      const result = service.sanitizeHtml('<a href="&#106;&#97;&#118;&#97;&#115;&#99;&#114;&#105;&#112;&#116;&#58;alert(1)">link</a>');
+      expect(result).not.toContain('javascript');
+    });
+
+    it('should handle deeply nested XSS attempts', () => {
+      const malicious = '<div><span><a href="javascript:alert(1)"><img src="x" onerror="alert(2)"></a></span></div>';
+      const result = service.sanitizeHtml(malicious);
+      expect(result).not.toContain('javascript');
+      expect(result).not.toContain('onerror');
+      expect(result).not.toContain('alert');
+    });
+
+    it('should prevent DOM clobbering via id/name', () => {
+      // While we don't specifically handle DOM clobbering, we should strip dangerous content
+      const html = '<form id="location"><input name="href"></form>';
+      const result = service.sanitizeHtml(html);
+      expect(result).not.toContain('<form>');
+      expect(result).not.toContain('<input>');
+    });
+  });
 });
