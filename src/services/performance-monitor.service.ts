@@ -172,7 +172,10 @@ export class PerformanceMonitorService {
         // Time to First Byte / Time to Interactive
         const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTimingExtended;
 
-        let responseStart = navigation?.responseStart;
+responseStart = responseStart !== undefined ? responseStart : legacyTiming.responseStart;
+requestStart = requestStart !== undefined ? requestStart : legacyTiming.requestStart;
+domInteractive = domInteractive !== undefined ? domInteractive : legacyTiming.domInteractive;
+fetchStart = fetchStart !== undefined ? fetchStart : legacyTiming.fetchStart;
         let requestStart = navigation?.requestStart;
         let domInteractive = navigation?.domInteractive;
         let fetchStart = navigation?.fetchStart;
