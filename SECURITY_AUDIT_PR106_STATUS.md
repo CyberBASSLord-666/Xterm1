@@ -234,4 +234,4 @@ For security questions or concerns:
 
 **🔒 End of Security Audit Status Report**
 
-*This PR represents best practices in secure code development and maintains the high security standards established in the PolliWall project.*
+*This PR represents best practices in secure code development and maintains the high security standards established in the Xterm1 project.*
