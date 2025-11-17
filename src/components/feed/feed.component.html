@@ -113,7 +113,7 @@
     </div>
 
     @if (activeDiagnostics().stalled) {
-      <div role="alert" class="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-amber-100 text-sm">
+<div role="status" aria-live="polite" class="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-amber-100 text-sm">
         Throughput monitoring detected a stall (no events for {{ stallDurationLabel() }}). We will continue buffering
         and attempt recovery automatically.
       </div>
