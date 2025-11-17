@@ -13,6 +13,9 @@ interface AppNavigationItem {
   readonly analyticsId?: string;
 }
 
+const EXACT_MATCH_OPTIONS = { exact: true } as const;
+const DEFAULT_MATCH_OPTIONS = { exact: false } as const;
+
 const APP_NAVIGATION_ITEMS: readonly AppNavigationItem[] = [
   { label: 'Create', path: '/', exact: true, analyticsId: 'nav-create' },
   { label: 'Gallery', path: '/gallery', analyticsId: 'nav-gallery' },
@@ -33,6 +36,8 @@ export class AppComponent {
   private doc = inject(DOCUMENT, { optional: true });
 
   readonly navigationItems = APP_NAVIGATION_ITEMS;
+  readonly exactMatchOptions = EXACT_MATCH_OPTIONS;
+  readonly defaultMatchOptions = DEFAULT_MATCH_OPTIONS;
 
   isDarkTheme = this.settingsService.themeDark;
   isMobileMenuOpen = signal(false);
