@@ -265,11 +265,10 @@ describe('SettingsService', () => {
       };
 
       // Simulate storage event from another tab
-      const storageEvent = new StorageEvent('storage', {
-        key: 'polliwall_settings',
-        newValue: JSON.stringify(newSettings),
-        storageArea: localStorage,
-      });
+      const storageEvent = new StorageEvent('storage');
+      Object.defineProperty(storageEvent, 'key', { value: 'polliwall_settings' });
+      Object.defineProperty(storageEvent, 'newValue', { value: JSON.stringify(newSettings) });
+      Object.defineProperty(storageEvent, 'storageArea', { value: localStorage });
 
       window.dispatchEvent(storageEvent);
 
@@ -285,11 +284,10 @@ describe('SettingsService', () => {
     it('should ignore storage event with null newValue', () => {
       const initialTheme = service.themeDark();
 
-      const storageEvent = new StorageEvent('storage', {
-        key: 'polliwall_settings',
-        newValue: null,
-        storageArea: localStorage,
-      });
+      const storageEvent = new StorageEvent('storage');
+      Object.defineProperty(storageEvent, 'key', { value: 'polliwall_settings' });
+      Object.defineProperty(storageEvent, 'newValue', { value: null });
+      Object.defineProperty(storageEvent, 'storageArea', { value: localStorage });
 
       window.dispatchEvent(storageEvent);
 
@@ -300,11 +298,10 @@ describe('SettingsService', () => {
     it('should ignore storage event for different key', () => {
       const initialTheme = service.themeDark();
 
-      const storageEvent = new StorageEvent('storage', {
-        key: 'other_key',
-        newValue: JSON.stringify({ themeDark: !initialTheme }),
-        storageArea: localStorage,
-      });
+      const storageEvent = new StorageEvent('storage');
+      Object.defineProperty(storageEvent, 'key', { value: 'other_key' });
+      Object.defineProperty(storageEvent, 'newValue', { value: JSON.stringify({ themeDark: !initialTheme }) });
+      Object.defineProperty(storageEvent, 'storageArea', { value: localStorage });
 
       window.dispatchEvent(storageEvent);
 
@@ -316,11 +313,10 @@ describe('SettingsService', () => {
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
       const initialTheme = service.themeDark();
 
-      const storageEvent = new StorageEvent('storage', {
-        key: 'polliwall_settings',
-        newValue: 'invalid json',
-        storageArea: localStorage,
-      });
+      const storageEvent = new StorageEvent('storage');
+      Object.defineProperty(storageEvent, 'key', { value: 'polliwall_settings' });
+      Object.defineProperty(storageEvent, 'newValue', { value: 'invalid json' });
+      Object.defineProperty(storageEvent, 'storageArea', { value: localStorage });
 
       window.dispatchEvent(storageEvent);
 
