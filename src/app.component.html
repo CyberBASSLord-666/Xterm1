@@ -19,6 +19,7 @@
                 routerLinkActive="font-bold text-accent"
                 #desktopLink="routerLinkActive"
                 [routerLinkActiveOptions]="item.exact ? exactMatchOptions : defaultMatchOptions"
+                [routerLinkActiveOptions]="{ exact: item.exact }"
                 [attr.data-analytics-id]="item.analyticsId || null"
                 [attr.aria-current]="desktopLink.isActive ? 'page' : null"
                 [ngClass]="desktopNavLinkClass"

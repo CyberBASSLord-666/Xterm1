@@ -173,7 +173,7 @@ export class AnalyticsService {
       if (this.eventQueue.length > 0) {
         this.sendBatch();
       }
-    }, this.batchInterval) as number;
+    }, this.batchInterval);
 
     this.logger.debug('Batch timer started', { interval: this.batchInterval }, 'Analytics');
   }
@@ -184,7 +184,7 @@ export class AnalyticsService {
    */
   private stopBatchTimer(): void {
     if (this.batchTimer !== null) {
-      window.clearInterval(this.batchTimer);
+      clearInterval(this.batchTimer);
       this.batchTimer = null;
       this.logger.debug('Batch timer stopped', undefined, 'Analytics');
     }
