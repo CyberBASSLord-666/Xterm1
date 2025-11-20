@@ -127,10 +127,7 @@ cd Xterm1
 
 ```bash
 # Install all project dependencies
-npm ci --legacy-peer-deps
-
-# Why --legacy-peer-deps?
-# Required for Angular 20 compatibility with some dependencies
+npm ci
 ```
 
 **Note**: Use `npm ci` (not `npm install`) for consistent installations matching package-lock.json.
@@ -337,7 +334,7 @@ npm run health-check         # Verify setup
 
 # Clear caches
 rm -rf node_modules package-lock.json
-npm ci --legacy-peer-deps
+npm ci
 
 # Update dependencies
 npm update
@@ -684,7 +681,7 @@ ng serve --port 4201
 ```bash
 # Reinstall dependencies
 rm -rf node_modules package-lock.json
-npm ci --legacy-peer-deps
+npm ci
 ```
 
 #### TypeScript Errors

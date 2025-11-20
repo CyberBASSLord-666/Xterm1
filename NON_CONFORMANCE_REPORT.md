@@ -169,7 +169,7 @@ The codebase demonstrates exceptional adherence to documented best practices. Ou
 ### ✅ CI/CD Configuration (100% Compliant)
 
 **Documented Standard** (DEPLOYMENT.md):
-- All workflows use `npm ci --legacy-peer-deps`
+- All workflows use `npm ci`
 - All actions pinned to specific versions
 - Security scanning enabled (CodeQL)
 - Build caching optimized
@@ -344,7 +344,7 @@ The following are observations that do NOT constitute non-conformance but are no
 ## CI/CD Workflows Audit
 
 All 7 workflows audited for:
-- Proper use of `npm ci --legacy-peer-deps` ✅
+- Proper use of `npm ci` ✅
 - Pinned action versions ✅
 - Caching configured ✅
 - Security scanning enabled ✅

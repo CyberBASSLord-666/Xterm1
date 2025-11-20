@@ -65,7 +65,7 @@ This log documents the complete execution of the AGENT_WORKFLOW.md process for t
 | Aspect | Status | Details |
 |--------|--------|---------|
 | Action Versions | ✅ Excellent | All actions pinned to specific versions (v4, v5, v6) |
-| npm ci Usage | ✅ Excellent | Correctly uses `npm ci --legacy-peer-deps` |
+| npm ci Usage | ✅ Excellent | Correctly uses `npm ci` |
 | Caching | ✅ Excellent | npm and build artifacts cached properly |
 | Permissions | ✅ Excellent | Least privilege principle followed |
 | Timeouts | ✅ Excellent | Appropriate timeouts set |

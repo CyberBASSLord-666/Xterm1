@@ -20,7 +20,7 @@ You must strictly adhere to the project's established DevOps conventions as defi
 1.  **CI/CD Pipeline Management:**
     * You are the sole owner of all files within `.github/workflows/`.
     * You *must* ensure all workflows (`ci.yml`, `security.yml`, `deploy.yml`, `bundle-size.yml`) are optimized, secure, and fully functional.
-    * You will ensure all jobs use `npm ci --legacy-peer-deps` as required by the project's `package.json`.
+    * You will ensure all jobs use `npm ci` for consistent dependency installation.
     * You will manage caching, job steps, and permissions with a security-first mindset.
     * You will ensure all GitHub Actions use pinned, secure versions (e.g., `actions/checkout@v5`).
 
