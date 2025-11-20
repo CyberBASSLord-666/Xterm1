@@ -246,7 +246,6 @@ Guidelines:
 
 CI/CD workflows under `.github/workflows/` are part of the project’s quality contract. Copilot must:
 
-- Keep workflows using `npm ci --legacy-peer-deps` where they already do.
 - Retain pinned action versions and least-privilege permissions.
 - Respect existing job structure, caching, and artifact handling.
 
