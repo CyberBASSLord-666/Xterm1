@@ -1,0 +1,232 @@
+{
+  "agent_name": "documentation_curator",
+  "role": "Comprehensive Documentation Maintenance, Consistency Validation, and Knowledge Management Specialist",
+  "responsibilities": [
+    "Maintain synchronization between source code and documentation files (ARCHITECTURE.md, API_DOCUMENTATION.md, DEVELOPMENT.md, E2E_TESTING.md, TEST_COVERAGE.md) by detecting code changes and automatically generating corresponding documentation updates with detailed API references, usage examples, and architectural diagrams",
+    "Enforce documentation standards including consistent markdown formatting, proper heading hierarchy (h1 → h6 progression), code block syntax highlighting (specify language for all code blocks), internal link validation (no broken references), and table of contents accuracy for documents exceeding 200 lines",
+    "Generate comprehensive CHANGELOG.md entries for every pull request following Keep a Changelog format with categorization (Added, Changed, Fixed, Deprecated, Removed, Security, Performance) including commit references, issue links, and detailed change descriptions",
+    "Validate API documentation completeness ensuring all public classes, methods, interfaces, and services have TSDoc/JSDoc comments with @param, @returns, @throws, @example annotations, and that API_DOCUMENTATION.md accurately reflects the current codebase",
+    "Maintain architectural decision records (ADRs) documenting significant design choices, technology selections, pattern implementations, and trade-off analyses with context, decision rationale, consequences, and alternative options considered",
+    "Execute documentation quality checks including spell checking (using cspell or equivalent), grammar validation, broken link detection (internal and external), code example verification (syntax validation and execution testing), and documentation coverage metrics (ratio of documented to undocumented public APIs)",
+    "Generate automated documentation from source code using TypeDoc or Compodoc for Angular projects, creating comprehensive API reference documentation with type information, inheritance diagrams, dependency graphs, and cross-references",
+    "Coordinate documentation translations and internationalization supporting multiple languages with translation workflow management, translation quality assurance, and synchronization between English source and translated versions",
+    "Maintain documentation versioning aligned with release versions ensuring documentation branches match code branches, historical documentation accessibility for previous versions, and migration guides between major versions",
+    "Generate documentation analytics including page view tracking, search query analysis, frequently accessed sections, documentation gap identification based on user behavior, and continuous improvement recommendations"
+  ],
+  "configuration": {
+    "trigger_events": [
+      "pull_request.opened",
+      "pull_request.synchronize",
+      "push.branches.main",
+      "push.branches.develop",
+      "release.published",
+      "schedule.cron.0_0_*_*_0",
+      "workflow_dispatch"
+    ],
+    "documentation_files": {
+      "core_documentation": [
+        "README.md",
+        "ARCHITECTURE.md",
+        "API_DOCUMENTATION.md",
+        "DEVELOPMENT.md",
+        "DEPLOYMENT.md",
+        "DEPLOYMENT_SECURITY.md"
+      ],
+      "testing_documentation": [
+        "TEST_COVERAGE.md",
+        "E2E_TESTING.md"
+      ],
+      "operational_documentation": [
+        "CHANGELOG.md",
+        "PRODUCTION_READINESS_REPORT.md",
+        "PRODUCTION_LINE_GUIDE.md",
+        "QUALITY_METRICS.md"
+      ],
+      "planning_documentation": [
+        "PLAN.md",
+        "PLAN_OF_RECORD_TEMPLATE.md"
+      ],
+      "compliance_documentation": [
+        "docs/XSS_PREVENTION.md",
+        "docs/DEPENDABOT_STRATEGY.md"
+      ],
+      "agent_documentation": [
+        ".github/AGENT_WORKFLOW.md",
+        "AGENT_WORKFLOW_EXECUTION_LOG.md"
+      ]
+    },
+    "documentation_standards": {
+      "markdown_style": {
+        "line_length_max": 120,
+        "heading_style": "atx",
+        "list_marker": "-",
+        "code_block_style": "fenced",
+        "require_language_for_code_blocks": true,
+        "emphasis_marker": "*",
+        "strong_marker": "**"
+      },
+      "content_requirements": {
+        "require_table_of_contents": {
+          "min_heading_count": 5,
+          "max_depth": 3
+        },
+        "require_metadata": {
+          "title": true,
+          "last_updated": true,
+          "status": true,
+          "authors": false
+        },
+        "code_examples": {
+          "require_syntax_highlighting": true,
+          "validate_syntax": true,
+          "test_examples": false
+        }
+      },
+      "link_validation": {
+        "check_internal_links": true,
+        "check_external_links": true,
+        "allow_relative_links": true,
+        "require_anchor_validation": true
+      }
+    },
+    "changelog_management": {
+      "format": "keep_a_changelog",
+      "categories": [
+        "Added",
+        "Changed",
+        "Deprecated",
+        "Removed",
+        "Fixed",
+        "Security",
+        "Performance",
+        "Accessibility"
+      ],
+      "version_format": "semantic",
+      "require_issue_links": true,
+      "require_commit_references": true,
+      "auto_generate_from_commits": true,
+      "commit_message_conventions": {
+        "format": "conventional_commits",
+        "types": {
+          "feat": "Added",
+          "fix": "Fixed",
+          "docs": "Documentation",
+          "style": "Code Style",
+          "refactor": "Changed",
+          "perf": "Performance",
+          "test": "Testing",
+          "chore": "Maintenance"
+        }
+      }
+    },
+    "api_documentation": {
+      "source_files": ["src/**/*.ts"],
+      "exclude_patterns": ["**/*.spec.ts", "**/__tests__/**"],
+      "documentation_tool": "typedoc",
+      "output_format": "markdown",
+      "include_private_apis": false,
+      "require_jsdoc": {
+        "public_methods": true,
+        "public_properties": true,
+        "interfaces": true,
+        "types": true
+      },
+      "validation": {
+        "check_param_documentation": true,
+        "check_return_documentation": true,
+        "check_throws_documentation": true,
+        "require_examples": {
+          "services": true,
+          "components": false,
+          "utilities": true
+        }
+      }
+    },
+    "documentation_quality_checks": {
+      "spell_check": {
+        "enabled": true,
+        "tool": "cspell",
+        "config_file": ".cspell.json",
+        "custom_dictionaries": ["technical_terms", "project_specific"]
+      },
+      "grammar_check": {
+        "enabled": false,
+        "tool": "write-good"
+      },
+      "readability_analysis": {
+        "enabled": true,
+        "max_flesch_kincaid_grade": 12,
+        "warn_on_complex_sentences": true
+      },
+      "link_checking": {
+        "enabled": true,
+        "check_frequency": "weekly",
+        "timeout_seconds": 30,
+        "retry_count": 3
+      },
+      "code_example_validation": {
+        "enabled": true,
+        "validate_typescript": true,
+        "validate_json": true,
+        "validate_shell": true
+      }
+    },
+    "automated_generation": {
+      "api_reference": {
+        "enabled": true,
+        "source": "src/",
+        "output": "API_DOCUMENTATION.md",
+        "format": "markdown",
+        "update_frequency": "on_change"
+      },
+      "architecture_diagrams": {
+        "enabled": false,
+        "tool": "mermaid",
+        "diagram_types": ["component", "sequence", "dependency"]
+      },
+      "test_coverage_reports": {
+        "enabled": true,
+        "source": "coverage/",
+        "output": "TEST_COVERAGE.md",
+        "include_trend_charts": true
+      }
+    },
+    "synchronization_validation": {
+      "code_to_doc_mapping": {
+        "services": "API_DOCUMENTATION.md",
+        "components": "ARCHITECTURE.md",
+        "utilities": "API_DOCUMENTATION.md",
+        "workflows": ".github/AGENT_WORKFLOW.md"
+      },
+      "detect_undocumented_changes": true,
+      "require_documentation_update_in_pr": true,
+      "auto_generate_documentation_skeleton": true
+    },
+    "versioning_strategy": {
+      "version_documentation_with_releases": true,
+      "maintain_version_branches": false,
+      "generate_migration_guides": true,
+      "archive_old_versions": true,
+      "version_format": "semver"
+    },
+    "reporting": {
+      "generate_documentation_coverage_report": true,
+      "generate_broken_link_report": true,
+      "generate_outdated_documentation_report": true,
+      "notification_channels": ["pull_request_comment", "github_check"],
+      "create_issues_for_gaps": true,
+      "documentation_quality_score": true
+    },
+    "execution_context": {
+      "runs_on": "ubuntu-latest",
+      "node_version": "20",
+      "timeout_minutes": 15,
+      "cache_dependencies": true,
+      "permissions": {
+        "contents": "write",
+        "pull_requests": "write",
+        "issues": "write"
+      }
+    }
+  }
+}

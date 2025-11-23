@@ -1,0 +1,191 @@
+{
+  "agent_name": "security_guardian",
+  "role": "Comprehensive Security Vulnerability Detection and Remediation Orchestrator",
+  "responsibilities": [
+    "Execute automated security scanning using CodeQL analysis engine on every pull request and main branch commit, detecting vulnerabilities including SQL injection, XSS, CSRF, command injection, path traversal, and insecure cryptographic operations with SARIF output generation",
+    "Perform continuous dependency vulnerability scanning using npm audit, Snyk, and GitHub Security Advisories, identifying CVEs in direct and transitive dependencies with severity classification (critical, high, medium, low) and automated patch recommendation",
+    "Validate Content Security Policy (CSP) headers across all deployment configurations (vercel.json, _headers, .htaccess, nginx.conf.example) ensuring script-src, style-src, img-src, connect-src directives are properly configured with nonce-based inline script protection",
+    "Enforce secure coding practices including mandatory use of ValidationService.sanitizeHtml, sanitizeString, and sanitizeUrl for all user-controlled input as defined in XSS_PREVENTION.md, with automated detection of unsanitized input vulnerabilities",
+    "Monitor and validate that no API keys, authentication tokens, private keys, or sensitive credentials are committed to the repository through regex-based secret scanning and entropy analysis, with immediate remediation alerts",
+    "Analyze authentication and authorization implementations ensuring proper session management, CSRF token validation, secure password handling with bcrypt/scrypt, and JWT token validation with signature verification",
+    "Validate HTTPS enforcement, secure cookie attributes (HttpOnly, Secure, SameSite), HSTS header configuration (max-age >= 31536000), and TLS configuration requiring TLS 1.2+ with strong cipher suites",
+    "Perform automated security regression testing to ensure previously fixed vulnerabilities do not reappear, maintaining a vulnerability database with remediation history and verification test cases",
+    "Generate security compliance reports mapping findings to OWASP Top 10, CWE classifications, and MITRE ATT&CK framework, with risk scoring, exploitability assessment, and prioritized remediation roadmaps",
+    "Coordinate with Dependabot to automatically merge security patches for low-risk dependencies while flagging high-risk updates requiring manual review, based on semantic versioning impact analysis and test suite validation"
+  ],
+  "configuration": {
+    "trigger_events": [
+      "pull_request.opened",
+      "pull_request.synchronize",
+      "push.branches.main",
+      "push.branches.develop",
+      "schedule.cron.0_2_*_*_*",
+      "security_advisory.published"
+    ],
+    "scanning_tools": {
+      "codeql": {
+        "enabled": true,
+        "config_file": ".github/codeql-config.yml",
+        "languages": ["javascript", "typescript"],
+        "queries": ["security-extended", "security-and-quality"],
+        "fail_on_severity": ["critical", "high"],
+        "sarif_output": true,
+        "upload_to_github": true
+      },
+      "npm_audit": {
+        "enabled": true,
+        "audit_level": "moderate",
+        "production_only": false,
+        "fail_on_severity": ["critical", "high"],
+        "audit_signatures": true
+      },
+      "snyk": {
+        "enabled": false,
+        "organization": "xterm1-security",
+        "fail_on_severity": ["critical", "high"],
+        "monitor_on_merge": true
+      },
+      "secret_scanning": {
+        "enabled": true,
+        "patterns": [
+          "api_key",
+          "secret_key",
+          "password",
+          "private_key",
+          "access_token",
+          "bearer_token",
+          "oauth_token",
+          "ssh_key",
+          "aws_key",
+          "gcp_key"
+        ],
+        "entropy_threshold": 4.5,
+        "exclude_paths": ["node_modules", "dist", "coverage", ".git"]
+      }
+    },
+    "security_policies": {
+      "csp_validation": {
+        "require_nonce_for_inline_scripts": true,
+        "allowed_script_sources": ["self", "https://apis.google.com"],
+        "allowed_style_sources": ["self", "unsafe-inline"],
+        "allowed_image_sources": ["self", "data:", "https:"],
+        "allowed_connect_sources": ["self", "https://image.pollinations.ai", "https://generativelanguage.googleapis.com"],
+        "block_all_mixed_content": true
+      },
+      "input_sanitization": {
+        "require_validation_service": true,
+        "forbidden_patterns": ["eval\\(", "innerHTML\\s*=", "document.write", "dangerouslySetInnerHTML"],
+        "required_sanitization_methods": ["sanitizeHtml", "sanitizeString", "sanitizeUrl", "sanitizeFilename"]
+      },
+      "secure_headers": {
+        "strict_transport_security": {
+          "required": true,
+          "max_age": 31536000,
+          "include_subdomains": true,
+          "preload": true
+        },
+        "x_frame_options": {
+          "required": true,
+          "value": "DENY"
+        },
+        "x_content_type_options": {
+          "required": true,
+          "value": "nosniff"
+        },
+        "referrer_policy": {
+          "required": true,
+          "value": "strict-origin-when-cross-origin"
+        },
+        "permissions_policy": {
+          "required": true,
+          "directives": {
+            "geolocation": "none",
+            "microphone": "none",
+            "camera": "none"
+          }
+        }
+      },
+      "dependency_security": {
+        "auto_merge_security_patches": {
+          "enabled": true,
+          "max_severity": "moderate",
+          "require_passing_tests": true,
+          "require_ci_success": true
+        },
+        "vulnerability_response_sla": {
+          "critical": "24_hours",
+          "high": "7_days",
+          "moderate": "30_days",
+          "low": "90_days"
+        }
+      }
+    },
+    "vulnerability_management": {
+      "severity_classification": {
+        "critical": {
+          "cvss_score_min": 9.0,
+          "response_time_hours": 24,
+          "requires_immediate_action": true,
+          "block_deployment": true
+        },
+        "high": {
+          "cvss_score_min": 7.0,
+          "response_time_hours": 168,
+          "requires_immediate_action": false,
+          "block_deployment": true
+        },
+        "medium": {
+          "cvss_score_min": 4.0,
+          "response_time_hours": 720,
+          "requires_immediate_action": false,
+          "block_deployment": false
+        },
+        "low": {
+          "cvss_score_min": 0.1,
+          "response_time_hours": 2160,
+          "requires_immediate_action": false,
+          "block_deployment": false
+        }
+      },
+      "remediation_workflow": {
+        "auto_create_issues": true,
+        "assign_to_security_team": true,
+        "require_fix_verification": true,
+        "track_remediation_metrics": true
+      }
+    },
+    "compliance_frameworks": {
+      "owasp_top_10": {
+        "enabled": true,
+        "version": "2021",
+        "generate_compliance_report": true
+      },
+      "cwe": {
+        "enabled": true,
+        "track_weakness_categories": true
+      },
+      "pci_dss": {
+        "enabled": false,
+        "version": "4.0"
+      }
+    },
+    "reporting": {
+      "generate_security_dashboard": true,
+      "generate_sarif_reports": true,
+      "notification_channels": ["github_security_alerts", "pull_request_comment", "issue"],
+      "vulnerability_trending": true,
+      "generate_compliance_badges": true,
+      "create_security_advisories": true
+    },
+    "execution_context": {
+      "runs_on": "ubuntu-latest",
+      "timeout_minutes": 30,
+      "permissions": {
+        "security_events": "write",
+        "contents": "read",
+        "pull_requests": "write",
+        "issues": "write"
+      }
+    }
+  }
+}
