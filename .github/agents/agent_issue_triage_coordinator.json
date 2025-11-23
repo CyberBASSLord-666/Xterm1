@@ -1,0 +1,209 @@
+{
+  "agent_name": "issue_triage_coordinator",
+  "role": "Intelligent Issue Classification, Prioritization, Labeling, and Assignment Automation Manager",
+  "responsibilities": [
+    "Automatically classify and label incoming GitHub issues using natural language processing to detect issue types (bug, feature request, documentation, question, security vulnerability, performance issue) with confidence scoring and multi-label support for complex issues",
+    "Implement intelligent priority assignment based on issue content analysis including severity keywords (critical, urgent, blocker), affected components (core services, UI components, security), user impact assessment (number of affected users, production vs development), and business value estimation",
+    "Perform automated duplicate detection by comparing new issues against existing open and closed issues using semantic similarity analysis (cosine similarity > 0.85 threshold), title matching, and stack trace comparison, automatically linking duplicates with references",
+    "Execute automatic issue assignment to relevant team members or agent specialists based on component ownership (security issues → security-specialist, testing issues → qa-engineer, architecture questions → lead-architect), workload balancing, and expertise matching",
+    "Validate issue quality ensuring bug reports include reproduction steps, expected vs actual behavior, environment information (browser, OS, version), and logs/screenshots, automatically requesting missing information through templated comments and applying 'needs-more-info' labels",
+    "Implement service level agreement (SLA) tracking for issue response times with automated escalation (critical issues: 4 hours, high priority: 24 hours, normal: 3 days) including notification to maintainers when SLAs are at risk and automatic status updates",
+    "Coordinate issue lifecycle management tracking state transitions (triage → in-progress → review → done → closed) with automatic stale issue detection (no activity for 30 days), automated closure with user notification, and reopen handling for continued discussion",
+    "Generate issue metrics dashboards including issue creation rate trends, average time-to-close by priority, resolution rate percentages, backlog size monitoring, and team velocity metrics for sprint planning and capacity management",
+    "Implement automated issue templates enforcement ensuring users select appropriate templates (bug report, feature request, security report) with required field validation, automatic label application based on template, and rejection of issues not following templates",
+    "Execute cross-reference validation automatically linking issues to related pull requests, detecting when PRs close issues through commit messages (fixes #123, closes #456), updating issue status on PR merge, and generating release notes from closed issues"
+  ],
+  "configuration": {
+    "trigger_events": [
+      "issues.opened",
+      "issues.edited",
+      "issues.labeled",
+      "issues.assigned",
+      "issue_comment.created",
+      "schedule.cron.0_*/4_*_*_*"
+    ],
+    "classification_rules": {
+      "issue_types": {
+        "bug": {
+          "keywords": ["bug", "error", "broken", "crash", "fail", "incorrect", "wrong", "unexpected"],
+          "labels": ["bug", "needs-triage"],
+          "priority_default": "medium",
+          "assign_to": "code-assistant"
+        },
+        "feature_request": {
+          "keywords": ["feature", "enhancement", "add", "implement", "support", "would be nice"],
+          "labels": ["enhancement", "needs-discussion"],
+          "priority_default": "low",
+          "assign_to": "lead-architect"
+        },
+        "security_vulnerability": {
+          "keywords": ["security", "vulnerability", "exploit", "xss", "injection", "csrf", "cve"],
+          "labels": ["security", "critical"],
+          "priority_default": "critical",
+          "assign_to": "security-specialist",
+          "confidential": true
+        },
+        "performance_issue": {
+          "keywords": ["slow", "performance", "lag", "freeze", "memory leak", "cpu", "optimization"],
+          "labels": ["performance", "needs-investigation"],
+          "priority_default": "medium",
+          "assign_to": "performance-engineer"
+        },
+        "documentation": {
+          "keywords": ["documentation", "docs", "readme", "guide", "tutorial", "unclear"],
+          "labels": ["documentation"],
+          "priority_default": "low",
+          "assign_to": "technical-scribe"
+        },
+        "question": {
+          "keywords": ["question", "how to", "help", "clarification", "usage"],
+          "labels": ["question"],
+          "priority_default": "low",
+          "assign_to": null
+        }
+      },
+      "priority_classification": {
+        "critical": {
+          "keywords": ["critical", "urgent", "blocker", "production down", "data loss", "security breach"],
+          "sla_response_hours": 4,
+          "sla_resolution_days": 1,
+          "labels": ["priority:critical"]
+        },
+        "high": {
+          "keywords": ["high priority", "important", "major", "regression", "affects many users"],
+          "sla_response_hours": 24,
+          "sla_resolution_days": 7,
+          "labels": ["priority:high"]
+        },
+        "medium": {
+          "keywords": ["medium", "moderate", "normal"],
+          "sla_response_hours": 72,
+          "sla_resolution_days": 30,
+          "labels": ["priority:medium"]
+        },
+        "low": {
+          "keywords": ["low", "minor", "nice to have", "enhancement"],
+          "sla_response_hours": 168,
+          "sla_resolution_days": 90,
+          "labels": ["priority:low"]
+        }
+      }
+    },
+    "duplicate_detection": {
+      "enabled": true,
+      "similarity_threshold": 0.85,
+      "search_recent_issues_count": 100,
+      "compare_title": true,
+      "compare_body": true,
+      "compare_stack_traces": true,
+      "auto_close_duplicates": false,
+      "link_to_original": true,
+      "notification_message": "This issue appears to be a duplicate of #{original_issue_number}. Please follow the discussion there."
+    },
+    "quality_validation": {
+      "bug_reports": {
+        "require_reproduction_steps": true,
+        "require_expected_behavior": true,
+        "require_actual_behavior": true,
+        "require_environment_info": true,
+        "require_logs_or_screenshots": false,
+        "missing_info_label": "needs-more-info",
+        "auto_request_information": true
+      },
+      "feature_requests": {
+        "require_use_case": true,
+        "require_proposed_solution": false,
+        "require_alternatives_considered": false
+      },
+      "template_enforcement": {
+        "require_template_usage": true,
+        "allowed_templates": ["bug_report", "feature_request", "security_vulnerability"],
+        "reject_non_template_issues": false
+      }
+    },
+    "assignment_strategies": {
+      "auto_assignment": {
+        "enabled": true,
+        "strategies": ["component_ownership", "expertise_matching", "workload_balancing"],
+        "max_issues_per_assignee": 10
+      },
+      "component_ownership": {
+        "security": ["security-specialist"],
+        "testing": ["qa-engineer"],
+        "documentation": ["technical-scribe"],
+        "ci_cd": ["devops-engineer"],
+        "architecture": ["lead-architect"],
+        "code": ["code-assistant"]
+      },
+      "fallback_assignment": {
+        "enabled": true,
+        "default_assignee": "CyberBASSLord-666",
+        "notify_on_fallback": true
+      }
+    },
+    "sla_management": {
+      "enabled": true,
+      "tracking_metrics": ["response_time", "resolution_time"],
+      "escalation": {
+        "enabled": true,
+        "escalation_percentage": 80,
+        "escalation_notification": ["maintainers", "assignee"],
+        "escalation_labels": ["sla-at-risk"]
+      },
+      "reporting": {
+        "generate_sla_reports": true,
+        "report_frequency": "weekly"
+      }
+    },
+    "lifecycle_management": {
+      "stale_issue_detection": {
+        "enabled": true,
+        "days_until_stale": 30,
+        "days_until_close": 7,
+        "stale_label": "stale",
+        "exempt_labels": ["pinned", "security", "critical"],
+        "stale_message": "This issue has been automatically marked as stale due to inactivity. It will be closed if no further activity occurs.",
+        "close_message": "This issue was automatically closed due to inactivity."
+      },
+      "state_tracking": {
+        "enabled": true,
+        "states": ["triage", "in-progress", "review", "done", "closed"],
+        "auto_state_transitions": true
+      }
+    },
+    "metrics_collection": {
+      "track_issue_creation_rate": true,
+      "track_time_to_close": true,
+      "track_resolution_rate": true,
+      "track_backlog_size": true,
+      "track_sla_compliance": true,
+      "generate_dashboard": true,
+      "dashboard_update_frequency": "hourly"
+    },
+    "notification_strategies": {
+      "on_classification": {
+        "notify_assignee": true,
+        "notify_author": true,
+        "include_classification_reason": true
+      },
+      "on_duplicate_detection": {
+        "notify_author": true,
+        "link_to_original": true
+      },
+      "on_sla_risk": {
+        "notify_assignee": true,
+        "notify_maintainers": true,
+        "escalate_to_manager": false
+      }
+    },
+    "execution_context": {
+      "runs_on": "ubuntu-latest",
+      "timeout_minutes": 10,
+      "permissions": {
+        "issues": "write",
+        "contents": "read",
+        "pull_requests": "read"
+      }
+    }
+  }
+}

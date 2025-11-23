@@ -1,0 +1,266 @@
+{
+  "agent_name": "release_orchestration_manager",
+  "role": "Semantic Versioning, Release Automation, Changelog Generation, and Deployment Coordination Specialist",
+  "responsibilities": [
+    "Orchestrate complete release lifecycle from version determination through semantic versioning analysis (MAJOR.MINOR.PATCH) by parsing commit messages using Conventional Commits format, detecting breaking changes, features, and fixes to automatically calculate next version number",
+    "Generate comprehensive release notes and CHANGELOG.md entries by aggregating commits since last release, categorizing by type (Added, Changed, Fixed, Security, Performance, Breaking Changes), linking to pull requests and issues, and highlighting user-facing changes with upgrade instructions",
+    "Coordinate release branch creation and management following GitFlow workflow, creating release/vX.Y.Z branches from develop, managing hotfix branches from main, handling version bumps in package.json and other version files, and coordinating merge strategies",
+    "Execute automated release validation including full test suite execution (100% pass required), security scan validation (zero critical/high vulnerabilities), bundle size verification (within thresholds), documentation completeness check, and migration guide validation for breaking changes",
+    "Manage GitHub release creation with automated asset compilation including source code archives, build artifacts, release notes in markdown format, migration guides, API documentation snapshots, and checksums for verification with SHA-256 signatures",
+    "Coordinate deployment sequencing across multiple environments (staging → production) with mandatory approval gates, health check validation after each deployment, automated rollback on failure detection, and traffic ramping strategies for gradual rollouts",
+    "Implement release tagging strategy with annotated Git tags containing version number, release date, release notes summary, and GPG signatures for verification, ensuring tags are pushed to all remote repositories and protected from deletion",
+    "Execute post-release activities including notification distribution to stakeholders via multiple channels (GitHub releases, Slack, email), documentation website updates, dependency update notifications to downstream projects, and metrics collection for release retrospectives",
+    "Manage version compatibility matrices tracking supported Node.js versions, Angular versions, browser compatibility, and dependency version ranges, generating compatibility reports and deprecation notices for end-of-life versions",
+    "Coordinate hotfix release workflows enabling emergency patches outside regular release cycles with expedited validation, minimal required checks, automatic backport to active release branches, and emergency deployment procedures with stakeholder notification"
+  ],
+  "configuration": {
+    "trigger_events": [
+      "workflow_dispatch.inputs.release_type",
+      "push.tags.v*",
+      "schedule.cron.0_10_*_*_1",
+      "pull_request.labeled.ready-for-release"
+    ],
+    "versioning_strategy": {
+      "scheme": "semantic_versioning",
+      "format": "vMAJOR.MINOR.PATCH",
+      "version_files": [
+        "package.json",
+        "package-lock.json"
+      ],
+      "commit_message_convention": "conventional_commits",
+      "version_increment_rules": {
+        "major": {
+          "keywords": ["BREAKING CHANGE", "breaking:", "!:"],
+          "description": "Incompatible API changes"
+        },
+        "minor": {
+          "keywords": ["feat:", "feature:"],
+          "description": "Backward-compatible functionality additions"
+        },
+        "patch": {
+          "keywords": ["fix:", "bugfix:", "perf:", "refactor:"],
+          "description": "Backward-compatible bug fixes"
+        }
+      }
+    },
+    "release_types": {
+      "regular": {
+        "schedule": "biweekly",
+        "branch": "develop",
+        "target": "main",
+        "approval_required": true,
+        "full_validation": true
+      },
+      "hotfix": {
+        "schedule": "on_demand",
+        "branch": "main",
+        "target": "main",
+        "approval_required": true,
+        "expedited_validation": true,
+        "max_duration_hours": 4
+      },
+      "beta": {
+        "schedule": "on_demand",
+        "branch": "develop",
+        "target": "beta",
+        "approval_required": false,
+        "full_validation": true,
+        "version_suffix": "-beta"
+      },
+      "rc": {
+        "schedule": "pre_release",
+        "branch": "release/*",
+        "target": "main",
+        "approval_required": true,
+        "full_validation": true,
+        "version_suffix": "-rc"
+      }
+    },
+    "changelog_generation": {
+      "enabled": true,
+      "format": "keep_a_changelog",
+      "file": "CHANGELOG.md",
+      "sections": [
+        "Breaking Changes",
+        "Added",
+        "Changed",
+        "Fixed",
+        "Security",
+        "Performance",
+        "Deprecated",
+        "Removed"
+      ],
+      "include_commit_links": true,
+      "include_pr_links": true,
+      "include_issue_links": true,
+      "include_contributor_credits": true,
+      "group_by_scope": true,
+      "highlight_breaking_changes": true
+    },
+    "release_notes": {
+      "template": ".github/RELEASE_TEMPLATE.md",
+      "sections": {
+        "overview": true,
+        "breaking_changes": true,
+        "new_features": true,
+        "bug_fixes": true,
+        "performance_improvements": true,
+        "security_updates": true,
+        "upgrade_instructions": true,
+        "deprecation_notices": true,
+        "known_issues": true,
+        "contributors": true
+      },
+      "format": "markdown",
+      "include_statistics": {
+        "commits_count": true,
+        "files_changed": true,
+        "contributors_count": true,
+        "issues_closed": true
+      }
+    },
+    "validation_requirements": {
+      "pre_release": {
+        "all_tests_pass": true,
+        "all_checks_pass": true,
+        "zero_critical_vulnerabilities": true,
+        "zero_high_vulnerabilities": true,
+        "bundle_size_within_limits": true,
+        "documentation_updated": true,
+        "changelog_updated": true,
+        "migration_guide_if_breaking": true,
+        "approval_count": 1
+      },
+      "hotfix": {
+        "critical_tests_pass": true,
+        "security_scan_pass": true,
+        "approval_count": 1,
+        "expedited_process": true
+      }
+    },
+    "release_assets": {
+      "include_source_archives": true,
+      "include_build_artifacts": false,
+      "include_documentation": true,
+      "generate_checksums": {
+        "enabled": true,
+        "algorithms": ["sha256", "sha512"]
+      },
+      "sign_releases": {
+        "enabled": false,
+        "gpg_key_id": null
+      }
+    },
+    "branch_management": {
+      "gitflow_workflow": {
+        "enabled": true,
+        "main_branch": "main",
+        "develop_branch": "develop",
+        "release_branch_prefix": "release/",
+        "hotfix_branch_prefix": "hotfix/",
+        "feature_branch_prefix": "feature/"
+      },
+      "branch_protection": {
+        "protect_release_branches": true,
+        "protect_release_tags": true,
+        "require_pull_request": true,
+        "require_approvals": 1
+      },
+      "merge_strategies": {
+        "release_to_main": "merge",
+        "main_to_develop": "merge",
+        "hotfix_to_main": "merge",
+        "cleanup_after_merge": true
+      }
+    },
+    "deployment_coordination": {
+      "staging": {
+        "auto_deploy": true,
+        "requires_approval": false,
+        "health_check_enabled": true,
+        "rollback_on_failure": true
+      },
+      "production": {
+        "auto_deploy": false,
+        "requires_approval": true,
+        "approvers": ["CyberBASSLord-666"],
+        "health_check_enabled": true,
+        "rollback_on_failure": true,
+        "deployment_strategy": {
+          "type": "rolling",
+          "canary_percentage": 10,
+          "rollout_duration_minutes": 30
+        }
+      },
+      "post_deployment": {
+        "smoke_tests": true,
+        "performance_validation": true,
+        "error_rate_monitoring": true,
+        "rollback_threshold": {
+          "error_rate_increase_percent": 50,
+          "performance_degradation_percent": 25
+        }
+      }
+    },
+    "tagging_strategy": {
+      "create_annotated_tags": true,
+      "tag_format": "v{version}",
+      "tag_message_template": "Release {version}\n\n{release_notes_summary}",
+      "sign_tags": false,
+      "push_to_all_remotes": true,
+      "protect_tags": true
+    },
+    "notification_strategies": {
+      "channels": ["github_release", "slack", "email"],
+      "notify_on_release": {
+        "stakeholders": true,
+        "contributors": true,
+        "downstream_projects": true
+      },
+      "notification_content": {
+        "include_release_notes": true,
+        "include_upgrade_guide": true,
+        "include_breaking_changes": true,
+        "include_download_links": true
+      }
+    },
+    "compatibility_management": {
+      "track_compatibility_matrices": true,
+      "supported_versions": {
+        "node": ["18.x", "20.x", "22.x"],
+        "angular": ["20.x"],
+        "typescript": ["5.9.x"],
+        "browsers": {
+          "chrome": "last 2 versions",
+          "firefox": "last 2 versions",
+          "safari": "last 2 versions",
+          "edge": "last 2 versions"
+        }
+      },
+      "deprecation_policy": {
+        "notice_period_months": 6,
+        "support_period_months": 12,
+        "communication_channels": ["changelog", "migration_guide", "console_warnings"]
+      }
+    },
+    "metrics_collection": {
+      "track_release_frequency": true,
+      "track_time_to_release": true,
+      "track_hotfix_count": true,
+      "track_rollback_rate": true,
+      "track_deployment_success_rate": true,
+      "generate_release_retrospective": true
+    },
+    "execution_context": {
+      "runs_on": "ubuntu-latest",
+      "node_version": "20",
+      "timeout_minutes": 30,
+      "permissions": {
+        "contents": "write",
+        "pull_requests": "write",
+        "issues": "write",
+        "deployments": "write"
+      }
+    }
+  }
+}
