@@ -1,0 +1,347 @@
+{
+  "agent_name": "compliance_audit_specialist",
+  "role": "Regulatory Compliance, License Auditing, Legal Risk Assessment, and Policy Enforcement Coordinator",
+  "responsibilities": [
+    "Execute comprehensive license compliance audits scanning all dependencies (direct and transitive) for license types, identifying GPL/AGPL/SSPL licenses requiring source disclosure, validating license compatibility with project MIT license, generating NOTICE files with attribution requirements, and flagging license violations blocking merge",
+    "Perform GDPR compliance validation ensuring personal data processing has legal basis, consent mechanisms are properly implemented, data subject rights (access, deletion, portability) are supported, privacy policy is current and accessible, and data retention policies are enforced",
+    "Validate accessibility compliance conducting automated WCAG 2.1 AA audits, generating accessibility conformance reports (VPAT), tracking remediation of violations, ensuring keyboard navigation completeness, and validating screen reader compatibility for legal requirements (ADA, Section 508)",
+    "Monitor security compliance implementing OWASP Top 10 vulnerability scanning, validating secure coding practices, ensuring encryption for data at rest and in transit, conducting security audit trails, and maintaining incident response documentation for compliance frameworks (SOC2, ISO 27001)",
+    "Audit open source attribution requirements generating comprehensive third-party notices, validating copyright statements, ensuring proper attribution in documentation, checking for license file presence in distributions, and maintaining software bill of materials (SBOM)",
+    "Execute data sovereignty compliance validating data residency requirements for different jurisdictions, ensuring data doesn't cross unauthorized borders, implementing geo-fencing for sensitive operations, and documenting data flows for regulatory audits",
+    "Monitor API terms of service compliance for external services (Pollinations AI, Google Gemini) ensuring usage stays within acceptable use policies, validating rate limit adherence, checking for prohibited use cases, and maintaining compliance documentation",
+    "Perform code of conduct enforcement monitoring contributor behavior, enforcing inclusive language policies, validating harassment-free environment, reviewing content moderation, and maintaining incident reports",
+    "Generate compliance reports and certifications creating audit-ready documentation, tracking compliance metrics over time, preparing for regulatory audits, maintaining evidence repositories, and producing executive compliance summaries",
+    "Coordinate policy updates monitoring regulatory changes, updating policies to reflect new requirements, communicating policy changes to stakeholders, training team on compliance requirements, and versioning policy documents"
+  ],
+  "configuration": {
+    "trigger_events": [
+      "pull_request.opened",
+      "push.branches.main",
+      "release.published",
+      "schedule.cron.0_0_1_*_*",
+      "workflow_dispatch"
+    ],
+    "license_compliance": {
+      "enabled": true,
+      "project_license": "MIT",
+      "allowed_licenses": [
+        "MIT",
+        "Apache-2.0",
+        "BSD-2-Clause",
+        "BSD-3-Clause",
+        "ISC",
+        "0BSD",
+        "CC0-1.0",
+        "Unlicense"
+      ],
+      "conditional_licenses": {
+        "LGPL-2.1": {
+          "allowed": false,
+          "condition": "dynamic_linking_only",
+          "requires_review": true
+        },
+        "MPL-2.0": {
+          "allowed": true,
+          "condition": "file_level_copyleft",
+          "requires_review": false
+        }
+      },
+      "forbidden_licenses": [
+        "GPL-2.0",
+        "GPL-3.0",
+        "AGPL-3.0",
+        "SSPL-1.0",
+        "Commons Clause",
+        "BUSL-1.1",
+        "Proprietary"
+      ],
+      "license_scanning": {
+        "scan_dependencies": true,
+        "scan_transitive": true,
+        "scan_dev_dependencies": true,
+        "fail_on_violation": true
+      },
+      "attribution_requirements": {
+        "generate_notices_file": true,
+        "include_copyright_statements": true,
+        "include_license_text": true,
+        "update_on_dependency_change": true
+      }
+    },
+    "gdpr_compliance": {
+      "enabled": true,
+      "applies_to_jurisdictions": ["EU", "EEA", "UK"],
+      "requirements": {
+        "lawful_basis": {
+          "validate_consent_mechanism": true,
+          "validate_legitimate_interest": true,
+          "document_legal_basis": true
+        },
+        "data_subject_rights": {
+          "right_to_access": {
+            "implemented": true,
+            "response_time_days": 30
+          },
+          "right_to_erasure": {
+            "implemented": true,
+            "response_time_days": 30
+          },
+          "right_to_portability": {
+            "implemented": true,
+            "export_format": "json"
+          },
+          "right_to_rectification": {
+            "implemented": true
+          },
+          "right_to_restrict_processing": {
+            "implemented": false
+          },
+          "right_to_object": {
+            "implemented": true
+          }
+        },
+        "privacy_by_design": {
+          "data_minimization": true,
+          "purpose_limitation": true,
+          "storage_limitation": true,
+          "integrity_confidentiality": true
+        },
+        "documentation": {
+          "privacy_policy_current": true,
+          "cookie_policy_current": true,
+          "data_processing_agreements": false,
+          "breach_notification_procedures": true
+        }
+      },
+      "data_retention": {
+        "personal_data_max_days": 730,
+        "anonymize_after_days": 90,
+        "audit_logs_retention_days": 2555
+      }
+    },
+    "accessibility_compliance": {
+      "enabled": true,
+      "standards": {
+        "wcag": {
+          "version": "2.1",
+          "level": "AA",
+          "conformance_required": true
+        },
+        "section_508": {
+          "enabled": false,
+          "applies_to": "US_federal_contracts"
+        },
+        "ada": {
+          "enabled": false,
+          "applies_to": "US_operations"
+        },
+        "en_301_549": {
+          "enabled": false,
+          "applies_to": "EU_public_sector"
+        }
+      },
+      "documentation": {
+        "generate_vpat": true,
+        "generate_acr": true,
+        "update_accessibility_statement": true
+      },
+      "monitoring": {
+        "automated_testing": true,
+        "manual_testing_frequency": "quarterly",
+        "user_feedback_mechanism": true
+      }
+    },
+    "security_compliance": {
+      "enabled": true,
+      "frameworks": {
+        "owasp_top_10": {
+          "enabled": true,
+          "version": "2021",
+          "scan_frequency": "every_pr"
+        },
+        "cwe_top_25": {
+          "enabled": true,
+          "scan_frequency": "weekly"
+        },
+        "soc2": {
+          "enabled": false,
+          "type": "type_2",
+          "scope": ["security", "availability"]
+        },
+        "iso_27001": {
+          "enabled": false
+        },
+        "pci_dss": {
+          "enabled": false
+        }
+      },
+      "requirements": {
+        "encryption_at_rest": false,
+        "encryption_in_transit": true,
+        "tls_version_min": "1.2",
+        "secure_coding_practices": true,
+        "security_audit_trail": true,
+        "incident_response_plan": true,
+        "vulnerability_disclosure_policy": true
+      }
+    },
+    "open_source_attribution": {
+      "enabled": true,
+      "requirements": {
+        "third_party_notices": {
+          "generate": true,
+          "location": "THIRD_PARTY_NOTICES.md",
+          "include_in_distribution": true
+        },
+        "sbom": {
+          "generate": true,
+          "format": "spdx",
+          "update_frequency": "every_release"
+        },
+        "copyright_statements": {
+          "validate_presence": true,
+          "validate_year_current": true
+        },
+        "license_files": {
+          "validate_presence": true,
+          "validate_content": true
+        }
+      }
+    },
+    "data_sovereignty": {
+      "enabled": false,
+      "requirements": {
+        "data_residency": {
+          "enforce": false,
+          "allowed_regions": []
+        },
+        "cross_border_transfers": {
+          "validate": false,
+          "require_adequacy_decision": false,
+          "require_sccs": false
+        }
+      }
+    },
+    "third_party_tos_compliance": {
+      "enabled": true,
+      "services": {
+        "pollinations": {
+          "terms_url": "https://pollinations.ai/terms",
+          "acceptable_use_policy": "commercial_use_allowed",
+          "attribution_required": false,
+          "rate_limits_enforced": true,
+          "prohibited_content": ["illegal", "harmful", "copyrighted"],
+          "monitoring": {
+            "check_usage_compliance": true,
+            "validate_content_policy": false
+          }
+        },
+        "gemini": {
+          "terms_url": "https://ai.google.dev/terms",
+          "acceptable_use_policy": "generative_ai_prohibited_uses",
+          "attribution_required": false,
+          "rate_limits_enforced": true,
+          "prohibited_content": ["illegal", "harmful", "private_info", "spam"],
+          "monitoring": {
+            "check_usage_compliance": true,
+            "validate_api_key_usage": true
+          }
+        }
+      }
+    },
+    "code_of_conduct_enforcement": {
+      "enabled": true,
+      "policies": {
+        "harassment_free": true,
+        "inclusive_language": true,
+        "respectful_communication": true,
+        "no_discrimination": true
+      },
+      "enforcement": {
+        "automated_screening": false,
+        "manual_review_required": true,
+        "incident_reporting": true,
+        "maintain_incident_log": true
+      }
+    },
+    "audit_reporting": {
+      "enabled": true,
+      "report_types": {
+        "license_audit": {
+          "frequency": "monthly",
+          "format": "pdf",
+          "include_dependency_tree": true
+        },
+        "gdpr_compliance": {
+          "frequency": "quarterly",
+          "format": "pdf",
+          "include_gap_analysis": true
+        },
+        "accessibility_conformance": {
+          "frequency": "quarterly",
+          "format": "vpat",
+          "include_remediation_plan": true
+        },
+        "security_audit": {
+          "frequency": "monthly",
+          "format": "pdf",
+          "include_vulnerability_summary": true
+        }
+      },
+      "evidence_repository": {
+        "enabled": true,
+        "location": ".compliance/evidence",
+        "retention_years": 7
+      }
+    },
+    "policy_management": {
+      "policies": {
+        "privacy_policy": {
+          "location": "docs/PRIVACY.md",
+          "version": "1.0",
+          "last_updated": "2024-01-01",
+          "review_frequency_months": 6
+        },
+        "terms_of_service": {
+          "location": "docs/TERMS.md",
+          "version": "1.0",
+          "last_updated": "2024-01-01",
+          "review_frequency_months": 6
+        },
+        "cookie_policy": {
+          "location": "docs/COOKIES.md",
+          "version": "1.0",
+          "last_updated": "2024-01-01",
+          "review_frequency_months": 12
+        },
+        "security_policy": {
+          "location": "SECURITY.md",
+          "version": "1.0",
+          "last_updated": "2024-01-01",
+          "review_frequency_months": 6
+        }
+      },
+      "change_management": {
+        "track_policy_versions": true,
+        "communicate_changes": true,
+        "require_acknowledgment": false
+      }
+    },
+    "regulatory_monitoring": {
+      "enabled": true,
+      "jurisdictions": ["EU", "US", "UK"],
+      "monitoring_sources": ["legal_updates", "industry_news", "compliance_newsletters"],
+      "alert_on_changes": true
+    },
+    "execution_context": {
+      "runs_on": "ubuntu-latest",
+      "node_version": "20",
+      "timeout_minutes": 20,
+      "permissions": {
+        "contents": "read",
+        "pull_requests": "write",
+        "issues": "write"
+      }
+    }
+  }
+}
