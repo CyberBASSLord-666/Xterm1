@@ -1,0 +1,340 @@
+{
+  "agent_name": "api_integration_validator",
+  "role": "External API Integration Testing, Contract Validation, Error Handling, and Resilience Pattern Enforcement Specialist",
+  "responsibilities": [
+    "Validate external API integrations with Pollinations AI and Google Gemini implementing contract testing to ensure request/response schemas match expectations, detecting breaking changes in API responses, verifying error response formats, and maintaining comprehensive API integration test suites",
+    "Execute automated API health monitoring continuously checking endpoint availability, measuring response times (p50, p95, p99 percentiles), tracking error rates by status code (4xx, 5xx), detecting rate limiting behaviors, and alerting on degraded service conditions",
+    "Implement resilience pattern validation ensuring proper retry logic with exponential backoff (base delay 100ms, max 30s, jitter), circuit breaker implementation (5 failures trigger open, 30s half-open period), timeout configuration (30s for generation, 10s for metadata), and fallback mechanisms",
+    "Validate request/response transformation ensuring proper data serialization, handling special characters in prompts, URL encoding correctness, content-type header validation, payload size limits enforcement, and response parsing error handling",
+    "Test error handling completeness for all failure scenarios including network errors (timeout, connection refused, DNS failure), HTTP errors (400 bad request, 401 unauthorized, 429 rate limit, 500 server error, 503 service unavailable), and malformed response handling",
+    "Monitor API usage and cost optimization tracking request volume trends, identifying redundant calls, measuring cache hit rates for RequestCacheService, validating API key usage patterns, and recommending batching opportunities to reduce costs",
+    "Validate authentication and authorization mechanisms ensuring API keys are securely stored (not in code or logs), tokens are properly refreshed before expiration, OAuth flows handle redirects correctly, and authorization headers are correctly formatted",
+    "Test rate limiting compliance implementing client-side rate limiting to respect API quotas (Pollinations: no official limit, Gemini: varies by tier), tracking remaining quota, implementing request queuing, providing user feedback on rate limit status, and graceful degradation",
+    "Execute load testing and capacity planning simulating concurrent API requests, measuring throughput under load, identifying bottlenecks in request handling, validating queue management, and determining maximum sustainable request rate",
+    "Generate API integration reports documenting endpoint usage statistics, success/failure rates, average response times, common error patterns, downtime incidents, and optimization recommendations with cost-benefit analysis"
+  ],
+  "configuration": {
+    "trigger_events": [
+      "pull_request.opened.paths.src/services/ai/**",
+      "pull_request.opened.paths.src/services/api/**",
+      "push.branches.main.paths.src/services/ai/**",
+      "schedule.cron.*/30_*_*_*_*",
+      "deployment.status.success",
+      "workflow_dispatch"
+    ],
+    "external_apis": {
+      "pollinations": {
+        "base_url": "https://image.pollinations.ai",
+        "endpoints": {
+          "generate_image": {
+            "path": "/prompt/{prompt}",
+            "method": "GET",
+            "timeout_seconds": 30,
+            "retry_count": 3,
+            "expected_content_type": "image/*"
+          }
+        },
+        "rate_limits": {
+          "requests_per_minute": null,
+          "requests_per_hour": null,
+          "note": "No official rate limit documented"
+        },
+        "authentication": {
+          "type": "none",
+          "api_key_required": false
+        }
+      },
+      "gemini": {
+        "base_url": "https://generativelanguage.googleapis.com",
+        "endpoints": {
+          "generate_content": {
+            "path": "/v1beta/models/gemini-pro:generateContent",
+            "method": "POST",
+            "timeout_seconds": 10,
+            "retry_count": 2,
+            "expected_content_type": "application/json"
+          }
+        },
+        "rate_limits": {
+          "requests_per_minute": 60,
+          "requests_per_day": 1500,
+          "note": "Free tier limits, varies by plan"
+        },
+        "authentication": {
+          "type": "api_key",
+          "api_key_required": true,
+          "api_key_location": "query_parameter"
+        }
+      }
+    },
+    "contract_testing": {
+      "enabled": true,
+      "schema_validation": {
+        "validate_request_schema": true,
+        "validate_response_schema": true,
+        "strict_mode": true
+      },
+      "test_scenarios": {
+        "pollinations": [
+          {
+            "name": "successful_image_generation",
+            "request": {
+              "prompt": "sunset over mountains",
+              "width": 1920,
+              "height": 1080
+            },
+            "expected_response": {
+              "status": 200,
+              "content_type": "image/jpeg",
+              "min_size_bytes": 50000
+            }
+          },
+          {
+            "name": "special_characters_in_prompt",
+            "request": {
+              "prompt": "café & résumé with émoji 🎨",
+              "width": 1920,
+              "height": 1080
+            },
+            "expected_response": {
+              "status": 200,
+              "content_type": "image/jpeg"
+            }
+          }
+        ],
+        "gemini": [
+          {
+            "name": "successful_prompt_enhancement",
+            "request": {
+              "prompt": "enhance this: sunset"
+            },
+            "expected_response": {
+              "status": 200,
+              "content_type": "application/json",
+              "required_fields": ["candidates", "text"]
+            }
+          },
+          {
+            "name": "empty_prompt_handling",
+            "request": {
+              "prompt": ""
+            },
+            "expected_response": {
+              "status": 400,
+              "error": true
+            }
+          }
+        ]
+      },
+      "breaking_change_detection": {
+        "enabled": true,
+        "baseline_schemas_directory": "tests/api-schemas",
+        "alert_on_changes": true
+      }
+    },
+    "health_monitoring": {
+      "enabled": true,
+      "check_frequency_minutes": 5,
+      "metrics": {
+        "availability": {
+          "track": true,
+          "target_uptime_percent": 99.9
+        },
+        "response_time": {
+          "track": true,
+          "percentiles": [50, 95, 99],
+          "thresholds": {
+            "p95_ms": 1000,
+            "p99_ms": 2000
+          }
+        },
+        "error_rate": {
+          "track": true,
+          "by_status_code": true,
+          "alert_threshold_percent": 5
+        },
+        "rate_limiting": {
+          "track": true,
+          "monitor_429_responses": true,
+          "track_retry_after_headers": true
+        }
+      },
+      "alerting": {
+        "on_service_down": {
+          "enabled": true,
+          "consecutive_failures_required": 3,
+          "severity": "critical"
+        },
+        "on_slow_response": {
+          "enabled": true,
+          "threshold_p95_ms": 2000,
+          "severity": "major"
+        },
+        "on_high_error_rate": {
+          "enabled": true,
+          "threshold_percent": 10,
+          "severity": "high"
+        }
+      }
+    },
+    "resilience_patterns": {
+      "retry_logic": {
+        "enabled": true,
+        "max_retries": 3,
+        "backoff_strategy": "exponential",
+        "base_delay_ms": 100,
+        "max_delay_ms": 30000,
+        "jitter": true,
+        "retryable_status_codes": [408, 429, 500, 502, 503, 504]
+      },
+      "circuit_breaker": {
+        "enabled": true,
+        "failure_threshold": 5,
+        "success_threshold": 2,
+        "timeout_ms": 30000,
+        "half_open_period_ms": 30000,
+        "metrics_window_ms": 60000
+      },
+      "timeout": {
+        "enabled": true,
+        "default_timeout_ms": 30000,
+        "per_endpoint_overrides": {
+          "generate_image": 30000,
+          "generate_content": 10000
+        }
+      },
+      "fallback": {
+        "enabled": true,
+        "strategies": {
+          "pollinations_unavailable": "use_cached_similar_image",
+          "gemini_unavailable": "use_original_prompt"
+        }
+      }
+    },
+    "error_handling_validation": {
+      "test_scenarios": {
+        "network_errors": [
+          "timeout",
+          "connection_refused",
+          "dns_failure",
+          "ssl_error"
+        ],
+        "http_errors": [
+          "400_bad_request",
+          "401_unauthorized",
+          "403_forbidden",
+          "404_not_found",
+          "429_rate_limit",
+          "500_internal_server_error",
+          "502_bad_gateway",
+          "503_service_unavailable",
+          "504_gateway_timeout"
+        ],
+        "response_errors": [
+          "malformed_json",
+          "unexpected_content_type",
+          "incomplete_response",
+          "invalid_image_data"
+        ]
+      },
+      "expected_handling": {
+        "user_notification": true,
+        "error_logging": true,
+        "metrics_tracking": true,
+        "graceful_degradation": true
+      }
+    },
+    "usage_optimization": {
+      "caching": {
+        "enabled": true,
+        "cache_service": "RequestCacheService",
+        "cache_ttl_hours": 24,
+        "cache_hit_rate_target_percent": 60
+      },
+      "redundancy_detection": {
+        "enabled": true,
+        "detect_duplicate_requests": true,
+        "recommend_deduplication": true
+      },
+      "batching": {
+        "enabled": false,
+        "batch_size": 10,
+        "batch_window_ms": 1000
+      },
+      "cost_tracking": {
+        "enabled": true,
+        "estimate_api_costs": true,
+        "generate_cost_reports": true
+      }
+    },
+    "authentication_validation": {
+      "api_key_security": {
+        "check_no_hardcoded_keys": true,
+        "check_no_logged_keys": true,
+        "validate_secure_storage": true
+      },
+      "token_management": {
+        "validate_refresh_logic": true,
+        "check_expiration_handling": true
+      },
+      "header_validation": {
+        "validate_authorization_format": true,
+        "check_required_headers": true
+      }
+    },
+    "rate_limiting": {
+      "client_side_limiting": {
+        "enabled": true,
+        "enforce_quotas": true,
+        "request_queuing": true,
+        "user_feedback": true
+      },
+      "quota_tracking": {
+        "track_remaining_quota": true,
+        "warn_at_threshold_percent": 80,
+        "block_at_threshold_percent": 95
+      }
+    },
+    "load_testing": {
+      "enabled": true,
+      "test_scenarios": {
+        "sustained_load": {
+          "duration_minutes": 10,
+          "requests_per_second": 10,
+          "concurrent_users": 50
+        },
+        "spike_test": {
+          "duration_minutes": 5,
+          "peak_requests_per_second": 50,
+          "concurrent_users": 100
+        }
+      },
+      "performance_targets": {
+        "max_response_time_p95_ms": 2000,
+        "min_throughput_rps": 20,
+        "max_error_rate_percent": 1
+      }
+    },
+    "reporting": {
+      "generate_integration_health_report": true,
+      "generate_usage_statistics": true,
+      "generate_error_analysis": true,
+      "generate_optimization_recommendations": true,
+      "notification_channels": ["pull_request_comment", "github_check", "api_health_dashboard"],
+      "include_cost_analysis": true,
+      "include_trend_charts": true
+    },
+    "execution_context": {
+      "runs_on": "ubuntu-latest",
+      "node_version": "20",
+      "timeout_minutes": 20,
+      "cache_dependencies": true,
+      "npm_install_command": "npm ci --legacy-peer-deps",
+      "permissions": {
+        "contents": "read",
+        "pull_requests": "write",
+        "checks": "write"
+      }
+    }
+  }
+}

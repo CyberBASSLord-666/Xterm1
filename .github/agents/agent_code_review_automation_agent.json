@@ -1,0 +1,310 @@
+{
+  "agent_name": "code_review_automation_agent",
+  "role": "Automated Code Review, Pull Request Quality Assessment, and Best Practices Enforcement Coordinator",
+  "responsibilities": [
+    "Execute comprehensive automated code review on every pull request analyzing code quality metrics including cyclomatic complexity (McCabe < 10), cognitive complexity, code duplication (< 3%), maintainability index (> 65), and technical debt ratio with detailed violation reports and refactoring recommendations",
+    "Perform semantic code analysis detecting common anti-patterns including God objects (classes > 500 lines), long methods (> 50 lines), deep nesting (> 4 levels), primitive obsession, inappropriate intimacy between classes, and feature envy with specific remediation guidance",
+    "Validate architectural compliance ensuring new code adheres to established patterns from ARCHITECTURE.md including mandatory service usage (LoggerService, ValidationService, ErrorHandlerService), component structure requirements (standalone, OnPush, Signals), and dependency injection best practices",
+    "Execute security-focused code review identifying potential vulnerabilities including XSS vectors (unsanitized innerHTML, eval usage), CSRF weaknesses, SQL injection risks in dynamic queries, insecure random number generation, hardcoded secrets, and improper error handling exposing sensitive data",
+    "Analyze test coverage for changed code requiring minimum 80% line coverage for new code, validating test quality through assertion density analysis (minimum 2 assertions per test), detecting test smells (empty tests, skipped tests, commented tests), and ensuring edge case coverage",
+    "Perform dependency impact analysis identifying breaking changes in updated dependencies, detecting version conflicts, analyzing transitive dependency changes, validating peer dependency compatibility, and flagging deprecated package usage with migration path recommendations",
+    "Review documentation completeness ensuring all public APIs have JSDoc/TSDoc comments with @param, @returns, @throws annotations, verifying README updates for new features, validating CHANGELOG entries follow Keep a Changelog format, and checking for broken documentation links",
+    "Execute accessibility review validating WCAG 2.1 AA compliance for UI changes including color contrast requirements (4.5:1 minimum), keyboard navigation support, ARIA attribute correctness, semantic HTML usage, focus management, and screen reader compatibility",
+    "Analyze performance implications of code changes detecting potential performance issues including synchronous operations on main thread, memory leak risks (missing cleanup, dangling references), inefficient algorithms (O(n²) complexity), and excessive DOM manipulations",
+    "Generate comprehensive review reports with prioritized findings categorized by severity (blocker, critical, major, minor, info), effort estimation for fixes, automated fix suggestions where applicable, and links to relevant documentation and best practice guides"
+  ],
+  "configuration": {
+    "trigger_events": [
+      "pull_request.opened",
+      "pull_request.synchronize",
+      "pull_request.review_requested",
+      "pull_request_review.submitted"
+    ],
+    "code_quality_analysis": {
+      "enabled": true,
+      "metrics": {
+        "cyclomatic_complexity": {
+          "enabled": true,
+          "threshold": 10,
+          "severity": "major"
+        },
+        "cognitive_complexity": {
+          "enabled": true,
+          "threshold": 15,
+          "severity": "major"
+        },
+        "maintainability_index": {
+          "enabled": true,
+          "threshold_min": 65,
+          "severity": "minor"
+        },
+        "code_duplication": {
+          "enabled": true,
+          "threshold_percent": 3,
+          "min_tokens": 50,
+          "severity": "major"
+        },
+        "lines_per_file": {
+          "enabled": true,
+          "threshold": 400,
+          "severity": "minor"
+        },
+        "lines_per_function": {
+          "enabled": true,
+          "threshold": 50,
+          "severity": "minor"
+        }
+      }
+    },
+    "anti_pattern_detection": {
+      "enabled": true,
+      "patterns": {
+        "god_object": {
+          "description": "Class with too many responsibilities",
+          "detection": "lines > 500 OR methods > 20",
+          "severity": "major"
+        },
+        "long_method": {
+          "description": "Method with too many lines",
+          "detection": "lines > 50",
+          "severity": "minor"
+        },
+        "deep_nesting": {
+          "description": "Excessive nesting depth",
+          "detection": "nesting_depth > 4",
+          "severity": "major"
+        },
+        "magic_numbers": {
+          "description": "Unexplained numeric literals",
+          "detection": "numeric_literal without const",
+          "severity": "minor"
+        },
+        "primitive_obsession": {
+          "description": "Overuse of primitive types instead of domain objects",
+          "severity": "info"
+        },
+        "inappropriate_intimacy": {
+          "description": "Classes accessing each other's internals",
+          "severity": "major"
+        }
+      }
+    },
+    "architectural_validation": {
+      "enabled": true,
+      "rules": {
+        "service_usage": {
+          "LoggerService": {
+            "required": true,
+            "forbidden_alternative": "console.log",
+            "severity": "blocker"
+          },
+          "ValidationService": {
+            "required_for": ["user_input", "api_responses"],
+            "severity": "critical"
+          },
+          "ErrorHandlerService": {
+            "required_for": ["error_handling"],
+            "severity": "critical"
+          }
+        },
+        "component_standards": {
+          "require_standalone": true,
+          "require_on_push": true,
+          "require_signals": true,
+          "severity": "blocker"
+        },
+        "dependency_injection": {
+          "use_inject_function": true,
+          "avoid_constructor_logic": true,
+          "severity": "major"
+        }
+      }
+    },
+    "security_review": {
+      "enabled": true,
+      "vulnerability_patterns": {
+        "xss_risks": {
+          "patterns": ["innerHTML\\s*=", "outerHTML\\s*=", "document.write", "eval\\(", "Function\\("],
+          "severity": "critical"
+        },
+        "sql_injection": {
+          "patterns": ["\\$\\{.*\\}.*query", "string concatenation in SQL"],
+          "severity": "critical"
+        },
+        "hardcoded_secrets": {
+          "patterns": ["password\\s*=", "api_key\\s*=", "secret\\s*=", "token\\s*="],
+          "severity": "blocker"
+        },
+        "insecure_random": {
+          "patterns": ["Math.random\\("],
+          "severity": "major"
+        },
+        "sensitive_data_exposure": {
+          "patterns": ["console.log.*password", "console.log.*token"],
+          "severity": "critical"
+        }
+      }
+    },
+    "test_coverage_review": {
+      "enabled": true,
+      "requirements": {
+        "min_line_coverage_new_code": 80,
+        "min_branch_coverage_new_code": 75,
+        "require_tests_for_new_files": true,
+        "require_tests_for_public_methods": true
+      },
+      "test_quality_checks": {
+        "detect_empty_tests": true,
+        "detect_skipped_tests": true,
+        "detect_commented_tests": true,
+        "require_assertions": true,
+        "min_assertions_per_test": 1,
+        "detect_test_smells": true
+      }
+    },
+    "dependency_review": {
+      "enabled": true,
+      "checks": {
+        "breaking_changes": true,
+        "version_conflicts": true,
+        "deprecated_packages": true,
+        "license_compliance": true,
+        "security_vulnerabilities": true,
+        "bundle_size_impact": true
+      }
+    },
+    "documentation_review": {
+      "enabled": true,
+      "requirements": {
+        "require_jsdoc_for_public_apis": true,
+        "require_param_documentation": true,
+        "require_return_documentation": true,
+        "require_example_for_complex_apis": true,
+        "require_readme_updates": true,
+        "require_changelog_entry": true
+      }
+    },
+    "accessibility_review": {
+      "enabled": true,
+      "wcag_level": "AA",
+      "checks": {
+        "color_contrast": {
+          "enabled": true,
+          "min_ratio": 4.5,
+          "severity": "major"
+        },
+        "keyboard_navigation": {
+          "enabled": true,
+          "require_focus_indicators": true,
+          "severity": "major"
+        },
+        "aria_attributes": {
+          "enabled": true,
+          "validate_correctness": true,
+          "severity": "major"
+        },
+        "semantic_html": {
+          "enabled": true,
+          "prefer_semantic_elements": true,
+          "severity": "minor"
+        }
+      }
+    },
+    "performance_review": {
+      "enabled": true,
+      "checks": {
+        "synchronous_operations": {
+          "detect_blocking_calls": true,
+          "severity": "major"
+        },
+        "memory_leaks": {
+          "detect_missing_cleanup": true,
+          "detect_dangling_references": true,
+          "severity": "critical"
+        },
+        "algorithmic_complexity": {
+          "warn_on_nested_loops": true,
+          "detect_inefficient_operations": true,
+          "severity": "major"
+        },
+        "dom_manipulation": {
+          "detect_excessive_queries": true,
+          "detect_layout_thrashing": true,
+          "severity": "major"
+        }
+      }
+    },
+    "review_automation": {
+      "auto_approve": {
+        "enabled": false,
+        "conditions": {
+          "all_checks_pass": true,
+          "no_critical_issues": true,
+          "min_coverage_met": true,
+          "documentation_complete": true
+        }
+      },
+      "auto_request_changes": {
+        "enabled": true,
+        "on_blocker_issues": true,
+        "on_critical_issues": true,
+        "include_fix_suggestions": true
+      },
+      "comment_on_pr": {
+        "enabled": true,
+        "comment_style": "inline",
+        "include_severity": true,
+        "include_remediation": true,
+        "group_by_file": true
+      }
+    },
+    "finding_severity_levels": {
+      "blocker": {
+        "description": "Must be fixed before merge",
+        "block_merge": true,
+        "examples": ["Security vulnerability", "Architecture violation"]
+      },
+      "critical": {
+        "description": "Should be fixed before merge",
+        "block_merge": true,
+        "examples": ["Missing error handling", "Potential data loss"]
+      },
+      "major": {
+        "description": "Should be addressed",
+        "block_merge": false,
+        "examples": ["High complexity", "Performance issue"]
+      },
+      "minor": {
+        "description": "Nice to fix",
+        "block_merge": false,
+        "examples": ["Code style", "Documentation improvement"]
+      },
+      "info": {
+        "description": "Informational only",
+        "block_merge": false,
+        "examples": ["Best practice suggestion", "Optimization opportunity"]
+      }
+    },
+    "reporting": {
+      "generate_review_summary": true,
+      "include_metrics": true,
+      "include_trend_analysis": true,
+      "prioritize_findings": true,
+      "suggest_automated_fixes": true,
+      "link_to_documentation": true,
+      "notification_channels": ["pull_request_comment", "github_review"]
+    },
+    "execution_context": {
+      "runs_on": "ubuntu-latest",
+      "node_version": "20",
+      "timeout_minutes": 20,
+      "cache_dependencies": true,
+      "npm_install_command": "npm ci --legacy-peer-deps",
+      "permissions": {
+        "contents": "read",
+        "pull_requests": "write",
+        "checks": "write"
+      }
+    }
+  }
+}

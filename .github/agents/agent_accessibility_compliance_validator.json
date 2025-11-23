@@ -1,0 +1,339 @@
+{
+  "agent_name": "accessibility_compliance_validator",
+  "role": "WCAG 2.1 AA Compliance Enforcement, Accessibility Testing, and Inclusive Design Guardian",
+  "responsibilities": [
+    "Execute automated accessibility audits using axe-core, Pa11y, and Lighthouse accessibility scanner on every pull request and deployment, detecting WCAG 2.1 Level AA violations including color contrast failures, missing ARIA labels, keyboard navigation issues, and semantic HTML violations with detailed remediation guidance",
+    "Validate keyboard navigation completeness ensuring all interactive elements are reachable via Tab key, logical focus order follows visual layout, focus indicators meet 3:1 contrast ratio requirement, keyboard shortcuts don't conflict with screen readers, and focus trap implementation in modals and dialogs",
+    "Perform screen reader compatibility testing validating proper ARIA landmark usage (navigation, main, complementary), ARIA live region announcements for dynamic content, form field labeling completeness, button and link text clarity, and heading hierarchy logical progression (h1→h2→h3)",
+    "Analyze color contrast ratios for all text and UI components ensuring minimum 4.5:1 ratio for normal text (14pt+), 3:1 ratio for large text (18pt+ or 14pt bold), 3:1 ratio for graphical objects and UI components, with testing against both light and dark themes across different viewport sizes",
+    "Validate semantic HTML structure enforcing use of appropriate elements (nav, main, article, section, header, footer, button, a) rather than generic divs, ensuring heading hierarchy completeness without skipped levels, proper table markup with thead/tbody/caption, and form elements with associated labels",
+    "Test alternative text completeness for images verifying all informative images have descriptive alt text, decorative images have empty alt attributes, complex images (charts, diagrams) have longdesc or adjacent detailed descriptions, and SVG graphics include proper title and desc elements",
+    "Verify form accessibility ensuring all form inputs have associated labels (explicit via for/id or implicit wrapping), error messages are announced to screen readers via aria-describedby, required field indication is not color-only, fieldsets group related inputs, and error prevention mechanisms exist",
+    "Validate responsive accessibility across viewport sizes ensuring touch targets meet minimum 44x44px requirement on mobile, zoom functionality up to 200% doesn't break layout, content reflow occurs without horizontal scrolling, and text spacing can be adjusted without loss of functionality",
+    "Test motion and animation accessibility respecting prefers-reduced-motion media query for users with vestibular disorders, providing pause/stop controls for auto-playing content, ensuring animations don't trigger seizures (< 3 flashes per second), and offering non-animated alternatives",
+    "Generate comprehensive accessibility reports with WCAG success criteria references, impact assessment (number of affected users), severity classification (blocker, critical, major, minor), automated fix recommendations, manual testing requirements, and progress tracking toward 100% compliance"
+  ],
+  "configuration": {
+    "trigger_events": [
+      "pull_request.opened",
+      "pull_request.synchronize",
+      "push.branches.main",
+      "deployment.status.success",
+      "schedule.cron.0_0_*_*_0",
+      "workflow_dispatch"
+    ],
+    "wcag_compliance": {
+      "version": "2.1",
+      "conformance_level": "AA",
+      "target_score": 100,
+      "block_merge_on_violations": true,
+      "severity_threshold": "moderate"
+    },
+    "automated_testing_tools": {
+      "axe_core": {
+        "enabled": true,
+        "version": "latest",
+        "rules": {
+          "enabled": "wcag2a,wcag2aa,wcag21a,wcag21aa",
+          "disabled": []
+        },
+        "run_context": "playwright_tests",
+        "report_format": "json"
+      },
+      "pa11y": {
+        "enabled": false,
+        "standard": "WCAG2AA",
+        "runners": ["axe", "htmlcs"]
+      },
+      "lighthouse": {
+        "enabled": true,
+        "category": "accessibility",
+        "min_score": 95,
+        "run_on": "deployment"
+      }
+    },
+    "keyboard_navigation": {
+      "validation_rules": {
+        "tab_reachability": {
+          "enabled": true,
+          "check_all_interactive_elements": true,
+          "severity": "critical"
+        },
+        "focus_order": {
+          "enabled": true,
+          "validate_logical_progression": true,
+          "severity": "major"
+        },
+        "focus_indicators": {
+          "enabled": true,
+          "min_contrast_ratio": 3.0,
+          "require_visible_outline": true,
+          "severity": "major"
+        },
+        "keyboard_shortcuts": {
+          "enabled": true,
+          "check_conflicts": true,
+          "require_documentation": true,
+          "severity": "minor"
+        },
+        "focus_trap": {
+          "enabled": true,
+          "validate_in_modals": true,
+          "validate_in_dialogs": true,
+          "severity": "critical"
+        },
+        "skip_links": {
+          "enabled": true,
+          "require_skip_to_main": true,
+          "severity": "major"
+        }
+      },
+      "testing_methodology": "automated_and_manual"
+    },
+    "screen_reader_compatibility": {
+      "testing_tools": ["nvda", "jaws", "voiceover"],
+      "validation_rules": {
+        "aria_landmarks": {
+          "enabled": true,
+          "require_main": true,
+          "require_navigation": true,
+          "allow_multiple_complementary": true,
+          "severity": "major"
+        },
+        "aria_live_regions": {
+          "enabled": true,
+          "validate_announcements": true,
+          "check_politeness_settings": true,
+          "severity": "major"
+        },
+        "form_labels": {
+          "enabled": true,
+          "require_explicit_or_implicit": true,
+          "check_describedby_for_errors": true,
+          "severity": "critical"
+        },
+        "button_link_text": {
+          "enabled": true,
+          "forbid_generic_text": ["click here", "read more", "link"],
+          "require_meaningful_text": true,
+          "severity": "major"
+        },
+        "heading_hierarchy": {
+          "enabled": true,
+          "validate_h1_present": true,
+          "forbid_skipped_levels": true,
+          "check_logical_structure": true,
+          "severity": "major"
+        }
+      }
+    },
+    "color_contrast": {
+      "validation_rules": {
+        "normal_text": {
+          "enabled": true,
+          "min_ratio": 4.5,
+          "applies_to": "text < 18pt or text < 14pt bold",
+          "severity": "critical"
+        },
+        "large_text": {
+          "enabled": true,
+          "min_ratio": 3.0,
+          "applies_to": "text >= 18pt or text >= 14pt bold",
+          "severity": "major"
+        },
+        "ui_components": {
+          "enabled": true,
+          "min_ratio": 3.0,
+          "applies_to": "buttons, form controls, focus indicators",
+          "severity": "major"
+        },
+        "graphical_objects": {
+          "enabled": true,
+          "min_ratio": 3.0,
+          "applies_to": "icons, charts, infographics",
+          "severity": "major"
+        }
+      },
+      "test_against_themes": ["light", "dark"],
+      "test_viewport_sizes": ["mobile", "tablet", "desktop"]
+    },
+    "semantic_html": {
+      "validation_rules": {
+        "use_semantic_elements": {
+          "enabled": true,
+          "prefer_over_divs": ["nav", "main", "article", "section", "header", "footer", "aside"],
+          "severity": "minor"
+        },
+        "button_vs_link": {
+          "enabled": true,
+          "button_for_actions": true,
+          "link_for_navigation": true,
+          "severity": "major"
+        },
+        "heading_structure": {
+          "enabled": true,
+          "require_h1": true,
+          "forbid_skipped_levels": true,
+          "severity": "major"
+        },
+        "table_markup": {
+          "enabled": true,
+          "require_thead_tbody": true,
+          "require_th_scope": true,
+          "require_caption": false,
+          "severity": "major"
+        },
+        "form_structure": {
+          "enabled": true,
+          "require_labels": true,
+          "require_fieldsets_for_groups": true,
+          "severity": "critical"
+        }
+      }
+    },
+    "alternative_text": {
+      "validation_rules": {
+        "informative_images": {
+          "enabled": true,
+          "require_descriptive_alt": true,
+          "forbid_generic_alt": ["image", "photo", "picture"],
+          "severity": "critical"
+        },
+        "decorative_images": {
+          "enabled": true,
+          "require_empty_alt": true,
+          "severity": "major"
+        },
+        "complex_images": {
+          "enabled": true,
+          "require_longdesc_or_adjacent": true,
+          "severity": "major"
+        },
+        "svg_graphics": {
+          "enabled": true,
+          "require_title": true,
+          "require_desc": true,
+          "require_role_img": true,
+          "severity": "major"
+        }
+      }
+    },
+    "form_accessibility": {
+      "validation_rules": {
+        "input_labels": {
+          "enabled": true,
+          "require_explicit_or_implicit": true,
+          "check_for_attribute_match": true,
+          "severity": "critical"
+        },
+        "error_identification": {
+          "enabled": true,
+          "require_aria_describedby": true,
+          "require_aria_invalid": true,
+          "forbid_color_only_indication": true,
+          "severity": "critical"
+        },
+        "required_field_indication": {
+          "enabled": true,
+          "require_aria_required": true,
+          "forbid_asterisk_only": true,
+          "severity": "major"
+        },
+        "error_prevention": {
+          "enabled": true,
+          "require_confirmation_for_critical": true,
+          "require_reversible_submissions": true,
+          "severity": "major"
+        }
+      }
+    },
+    "responsive_accessibility": {
+      "viewport_sizes": ["320px", "768px", "1024px", "1920px"],
+      "validation_rules": {
+        "touch_target_size": {
+          "enabled": true,
+          "min_size_px": 44,
+          "applies_to_viewports": ["mobile", "tablet"],
+          "severity": "major"
+        },
+        "zoom_support": {
+          "enabled": true,
+          "max_zoom_percent": 200,
+          "forbid_layout_break": true,
+          "severity": "critical"
+        },
+        "content_reflow": {
+          "enabled": true,
+          "forbid_horizontal_scroll": true,
+          "applies_to_width_px": 320,
+          "severity": "major"
+        },
+        "text_spacing": {
+          "enabled": true,
+          "allow_adjustment": true,
+          "forbid_content_loss": true,
+          "severity": "major"
+        }
+      }
+    },
+    "motion_animation": {
+      "validation_rules": {
+        "prefers_reduced_motion": {
+          "enabled": true,
+          "require_respect": true,
+          "provide_alternatives": true,
+          "severity": "major"
+        },
+        "auto_playing_content": {
+          "enabled": true,
+          "require_pause_control": true,
+          "max_auto_play_seconds": 5,
+          "severity": "major"
+        },
+        "seizure_prevention": {
+          "enabled": true,
+          "max_flashes_per_second": 3,
+          "severity": "critical"
+        }
+      }
+    },
+    "manual_testing_requirements": {
+      "screen_reader_testing": {
+        "required": true,
+        "frequency": "monthly",
+        "tools": ["NVDA", "JAWS", "VoiceOver"]
+      },
+      "keyboard_only_testing": {
+        "required": true,
+        "frequency": "per_release",
+        "scenarios": "all_critical_user_flows"
+      },
+      "cognitive_load_testing": {
+        "required": true,
+        "frequency": "quarterly"
+      }
+    },
+    "reporting": {
+      "generate_wcag_compliance_report": true,
+      "include_success_criteria_references": true,
+      "include_impact_assessment": true,
+      "prioritize_by_severity": true,
+      "suggest_automated_fixes": true,
+      "track_compliance_progress": true,
+      "notification_channels": ["pull_request_comment", "github_check", "accessibility_dashboard"],
+      "generate_accessibility_badge": true
+    },
+    "execution_context": {
+      "runs_on": "ubuntu-latest",
+      "node_version": "20",
+      "timeout_minutes": 20,
+      "cache_dependencies": true,
+      "npm_install_command": "npm ci --legacy-peer-deps",
+      "permissions": {
+        "contents": "read",
+        "pull_requests": "write",
+        "checks": "write"
+      }
+    }
+  }
+}

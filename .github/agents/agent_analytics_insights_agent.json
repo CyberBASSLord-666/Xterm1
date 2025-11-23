@@ -1,0 +1,311 @@
+{
+  "agent_name": "analytics_insights_agent",
+  "role": "Data Analytics, User Behavior Analysis, Business Intelligence, and Actionable Insights Generation Specialist",
+  "responsibilities": [
+    "Aggregate and analyze user behavior data from AnalyticsService tracking feature adoption rates, user retention cohorts (Day 1, Day 7, Day 30), session duration distributions, bounce rate patterns, and conversion funnel optimization identifying drop-off points with statistical significance testing",
+    "Generate actionable business insights through advanced analytics including A/B test result analysis, feature impact assessment (before/after comparisons), user segmentation by behavior patterns, churn prediction models, and revenue attribution analysis with confidence intervals",
+    "Monitor key performance indicators (KPIs) establishing baseline metrics for active users (DAU, WAU, MAU), engagement metrics (wallpapers generated per user, collections created, sharing rate), technical metrics (error rate, performance scores), and quality metrics (CSAT, NPS) with automated anomaly detection",
+    "Implement cohort analysis tracking user groups by acquisition date, analyzing retention curves, identifying activation moments (aha moments), measuring feature stickiness, and comparing cohort performance across product changes",
+    "Execute funnel analysis for critical user journeys (onboarding → first generation → first collection → first share) measuring conversion rates at each step, identifying friction points, calculating time-to-value, and recommending UX improvements with expected impact estimation",
+    "Perform predictive analytics using machine learning models predicting user churn probability, forecasting feature adoption, estimating lifetime value, identifying high-value user characteristics, and recommending proactive engagement strategies",
+    "Generate automated reports and dashboards creating executive summaries with key metrics trends, detailed drill-down reports by feature/user segment, real-time operational dashboards, and custom reports for stakeholder requests with scheduled email delivery",
+    "Conduct impact analysis for product changes measuring pre/post metrics for feature launches, quantifying performance optimization impact, assessing UI/UX improvement effectiveness, and calculating ROI for development efforts",
+    "Implement data quality validation ensuring analytics data accuracy through data integrity checks, identifying tracking gaps (missing events, incomplete data), validating event schema compliance, and monitoring data collection pipeline health",
+    "Coordinate privacy-compliant analytics ensuring GDPR/CCPA compliance, implementing data anonymization, respecting Do Not Track headers, providing transparency about data collection, and enabling user data export/deletion workflows"
+  ],
+  "configuration": {
+    "trigger_events": [
+      "schedule.cron.0_8_*_*_*",
+      "deployment.status.success",
+      "workflow_dispatch",
+      "repository_dispatch.type.analytics_request"
+    ],
+    "data_sources": {
+      "analytics_service": {
+        "enabled": true,
+        "events_tracked": [
+          "wallpaper_generated",
+          "wallpaper_downloaded",
+          "wallpaper_shared",
+          "collection_created",
+          "collection_updated",
+          "prompt_enhanced",
+          "theme_toggled",
+          "settings_changed",
+          "error_encountered"
+        ]
+      },
+      "performance_metrics": {
+        "enabled": true,
+        "metrics": ["lcp", "fid", "cls", "ttfb", "page_load_time"]
+      },
+      "error_tracking": {
+        "enabled": true,
+        "metrics": ["error_count", "error_rate", "unique_errors"]
+      }
+    },
+    "kpi_monitoring": {
+      "user_metrics": {
+        "daily_active_users": {
+          "track": true,
+          "target": 1000,
+          "alert_threshold_decrease_percent": 10
+        },
+        "weekly_active_users": {
+          "track": true,
+          "target": 5000
+        },
+        "monthly_active_users": {
+          "track": true,
+          "target": 20000
+        },
+        "new_user_signups": {
+          "track": true,
+          "target_per_day": 50
+        }
+      },
+      "engagement_metrics": {
+        "wallpapers_per_user": {
+          "track": true,
+          "target_average": 5,
+          "percentiles": [50, 90, 99]
+        },
+        "collections_per_user": {
+          "track": true,
+          "target_average": 2
+        },
+        "session_duration": {
+          "track": true,
+          "target_median_minutes": 10
+        },
+        "return_rate": {
+          "track": true,
+          "target_day_1_percent": 40,
+          "target_day_7_percent": 20,
+          "target_day_30_percent": 10
+        }
+      },
+      "technical_metrics": {
+        "error_rate": {
+          "track": true,
+          "target_max_percent": 1
+        },
+        "performance_score": {
+          "track": true,
+          "target_min": 90
+        },
+        "uptime": {
+          "track": true,
+          "target_percent": 99.9
+        }
+      },
+      "quality_metrics": {
+        "csat_score": {
+          "track": false,
+          "target_min": 4.0
+        },
+        "nps_score": {
+          "track": false,
+          "target_min": 50
+        }
+      }
+    },
+    "cohort_analysis": {
+      "enabled": true,
+      "cohort_definitions": {
+        "by_acquisition_date": {
+          "enabled": true,
+          "granularity": "weekly"
+        },
+        "by_first_feature_used": {
+          "enabled": true,
+          "features": ["basic_generation", "enhanced_prompt", "collections"]
+        },
+        "by_referral_source": {
+          "enabled": false
+        }
+      },
+      "retention_tracking": {
+        "periods": ["day_1", "day_7", "day_30", "day_90"],
+        "definition": "user_returned_and_performed_action"
+      }
+    },
+    "funnel_analysis": {
+      "enabled": true,
+      "funnels": {
+        "onboarding": {
+          "steps": [
+            "landing_page_view",
+            "settings_opened",
+            "api_key_configured",
+            "first_generation_initiated",
+            "first_generation_success"
+          ],
+          "target_conversion_rate_percent": 60
+        },
+        "collection_creation": {
+          "steps": [
+            "wallpaper_generated",
+            "collections_tab_opened",
+            "create_collection_clicked",
+            "collection_named",
+            "wallpaper_added_to_collection"
+          ],
+          "target_conversion_rate_percent": 30
+        },
+        "sharing": {
+          "steps": [
+            "wallpaper_generated",
+            "wallpaper_opened",
+            "share_button_clicked",
+            "share_completed"
+          ],
+          "target_conversion_rate_percent": 10
+        }
+      },
+      "drop_off_analysis": {
+        "enabled": true,
+        "identify_friction_points": true,
+        "recommend_improvements": true
+      }
+    },
+    "predictive_analytics": {
+      "enabled": true,
+      "models": {
+        "churn_prediction": {
+          "enabled": true,
+          "algorithm": "gradient_boosting",
+          "features": ["days_since_last_visit", "total_sessions", "wallpapers_generated", "error_encounters"],
+          "prediction_horizon_days": 7,
+          "intervention_threshold": 0.7
+        },
+        "feature_adoption": {
+          "enabled": true,
+          "forecast_horizon_days": 30
+        },
+        "ltv_estimation": {
+          "enabled": false
+        }
+      }
+    },
+    "reporting": {
+      "automated_reports": {
+        "daily_summary": {
+          "enabled": true,
+          "schedule": "0_8_*_*_*",
+          "recipients": ["product_team"],
+          "content": ["kpi_snapshot", "anomalies", "top_errors"]
+        },
+        "weekly_deep_dive": {
+          "enabled": true,
+          "schedule": "0_9_*_*_1",
+          "recipients": ["leadership", "product_team"],
+          "content": ["full_kpi_dashboard", "cohort_analysis", "funnel_performance", "feature_adoption"]
+        },
+        "monthly_executive": {
+          "enabled": true,
+          "schedule": "0_9_1_*_*",
+          "recipients": ["leadership"],
+          "content": ["executive_summary", "trends", "achievements", "recommendations"]
+        }
+      },
+      "dashboards": {
+        "real_time_operations": {
+          "enabled": true,
+          "refresh_interval_seconds": 60,
+          "metrics": ["active_users_now", "generations_per_minute", "error_rate", "p95_response_time"]
+        },
+        "product_analytics": {
+          "enabled": true,
+          "metrics": ["dau_wau_mau", "retention_curves", "funnel_conversions", "feature_adoption"]
+        },
+        "technical_health": {
+          "enabled": true,
+          "metrics": ["error_rate", "performance_scores", "uptime", "api_health"]
+        }
+      },
+      "ad_hoc_analysis": {
+        "enabled": true,
+        "query_interface": "sql_like",
+        "export_formats": ["csv", "json", "excel"]
+      }
+    },
+    "impact_analysis": {
+      "enabled": true,
+      "analysis_types": {
+        "feature_launch": {
+          "enabled": true,
+          "compare_periods": ["7_days_before", "7_days_after"],
+          "metrics": ["adoption_rate", "engagement_change", "error_rate_change"]
+        },
+        "performance_optimization": {
+          "enabled": true,
+          "metrics": ["lcp_improvement", "page_load_improvement", "bounce_rate_change"]
+        },
+        "ui_ux_changes": {
+          "enabled": true,
+          "metrics": ["conversion_rate_change", "time_on_page_change", "error_rate_change"]
+        }
+      },
+      "statistical_significance": {
+        "enabled": true,
+        "confidence_level": 0.95,
+        "minimum_sample_size": 100
+      }
+    },
+    "data_quality": {
+      "validation_rules": {
+        "completeness": {
+          "check_required_fields": true,
+          "alert_on_missing_data": true
+        },
+        "accuracy": {
+          "validate_event_timestamps": true,
+          "detect_outliers": true
+        },
+        "consistency": {
+          "check_event_ordering": true,
+          "validate_user_id_format": true
+        }
+      },
+      "monitoring": {
+        "track_collection_pipeline_health": true,
+        "alert_on_data_gaps": true,
+        "validate_schema_compliance": true
+      }
+    },
+    "privacy_compliance": {
+      "gdpr_ccpa_compliance": {
+        "enabled": true,
+        "anonymize_ip_addresses": true,
+        "respect_dnt_header": true,
+        "provide_opt_out": true
+      },
+      "data_retention": {
+        "raw_events_retention_days": 90,
+        "aggregated_data_retention_days": 730,
+        "pii_removal_after_days": 30
+      },
+      "user_rights": {
+        "data_export": true,
+        "data_deletion": true,
+        "access_request": true
+      }
+    },
+    "anomaly_detection": {
+      "enabled": true,
+      "algorithms": ["statistical", "machine_learning"],
+      "sensitivity": "medium",
+      "alert_on_anomalies": true,
+      "automatic_investigation": true
+    },
+    "execution_context": {
+      "runs_on": "ubuntu-latest",
+      "timeout_minutes": 20,
+      "permissions": {
+        "contents": "read",
+        "issues": "write"
+      }
+    }
+  }
+}

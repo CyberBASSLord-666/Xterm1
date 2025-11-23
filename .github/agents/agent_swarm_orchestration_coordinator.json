@@ -1,0 +1,358 @@
+{
+  "agent_name": "swarm_orchestration_coordinator",
+  "role": "Multi-Agent Workflow Coordination, Task Delegation, Conflict Resolution, and Swarm Intelligence Manager",
+  "responsibilities": [
+    "Orchestrate complex multi-agent workflows coordinating sequential and parallel task execution across specialized agents (code-quality-enforcer → test-automation → security-guardian → code-review → release-manager) with dependency resolution, failure handling, and rollback procedures ensuring atomic workflow completion",
+    "Implement intelligent task routing analyzing incoming requests (pull requests, issues, deployments) and delegating to appropriate specialist agents based on content classification, priority assessment, workload balancing, and agent expertise matching with automatic failover to generalist agents when specialists unavailable",
+    "Manage agent communication and data sharing establishing secure inter-agent protocols for sharing context (code changes, test results, security findings, performance metrics) maintaining data consistency, preventing information loss, and ensuring downstream agents receive complete upstream results",
+    "Coordinate conflict resolution when multiple agents provide contradictory recommendations (security wants to block merge, performance says optimization needed, code-quality has warnings) implementing priority-based decision trees, consensus algorithms, and escalation procedures for human review",
+    "Execute workflow optimization through machine learning analyzing historical workflow execution patterns, identifying bottlenecks, predicting task duration, recommending parallel execution opportunities, and dynamically adjusting agent resource allocation based on workload and priority",
+    "Implement swarm health monitoring tracking agent availability, response times, success rates, error frequencies, and resource utilization with automatic agent restart on failure, degraded mode operation when agents unavailable, and comprehensive swarm performance dashboards",
+    "Manage agent versioning and capability discovery maintaining registry of agent capabilities, supported operations, input/output schemas, and version compatibility ensuring workflows route to agents with required capabilities and gracefully handle agent upgrades",
+    "Coordinate emergency response procedures detecting critical issues (production outage, security breach, data loss) and triggering coordinated multi-agent emergency workflows with priority escalation, stakeholder notification, and parallel investigation/remediation efforts",
+    "Generate comprehensive workflow execution reports documenting complete workflow trace (which agents executed, in what order, with what results), execution timeline analysis, resource consumption metrics, and lessons learned for continuous workflow improvement",
+    "Implement adaptive learning system capturing workflow outcomes (success/failure, duration, resource cost, quality metrics) and using reinforcement learning to optimize future workflow execution strategies improving agent selection, parallelization decisions, and timeout configurations"
+  ],
+  "configuration": {
+    "trigger_events": [
+      "workflow_dispatch",
+      "repository_dispatch.type.swarm_event",
+      "schedule.cron.*/30_*_*_*_*",
+      "all_agent_triggers"
+    ],
+    "agent_registry": {
+      "code_quality_enforcer": {
+        "capabilities": ["lint", "format_check", "complexity_analysis", "architectural_validation"],
+        "priority": "high",
+        "timeout_minutes": 15,
+        "retry_count": 1,
+        "parallel_safe": true
+      },
+      "security_guardian": {
+        "capabilities": ["vulnerability_scan", "codeql_analysis", "dependency_audit", "secret_detection"],
+        "priority": "critical",
+        "timeout_minutes": 30,
+        "retry_count": 2,
+        "parallel_safe": true
+      },
+      "test_automation_orchestrator": {
+        "capabilities": ["unit_tests", "e2e_tests", "coverage_analysis", "accessibility_tests"],
+        "priority": "high",
+        "timeout_minutes": 30,
+        "retry_count": 2,
+        "parallel_safe": false
+      },
+      "ci_cd_pipeline_manager": {
+        "capabilities": ["build", "deploy", "environment_management", "artifact_management"],
+        "priority": "high",
+        "timeout_minutes": 45,
+        "retry_count": 1,
+        "parallel_safe": false
+      },
+      "dependency_lifecycle_manager": {
+        "capabilities": ["dependency_updates", "vulnerability_patches", "compatibility_checks"],
+        "priority": "medium",
+        "timeout_minutes": 20,
+        "retry_count": 2,
+        "parallel_safe": true
+      },
+      "documentation_curator": {
+        "capabilities": ["doc_generation", "changelog_updates", "api_docs", "link_validation"],
+        "priority": "medium",
+        "timeout_minutes": 15,
+        "retry_count": 1,
+        "parallel_safe": true
+      },
+      "issue_triage_coordinator": {
+        "capabilities": ["issue_classification", "priority_assignment", "duplicate_detection"],
+        "priority": "low",
+        "timeout_minutes": 10,
+        "retry_count": 1,
+        "parallel_safe": true
+      },
+      "performance_optimization_engineer": {
+        "capabilities": ["bundle_analysis", "lighthouse_audit", "performance_profiling"],
+        "priority": "medium",
+        "timeout_minutes": 25,
+        "retry_count": 1,
+        "parallel_safe": true
+      },
+      "release_orchestration_manager": {
+        "capabilities": ["version_calculation", "release_notes", "deployment_coordination"],
+        "priority": "high",
+        "timeout_minutes": 30,
+        "retry_count": 1,
+        "parallel_safe": false
+      },
+      "code_review_automation_agent": {
+        "capabilities": ["code_review", "quality_assessment", "automated_feedback"],
+        "priority": "high",
+        "timeout_minutes": 20,
+        "retry_count": 1,
+        "parallel_safe": true
+      },
+      "monitoring_observability_specialist": {
+        "capabilities": ["error_tracking", "performance_monitoring", "uptime_checks"],
+        "priority": "medium",
+        "timeout_minutes": 10,
+        "retry_count": 2,
+        "parallel_safe": true
+      },
+      "accessibility_compliance_validator": {
+        "capabilities": ["wcag_validation", "keyboard_navigation", "screen_reader_testing"],
+        "priority": "medium",
+        "timeout_minutes": 20,
+        "retry_count": 1,
+        "parallel_safe": true
+      }
+    },
+    "workflow_definitions": {
+      "pull_request_validation": {
+        "description": "Complete PR validation workflow",
+        "trigger": "pull_request.opened",
+        "stages": [
+          {
+            "name": "static_analysis",
+            "parallel": true,
+            "agents": ["code_quality_enforcer", "security_guardian", "documentation_curator"],
+            "continue_on_failure": false
+          },
+          {
+            "name": "testing",
+            "parallel": false,
+            "agents": ["test_automation_orchestrator"],
+            "continue_on_failure": false
+          },
+          {
+            "name": "accessibility_performance",
+            "parallel": true,
+            "agents": ["accessibility_compliance_validator", "performance_optimization_engineer"],
+            "continue_on_failure": false
+          },
+          {
+            "name": "review",
+            "parallel": false,
+            "agents": ["code_review_automation_agent"],
+            "continue_on_failure": false
+          }
+        ],
+        "on_success": "approve_if_passing",
+        "on_failure": "request_changes"
+      },
+      "deployment_validation": {
+        "description": "Pre-deployment validation workflow",
+        "trigger": "deployment.initiated",
+        "stages": [
+          {
+            "name": "final_checks",
+            "parallel": true,
+            "agents": ["security_guardian", "test_automation_orchestrator", "performance_optimization_engineer"],
+            "continue_on_failure": false
+          },
+          {
+            "name": "deployment",
+            "parallel": false,
+            "agents": ["ci_cd_pipeline_manager"],
+            "continue_on_failure": false
+          },
+          {
+            "name": "post_deployment",
+            "parallel": true,
+            "agents": ["monitoring_observability_specialist"],
+            "continue_on_failure": true
+          }
+        ],
+        "on_success": "complete_deployment",
+        "on_failure": "rollback_deployment"
+      },
+      "security_incident": {
+        "description": "Emergency security response workflow",
+        "trigger": "security_advisory.published",
+        "priority": "critical",
+        "stages": [
+          {
+            "name": "assessment",
+            "parallel": true,
+            "agents": ["security_guardian", "dependency_lifecycle_manager"],
+            "continue_on_failure": false
+          },
+          {
+            "name": "remediation",
+            "parallel": false,
+            "agents": ["dependency_lifecycle_manager", "test_automation_orchestrator"],
+            "continue_on_failure": false
+          },
+          {
+            "name": "emergency_deploy",
+            "parallel": false,
+            "agents": ["ci_cd_pipeline_manager"],
+            "continue_on_failure": false
+          }
+        ],
+        "on_success": "notify_stakeholders",
+        "on_failure": "escalate_to_humans"
+      },
+      "release_preparation": {
+        "description": "Complete release preparation workflow",
+        "trigger": "workflow_dispatch.release",
+        "stages": [
+          {
+            "name": "pre_release_validation",
+            "parallel": true,
+            "agents": ["code_quality_enforcer", "security_guardian", "test_automation_orchestrator", "documentation_curator"],
+            "continue_on_failure": false
+          },
+          {
+            "name": "release_orchestration",
+            "parallel": false,
+            "agents": ["release_orchestration_manager"],
+            "continue_on_failure": false
+          },
+          {
+            "name": "deployment",
+            "parallel": false,
+            "agents": ["ci_cd_pipeline_manager"],
+            "continue_on_failure": false
+          }
+        ],
+        "on_success": "publish_release",
+        "on_failure": "abort_release"
+      }
+    },
+    "task_routing": {
+      "classification_rules": {
+        "code_change": {
+          "patterns": ["*.ts", "*.html", "*.css"],
+          "route_to": ["code_quality_enforcer", "security_guardian", "test_automation_orchestrator"]
+        },
+        "dependency_update": {
+          "patterns": ["package.json", "package-lock.json"],
+          "route_to": ["dependency_lifecycle_manager", "security_guardian"]
+        },
+        "documentation_change": {
+          "patterns": ["*.md", "docs/**"],
+          "route_to": ["documentation_curator"]
+        },
+        "workflow_change": {
+          "patterns": [".github/workflows/**"],
+          "route_to": ["ci_cd_pipeline_manager"]
+        },
+        "configuration_change": {
+          "patterns": ["*.json", "*.yml", "*.yaml"],
+          "route_to": ["code_quality_enforcer", "ci_cd_pipeline_manager"]
+        }
+      },
+      "priority_routing": {
+        "critical": {
+          "response_time_minutes": 5,
+          "agents": ["security_guardian", "monitoring_observability_specialist"]
+        },
+        "high": {
+          "response_time_minutes": 30,
+          "agents": ["all"]
+        },
+        "medium": {
+          "response_time_minutes": 240,
+          "agents": ["all"]
+        },
+        "low": {
+          "response_time_minutes": 1440,
+          "agents": ["all"]
+        }
+      }
+    },
+    "conflict_resolution": {
+      "enabled": true,
+      "resolution_strategies": {
+        "security_vs_performance": {
+          "priority": "security",
+          "rationale": "Security always takes precedence"
+        },
+        "quality_vs_timeline": {
+          "priority": "quality",
+          "allow_override": true,
+          "requires_approval": true
+        },
+        "test_vs_deploy": {
+          "priority": "test",
+          "rationale": "No deployment without passing tests"
+        }
+      },
+      "escalation": {
+        "enabled": true,
+        "escalation_threshold": "high_priority_conflicts",
+        "escalation_recipients": ["maintainers", "tech_leads"]
+      }
+    },
+    "swarm_health_monitoring": {
+      "enabled": true,
+      "metrics": {
+        "agent_availability": {
+          "track": true,
+          "alert_threshold_percent": 80
+        },
+        "agent_response_time": {
+          "track": true,
+          "alert_threshold_seconds": 60
+        },
+        "agent_success_rate": {
+          "track": true,
+          "alert_threshold_percent": 90
+        },
+        "workflow_completion_rate": {
+          "track": true,
+          "alert_threshold_percent": 95
+        }
+      },
+      "auto_recovery": {
+        "enabled": true,
+        "restart_on_failure": true,
+        "max_restart_attempts": 3,
+        "degraded_mode_operation": true
+      }
+    },
+    "communication_protocol": {
+      "message_format": "json",
+      "encryption": "tls",
+      "authentication": "github_token",
+      "data_retention_hours": 24,
+      "max_message_size_kb": 1024
+    },
+    "optimization": {
+      "machine_learning": {
+        "enabled": true,
+        "algorithm": "reinforcement_learning",
+        "training_data_source": "workflow_history",
+        "update_frequency_days": 7
+      },
+      "caching": {
+        "enabled": true,
+        "cache_agent_results": true,
+        "cache_ttl_hours": 24
+      },
+      "parallel_execution": {
+        "max_parallel_agents": 5,
+        "resource_aware": true
+      }
+    },
+    "reporting": {
+      "generate_workflow_trace": true,
+      "generate_execution_timeline": true,
+      "generate_resource_metrics": true,
+      "generate_swarm_dashboard": true,
+      "notification_channels": ["github_check", "swarm_dashboard"],
+      "include_optimization_recommendations": true
+    },
+    "execution_context": {
+      "runs_on": "ubuntu-latest",
+      "timeout_minutes": 60,
+      "permissions": {
+        "contents": "write",
+        "pull_requests": "write",
+        "checks": "write",
+        "issues": "write",
+        "deployments": "write"
+      }
+    }
+  }
+}
