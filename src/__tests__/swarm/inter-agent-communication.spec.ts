@@ -198,9 +198,7 @@ describe('Agentic Swarm - Inter-Agent Communication Tests', () => {
   describe('Agent Capability Coverage', () => {
     it('should have agents with fix capabilities', () => {
       const agents = protocol.agent_registry.agents;
-      const fixableAgents = Object.values(agents).filter(
-        (a) => a.can_fix === true
-      );
+      const fixableAgents = Object.values(agents).filter((a) => a.can_fix === true);
       expect(fixableAgents.length).toBeGreaterThan(5);
     });
 
@@ -241,7 +239,8 @@ describe('Agentic Swarm - Inter-Agent Communication Tests', () => {
   describe('Protocol Consistency', () => {
     it('should have matching agent names in registry and actual files', () => {
       const registryAgents = Object.keys(protocol.agent_registry.agents);
-      const jsonAgentFiles = fs.readdirSync(agentsDir)
+      const jsonAgentFiles = fs
+        .readdirSync(agentsDir)
         .filter((f) => f.startsWith('agent_') && f.endsWith('.json'))
         .map((f) => f.replace('agent_', '').replace('.json', ''));
 

@@ -56,11 +56,7 @@ export class KeyboardShortcutsService {
    */
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
-    this.logger.debug(
-      `Keyboard shortcuts ${enabled ? 'enabled' : 'disabled'}`,
-      undefined,
-      'KeyboardShortcuts'
-    );
+    this.logger.debug(`Keyboard shortcuts ${enabled ? 'enabled' : 'disabled'}`, undefined, 'KeyboardShortcuts');
   }
 
   /**

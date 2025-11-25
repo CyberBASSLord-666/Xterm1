@@ -48,9 +48,7 @@ describe('Agentic Swarm - Workflow Integration Tests', () => {
 
     it('should have correct file extensions', () => {
       swarmWorkflows.forEach((workflow) => {
-        expect(workflow.endsWith('.yml') || workflow.endsWith('.yaml')).toBe(
-          true
-        );
+        expect(workflow.endsWith('.yml') || workflow.endsWith('.yaml')).toBe(true);
       });
     });
   });
@@ -113,9 +111,7 @@ describe('Agentic Swarm - Workflow Integration Tests', () => {
     });
 
     it('should have ESLint or npm run lint', () => {
-      expect(
-        content.includes('eslint') || content.includes('npm run lint')
-      ).toBe(true);
+      expect(content.includes('eslint') || content.includes('npm run lint')).toBe(true);
     });
   });
 
@@ -135,11 +131,7 @@ describe('Agentic Swarm - Workflow Integration Tests', () => {
     });
 
     it('should handle multiple commands', () => {
-      expect(
-        content.includes('fix lint') ||
-          content.includes('run tests') ||
-          content.includes('command')
-      ).toBe(true);
+      expect(content.includes('fix lint') || content.includes('run tests') || content.includes('command')).toBe(true);
     });
   });
 
@@ -159,11 +151,7 @@ describe('Agentic Swarm - Workflow Integration Tests', () => {
     });
 
     it('should have priority logic', () => {
-      expect(
-        content.toLowerCase().includes('priority') ||
-          content.includes('P0') ||
-          content.includes('P1')
-      ).toBe(true);
+      expect(content.toLowerCase().includes('priority') || content.includes('P0') || content.includes('P1')).toBe(true);
     });
   });
 
@@ -175,10 +163,7 @@ describe('Agentic Swarm - Workflow Integration Tests', () => {
     });
 
     it('should relate to feedback or review', () => {
-      expect(
-        content.toLowerCase().includes('feedback') ||
-          content.toLowerCase().includes('review')
-      ).toBe(true);
+      expect(content.toLowerCase().includes('feedback') || content.toLowerCase().includes('review')).toBe(true);
     });
 
     it('should trigger on PR-related events', () => {
@@ -194,10 +179,7 @@ describe('Agentic Swarm - Workflow Integration Tests', () => {
     });
 
     it('should reference swarm or coordinator', () => {
-      expect(
-        content.toLowerCase().includes('swarm') ||
-          content.toLowerCase().includes('coordinator')
-      ).toBe(true);
+      expect(content.toLowerCase().includes('swarm') || content.toLowerCase().includes('coordinator')).toBe(true);
     });
 
     it('should have workflow_dispatch for manual triggers', () => {
@@ -213,17 +195,11 @@ describe('Agentic Swarm - Workflow Integration Tests', () => {
     });
 
     it('should reference agent communication', () => {
-      expect(
-        content.toLowerCase().includes('agent') ||
-          content.toLowerCase().includes('communication')
-      ).toBe(true);
+      expect(content.toLowerCase().includes('agent') || content.toLowerCase().includes('communication')).toBe(true);
     });
 
     it('should support delegation commands', () => {
-      expect(
-        content.toLowerCase().includes('delegate') ||
-          content.toLowerCase().includes('consult')
-      ).toBe(true);
+      expect(content.toLowerCase().includes('delegate') || content.toLowerCase().includes('consult')).toBe(true);
     });
   });
 
@@ -239,10 +215,7 @@ describe('Agentic Swarm - Workflow Integration Tests', () => {
     });
 
     it('should have git commit capability', () => {
-      expect(
-        content.includes('git commit') ||
-          content.includes('git-auto-commit')
-      ).toBe(true);
+      expect(content.includes('git commit') || content.includes('git-auto-commit')).toBe(true);
     });
   });
 
@@ -257,19 +230,14 @@ describe('Agentic Swarm - Workflow Integration Tests', () => {
 
         it('should not contain hardcoded secrets', () => {
           // Check for common secret patterns
-          expect(content).not.toMatch(
-            /password\s*[:=]\s*['"][A-Za-z0-9!@#$%^&*]{8,}['"]/i
-          );
+          expect(content).not.toMatch(/password\s*[:=]\s*['"][A-Za-z0-9!@#$%^&*]{8,}['"]/i);
           expect(content).not.toMatch(/ghp_[A-Za-z0-9]{36}/); // GitHub PAT
           expect(content).not.toMatch(/ghs_[A-Za-z0-9]{36}/); // GitHub App token
         });
 
         it('should use secrets for sensitive values', () => {
           if (content.includes('GITHUB_TOKEN')) {
-            expect(
-              content.includes('${{ secrets.') ||
-                content.includes('${{ github.token }}')
-            ).toBe(true);
+            expect(content.includes('${{ secrets.') || content.includes('${{ github.token }}')).toBe(true);
           }
         });
 

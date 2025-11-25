@@ -105,11 +105,7 @@ describe('ImageUtilService', () => {
     });
 
     await expect(service.makeThumbnail(sourceBlob)).rejects.toThrow('Canvas toBlob failed');
-    expect(logger.error).toHaveBeenCalledWith(
-      'Failed to create thumbnail',
-      expect.any(Error),
-      'ImageUtilService'
-    );
+    expect(logger.error).toHaveBeenCalledWith('Failed to create thumbnail', expect.any(Error), 'ImageUtilService');
   });
 
   it('compresses oversized images respecting target dimensions and format', async () => {
@@ -153,7 +149,12 @@ describe('ImageUtilService', () => {
       },
     });
 
-    const result = await service.compressImage(sourceBlob, { maxWidth: 1280, maxHeight: 1280, quality: 0.9, format: 'image/jpeg' });
+    const result = await service.compressImage(sourceBlob, {
+      maxWidth: 1280,
+      maxHeight: 1280,
+      quality: 0.9,
+      format: 'image/jpeg',
+    });
 
     expect(result).toBe(outputBlob);
     expect(canvas.width).toBe(640);

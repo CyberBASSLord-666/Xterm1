@@ -235,13 +235,7 @@ describe('Agentic Swarm - Agent Configuration Tests', () => {
       });
 
       it('should have valid runs_on value', () => {
-        const validRunners = [
-          'ubuntu-latest',
-          'ubuntu-22.04',
-          'ubuntu-20.04',
-          'windows-latest',
-          'macos-latest',
-        ];
+        const validRunners = ['ubuntu-latest', 'ubuntu-22.04', 'ubuntu-20.04', 'windows-latest', 'macos-latest'];
         const runsOn = agent.configuration.execution_context?.runs_on;
         if (runsOn) {
           expect(validRunners).toContain(runsOn);
@@ -309,8 +303,7 @@ describe('Agentic Swarm - Agent Configuration Tests', () => {
     });
 
     it('should have accurate total_agents count', () => {
-      const expectedTotal =
-        manifest.json_agents.count + manifest.markdown_agents.count;
+      const expectedTotal = manifest.json_agents.count + manifest.markdown_agents.count;
       expect(manifest.total_agents).toBe(expectedTotal);
     });
 
@@ -325,9 +318,7 @@ describe('Agentic Swarm - Agent Configuration Tests', () => {
     });
 
     it('should have consistent markdown agent count', () => {
-      expect(manifest.markdown_agents.count).toBe(
-        manifest.markdown_agents.agents.length
-      );
+      expect(manifest.markdown_agents.count).toBe(manifest.markdown_agents.agents.length);
     });
 
     it('should have all JSON agent files present', () => {
@@ -354,14 +345,11 @@ describe('Agentic Swarm - Agent Configuration Tests', () => {
     it('should have accurate category counts', () => {
       const categoryCounts: Record<string, number> = {};
       manifest.json_agents.agents.forEach((agent) => {
-        categoryCounts[agent.category] =
-          (categoryCounts[agent.category] || 0) + 1;
+        categoryCounts[agent.category] = (categoryCounts[agent.category] || 0) + 1;
       });
       Object.keys(categoryCounts).forEach((category) => {
         if (manifest.categories[category]) {
-          expect(manifest.categories[category].count).toBe(
-            categoryCounts[category]
-          );
+          expect(manifest.categories[category].count).toBe(categoryCounts[category]);
         }
       });
     });
@@ -375,9 +363,7 @@ describe('Agentic Swarm - Agent Configuration Tests', () => {
 
     it('should have inter-agent communication configured', () => {
       expect(manifest.inter_agent_communication).toBeDefined();
-      expect(manifest.inter_agent_communication.protocol).toBe(
-        'inter-agent-protocol.json'
-      );
+      expect(manifest.inter_agent_communication.protocol).toBe('inter-agent-protocol.json');
     });
 
     it('should have all communication capabilities enabled', () => {
@@ -525,9 +511,7 @@ describe('Agentic Swarm - Agent Configuration Tests', () => {
     let manifest: SwarmManifest;
 
     beforeAll(() => {
-      manifest = loadJsonFile<SwarmManifest>(
-        path.join(agentsDir, 'swarm-manifest.json')
-      );
+      manifest = loadJsonFile<SwarmManifest>(path.join(agentsDir, 'swarm-manifest.json'));
     });
 
     it('should have all manifest JSON agents as actual files', () => {
@@ -554,12 +538,8 @@ describe('Agentic Swarm - Agent Configuration Tests', () => {
 
     it('should have consistent agent naming between file and config', () => {
       getAgentFiles().forEach((file) => {
-        const config = loadJsonFile<AgentConfiguration>(
-          path.join(agentsDir, file)
-        );
-        const expectedName = file
-          .replace('agent_', '')
-          .replace('.json', '');
+        const config = loadJsonFile<AgentConfiguration>(path.join(agentsDir, file));
+        const expectedName = file.replace('agent_', '').replace('.json', '');
         expect(config.agent_name).toBe(expectedName);
       });
     });
@@ -568,9 +548,7 @@ describe('Agentic Swarm - Agent Configuration Tests', () => {
   describe('Security Validation', () => {
     it('should have permission definitions if present', () => {
       getAgentFiles().forEach((file) => {
-        const config = loadJsonFile<AgentConfiguration>(
-          path.join(agentsDir, file)
-        );
+        const config = loadJsonFile<AgentConfiguration>(path.join(agentsDir, file));
         const permissions = config.configuration.execution_context?.permissions;
 
         if (permissions) {
@@ -585,9 +563,7 @@ describe('Agentic Swarm - Agent Configuration Tests', () => {
 
     it('should have reasonable timeout values', () => {
       getAgentFiles().forEach((file) => {
-        const config = loadJsonFile<AgentConfiguration>(
-          path.join(agentsDir, file)
-        );
+        const config = loadJsonFile<AgentConfiguration>(path.join(agentsDir, file));
         const timeout = config.configuration.execution_context?.timeout_minutes;
 
         // Most agents should complete within 60 minutes
@@ -624,9 +600,7 @@ describe('Agentic Swarm - Agent Configuration Tests', () => {
     });
 
     it('should have complete category coverage', () => {
-      const manifest = loadJsonFile<SwarmManifest>(
-        path.join(agentsDir, 'swarm-manifest.json')
-      );
+      const manifest = loadJsonFile<SwarmManifest>(path.join(agentsDir, 'swarm-manifest.json'));
 
       expect(manifest.categories.core).toBeDefined();
       expect(manifest.categories.advanced).toBeDefined();
@@ -635,9 +609,7 @@ describe('Agentic Swarm - Agent Configuration Tests', () => {
     });
 
     it('should have agents for all priority levels', () => {
-      const manifest = loadJsonFile<SwarmManifest>(
-        path.join(agentsDir, 'swarm-manifest.json')
-      );
+      const manifest = loadJsonFile<SwarmManifest>(path.join(agentsDir, 'swarm-manifest.json'));
 
       expect(manifest.priority_levels.critical.count).toBeGreaterThan(0);
       expect(manifest.priority_levels.high.count).toBeGreaterThan(0);
