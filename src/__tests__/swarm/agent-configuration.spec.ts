@@ -270,11 +270,15 @@ describe('Agentic Swarm - Agent Configuration Tests', () => {
       it('should not contain placeholder content', () => {
         // Check for actual placeholder patterns, not mentions of "TODO" in descriptive text
         const content = JSON.stringify(agent);
-        expect(content).not.toMatch(/\"TODO\"/); // Literal "TODO" value
-        expect(content).not.toContain('PLACEHOLDER');
-        expect(content).not.toMatch(/\"TBD\"/); // Literal "TBD" value
+        const contentLower = content.toLowerCase();
+        // Check for literal placeholder values
+        expect(content).not.toMatch(/\"TODO\"/i); // Literal "TODO" value
+        expect(contentLower).not.toContain('placeholder');
+        expect(content).not.toMatch(/\"TBD\"/i); // Literal "TBD" value
         expect(content).not.toContain('FIXME:');
         expect(content).not.toContain('XXX:');
+        expect(content).not.toContain('[FILL');
+        expect(content).not.toContain('[INSERT');
       });
     });
   });

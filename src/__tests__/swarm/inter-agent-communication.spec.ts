@@ -9,10 +9,49 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
+interface AgentEntry {
+  type: string;
+  capabilities: string[];
+  can_fix: boolean;
+  input_types: string[];
+  output_types: string[];
+}
+
+interface Protocol {
+  title: string;
+  description: string;
+  version: string;
+  last_updated: string;
+  protocol: {
+    name: string;
+    version: string;
+  };
+  agent_registry: {
+    description: string;
+    agents: Record<string, AgentEntry>;
+  };
+  delegation_protocol: {
+    description: string;
+    request_format: Record<string, string>;
+    response_format: Record<string, string>;
+  };
+  collaboration_patterns: Record<string, { description: string; example: string }>;
+  common_workflows: {
+    pr_validation: unknown;
+    auto_fix: unknown;
+  };
+}
+
 const agentsDir = path.join(__dirname, '../../../.github/agents');
 const protocolPath = path.join(agentsDir, 'inter-agent-protocol.json');
-const protocolContent = fs.readFileSync(protocolPath, 'utf-8');
-const protocol = JSON.parse(protocolContent);
+
+let protocol: Protocol;
+try {
+  const protocolContent = fs.readFileSync(protocolPath, 'utf-8');
+  protocol = JSON.parse(protocolContent) as Protocol;
+} catch (error) {
+  throw new Error(`Failed to load inter-agent protocol: ${error}`);
+}
 
 describe('Agentic Swarm - Inter-Agent Communication Tests', () => {
   describe('Protocol Metadata', () => {
@@ -62,24 +101,16 @@ describe('Agentic Swarm - Inter-Agent Communication Tests', () => {
 
     it('should have valid agent entries', () => {
       const agents = protocol.agent_registry.agents;
-      Object.entries(agents).forEach(([agentName, agent]: [string, unknown]) => {
-        const typedAgent = agent as {
-          type: string;
-          capabilities: string[];
-          can_fix: boolean;
-          input_types: string[];
-          output_types: string[];
-        };
-
+      Object.entries(agents).forEach(([agentName, agent]) => {
         expect(agentName.length).toBeGreaterThan(0);
-        expect(typedAgent.type).toBeDefined();
-        expect(['json', 'markdown', 'workflow']).toContain(typedAgent.type);
-        expect(typedAgent.capabilities).toBeDefined();
-        expect(Array.isArray(typedAgent.capabilities)).toBe(true);
-        expect(typedAgent.capabilities.length).toBeGreaterThan(0);
-        expect(typeof typedAgent.can_fix).toBe('boolean');
-        expect(Array.isArray(typedAgent.input_types)).toBe(true);
-        expect(Array.isArray(typedAgent.output_types)).toBe(true);
+        expect(agent.type).toBeDefined();
+        expect(['json', 'markdown', 'workflow']).toContain(agent.type);
+        expect(agent.capabilities).toBeDefined();
+        expect(Array.isArray(agent.capabilities)).toBe(true);
+        expect(agent.capabilities.length).toBeGreaterThan(0);
+        expect(typeof agent.can_fix).toBe('boolean');
+        expect(Array.isArray(agent.input_types)).toBe(true);
+        expect(Array.isArray(agent.output_types)).toBe(true);
       });
     });
   });
@@ -142,10 +173,9 @@ describe('Agentic Swarm - Inter-Agent Communication Tests', () => {
     });
 
     it('should have examples for all patterns', () => {
-      Object.values(protocol.collaboration_patterns).forEach((pattern: unknown) => {
-        const typedPattern = pattern as { example: string };
-        expect(typedPattern.example).toBeDefined();
-        expect(typedPattern.example.length).toBeGreaterThan(5);
+      Object.values(protocol.collaboration_patterns).forEach((pattern) => {
+        expect(pattern.example).toBeDefined();
+        expect(pattern.example.length).toBeGreaterThan(5);
       });
     });
   });
@@ -169,7 +199,7 @@ describe('Agentic Swarm - Inter-Agent Communication Tests', () => {
     it('should have agents with fix capabilities', () => {
       const agents = protocol.agent_registry.agents;
       const fixableAgents = Object.values(agents).filter(
-        (a: unknown) => (a as { can_fix: boolean }).can_fix === true
+        (a) => a.can_fix === true
       );
       expect(fixableAgents.length).toBeGreaterThan(5);
     });
@@ -177,36 +207,32 @@ describe('Agentic Swarm - Inter-Agent Communication Tests', () => {
     it('should have diverse capabilities across agents', () => {
       const agents = protocol.agent_registry.agents;
       const allCapabilities = new Set<string>();
-      Object.values(agents).forEach((agent: unknown) => {
-        const typedAgent = agent as { capabilities: string[] };
-        typedAgent.capabilities.forEach((cap) => allCapabilities.add(cap));
+      Object.values(agents).forEach((agent) => {
+        agent.capabilities.forEach((cap) => allCapabilities.add(cap));
       });
       expect(allCapabilities.size).toBeGreaterThanOrEqual(15);
     });
 
     it('should cover security capabilities', () => {
       const agents = protocol.agent_registry.agents;
-      const securityCapabilities = Object.values(agents).some((a: unknown) => {
-        const typedAgent = a as { capabilities: string[] };
-        return typedAgent.capabilities.some((c) => c.includes('security') || c.includes('vulnerability'));
+      const securityCapabilities = Object.values(agents).some((a) => {
+        return a.capabilities.some((c) => c.includes('security') || c.includes('vulnerability'));
       });
       expect(securityCapabilities).toBe(true);
     });
 
     it('should cover testing capabilities', () => {
       const agents = protocol.agent_registry.agents;
-      const testingCapabilities = Object.values(agents).some((a: unknown) => {
-        const typedAgent = a as { capabilities: string[] };
-        return typedAgent.capabilities.some((c) => c.includes('test'));
+      const testingCapabilities = Object.values(agents).some((a) => {
+        return a.capabilities.some((c) => c.includes('test'));
       });
       expect(testingCapabilities).toBe(true);
     });
 
     it('should cover code quality capabilities', () => {
       const agents = protocol.agent_registry.agents;
-      const qualityCapabilities = Object.values(agents).some((a: unknown) => {
-        const typedAgent = a as { capabilities: string[] };
-        return typedAgent.capabilities.some((c) => c.includes('lint') || c.includes('quality') || c.includes('format'));
+      const qualityCapabilities = Object.values(agents).some((a) => {
+        return a.capabilities.some((c) => c.includes('lint') || c.includes('quality') || c.includes('format'));
       });
       expect(qualityCapabilities).toBe(true);
     });
@@ -235,9 +261,8 @@ describe('Agentic Swarm - Inter-Agent Communication Tests', () => {
     it('should have consistent input types across agents', () => {
       const agents = protocol.agent_registry.agents;
       const allInputTypes = new Set<string>();
-      Object.values(agents).forEach((agent: unknown) => {
-        const typedAgent = agent as { input_types: string[] };
-        typedAgent.input_types.forEach((type) => allInputTypes.add(type));
+      Object.values(agents).forEach((agent) => {
+        agent.input_types.forEach((type) => allInputTypes.add(type));
       });
       // Should have common input types
       expect(allInputTypes.size).toBeGreaterThan(5);
@@ -246,9 +271,8 @@ describe('Agentic Swarm - Inter-Agent Communication Tests', () => {
     it('should have consistent output types across agents', () => {
       const agents = protocol.agent_registry.agents;
       const allOutputTypes = new Set<string>();
-      Object.values(agents).forEach((agent: unknown) => {
-        const typedAgent = agent as { output_types: string[] };
-        typedAgent.output_types.forEach((type) => allOutputTypes.add(type));
+      Object.values(agents).forEach((agent) => {
+        agent.output_types.forEach((type) => allOutputTypes.add(type));
       });
       // Should have common output types
       expect(allOutputTypes.size).toBeGreaterThan(5);
