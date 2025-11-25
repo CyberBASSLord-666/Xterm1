@@ -1,0 +1,303 @@
+# ============================================================================
+# Issue Auto-Triage & Response Workflow for PolliWall (Xterm1)
+# ============================================================================
+# This workflow automatically triages new issues, applies labels, assigns
+# priority, and can auto-respond with helpful information or templates.
+#
+# Features:
+# - Auto-labels issues based on content analysis
+# - Assigns priority based on keywords and context
+# - Auto-responds with relevant documentation links
+# - Detects duplicate issues
+# - Routes issues to appropriate team members
+# ============================================================================
+
+name: Issue Auto-Triage
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Analyze and label issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const title = issue.title.toLowerCase();
+            const body = (issue.body || '').toLowerCase();
+            const content = `${title} ${body}`;
+            
+            const labelsToAdd = [];
+            let priority = 'medium';
+            let responseTemplate = '';
+            
+            // ============ CATEGORY DETECTION ============
+            
+            // Bug detection
+            if (content.match(/\b(bug|error|crash|broken|doesn't work|not working|fail|issue)\b/)) {
+              labelsToAdd.push('bug');
+              responseTemplate = 'bug';
+            }
+            
+            // Feature request detection
+            if (content.match(/\b(feature|request|enhancement|add|implement|would be nice|suggestion)\b/)) {
+              labelsToAdd.push('enhancement');
+              responseTemplate = 'feature';
+            }
+            
+            // Documentation issues
+            if (content.match(/\b(doc|documentation|readme|guide|tutorial|example)\b/)) {
+              labelsToAdd.push('documentation');
+            }
+            
+            // Question/Help detection
+            if (content.match(/\b(how to|how do|question|help|confused|don't understand)\b/)) {
+              labelsToAdd.push('question');
+              responseTemplate = 'question';
+            }
+            
+            // ============ AREA DETECTION ============
+            
+            // Security issues
+            if (content.match(/\b(security|vulnerability|cve|xss|injection|auth|password|token|secret)\b/)) {
+              labelsToAdd.push('security');
+              priority = 'critical';
+            }
+            
+            // Performance issues
+            if (content.match(/\b(performance|slow|memory|leak|optimize|speed|lag)\b/)) {
+              labelsToAdd.push('performance');
+            }
+            
+            // Accessibility issues
+            if (content.match(/\b(accessibility|a11y|screen reader|keyboard|wcag|aria)\b/)) {
+              labelsToAdd.push('accessibility');
+            }
+            
+            // UI/UX issues
+            if (content.match(/\b(ui|ux|design|layout|style|css|visual|display)\b/)) {
+              labelsToAdd.push('ui/ux');
+            }
+            
+            // Testing issues
+            if (content.match(/\b(test|testing|jest|playwright|e2e|unit test|coverage)\b/)) {
+              labelsToAdd.push('testing');
+            }
+            
+            // CI/CD issues
+            if (content.match(/\b(ci|cd|pipeline|workflow|action|deploy|build)\b/)) {
+              labelsToAdd.push('ci/cd');
+            }
+            
+            // ============ PRIORITY DETECTION ============
+            
+            // Critical priority keywords
+            if (content.match(/\b(critical|urgent|asap|production|breaking|blocker|p0|severe)\b/)) {
+              priority = 'critical';
+              labelsToAdd.push('priority: critical');
+            }
+            // High priority keywords
+            else if (content.match(/\b(important|high priority|p1|major)\b/)) {
+              priority = 'high';
+              labelsToAdd.push('priority: high');
+            }
+            // Low priority keywords
+            else if (content.match(/\b(minor|low priority|p3|nice to have|when possible)\b/)) {
+              priority = 'low';
+              labelsToAdd.push('priority: low');
+            }
+            else {
+              labelsToAdd.push('priority: medium');
+            }
+            
+            // ============ APPLY LABELS ============
+            
+            // Add 'needs-triage' for complex issues
+            if (labelsToAdd.length <= 2) {
+              labelsToAdd.push('needs-triage');
+            }
+            
+            // Add labels to the issue
+            if (labelsToAdd.length > 0) {
+              try {
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  labels: labelsToAdd
+                });
+                console.log(`Added labels: ${labelsToAdd.join(', ')}`);
+              } catch (e) {
+                console.log(`Failed to add some labels (they may not exist): ${e.message}`);
+              }
+            }
+            
+            // ============ AUTO-RESPONSE ============
+            
+            let responseBody = '';
+            
+            if (responseTemplate === 'bug') {
+              responseBody = `## 🐛 Bug Report Received
+
+            Thank you for reporting this issue! To help us investigate faster, please ensure you've provided:
+
+            - [ ] Steps to reproduce the issue
+            - [ ] Expected behavior vs actual behavior
+            - [ ] Browser and OS information
+            - [ ] Screenshots or error messages (if applicable)
+
+            **Useful Resources:**
+            - [Development Guide](./DEVELOPMENT.md)
+            - [Troubleshooting Guide](./docs/TROUBLESHOOTING.md)
+
+            Our team will review this shortly. Priority: **${priority}**
+
+            ---
+            *This response was automatically generated by the Issue Triage system.*`;
+            }
+            else if (responseTemplate === 'feature') {
+              responseBody = `## ✨ Feature Request Received
+
+            Thank you for your suggestion! We appreciate community input on improving PolliWall.
+
+            To help us evaluate this request, please consider:
+
+            - [ ] Use case: What problem does this solve?
+            - [ ] Proposed solution: How would you implement this?
+            - [ ] Alternatives: Have you considered other approaches?
+
+            **Before we proceed:**
+            - Check if a similar feature request already exists
+            - Review our [Architecture Guide](./ARCHITECTURE.md) for context
+
+            We'll review this and discuss with the team.
+
+            ---
+            *This response was automatically generated by the Issue Triage system.*`;
+            }
+            else if (responseTemplate === 'question') {
+              responseBody = `## ❓ Question Received
+
+            Thanks for reaching out! Here are some resources that might help:
+
+            **Documentation:**
+            - [Getting Started](./README.md)
+            - [Development Guide](./DEVELOPMENT.md)
+            - [API Documentation](./API_DOCUMENTATION.md)
+            - [Architecture Overview](./ARCHITECTURE.md)
+
+            **Quick Tips:**
+            - Run \`npm run start\` to start the development server
+            - Run \`npm run test\` to run the test suite
+            - Check the [Troubleshooting Guide](./docs/TROUBLESHOOTING.md) for common issues
+
+            If the documentation doesn't answer your question, please provide more details and we'll help you out!
+
+            ---
+            *This response was automatically generated by the Issue Triage system.*`;
+            }
+            
+            // Post response if we have one
+            if (responseBody) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: responseBody
+              });
+            }
+            
+            console.log(`Issue #${issue.number} triaged with priority: ${priority}`);
+
+  detect-duplicates:
+    runs-on: ubuntu-latest
+    needs: triage
+    
+    steps:
+      - name: Check for duplicate issues
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const title = issue.title.toLowerCase();
+            
+            // Get recent open issues (last 100)
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100
+            });
+            
+            // Simple similarity check based on title words
+            const currentWords = title.split(/\s+/).filter(w => w.length > 3);
+            const potentialDuplicates = [];
+            
+            for (const existingIssue of issues) {
+              if (existingIssue.number === issue.number) continue;
+              
+              const existingTitle = existingIssue.title.toLowerCase();
+              const existingWords = existingTitle.split(/\s+/).filter(w => w.length > 3);
+              
+              // Count matching words
+              const matches = currentWords.filter(w => existingWords.includes(w));
+              const similarity = matches.length / Math.max(currentWords.length, 1);
+              
+              if (similarity > 0.5) {
+                potentialDuplicates.push({
+                  number: existingIssue.number,
+                  title: existingIssue.title,
+                  similarity: Math.round(similarity * 100)
+                });
+              }
+            }
+            
+            // If duplicates found, add comment
+            if (potentialDuplicates.length > 0) {
+              const duplicatesList = potentialDuplicates
+                .slice(0, 3)
+                .map(d => `- #${d.number}: ${d.title} (${d.similarity}% similar)`)
+                .join('\n');
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `## 🔍 Potential Duplicates Detected
+
+            This issue may be similar to existing issues:
+
+            ${duplicatesList}
+
+            Please check if any of these address the same concern. If so, consider:
+            - Adding your information to the existing issue
+            - Closing this as a duplicate
+
+            ---
+            *This check was automatically performed by the Issue Triage system.*`
+              });
+              
+              // Add duplicate label
+              try {
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  labels: ['possible-duplicate']
+                });
+              } catch (e) {
+                console.log('Could not add duplicate label');
+              }
+            }

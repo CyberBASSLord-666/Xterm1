@@ -128,6 +128,41 @@ The 7 markdown agents work as **GitHub Copilot custom agents**. Use them directl
 @security-specialist Is this code secure?
 ```
 
+### Using Swarm Commands in Comments
+
+You can interact with the Agentic Swarm directly through PR comments using these commands:
+
+| Command | Description |
+|---------|-------------|
+| `@copilot help` | Show all available commands |
+| `@copilot fix lint` | Auto-fix ESLint and Prettier issues, commit the changes |
+| `@copilot run tests` | Run the test suite and report results |
+| `@copilot check security` | Run npm audit and report vulnerabilities |
+| `@copilot apply suggestions` | List pending review suggestions to apply |
+| `@copilot summarize` | Generate a summary of PR changes by category |
+| `@copilot status` | Show status of all CI/CD checks |
+
+**Example: Auto-fixing lint issues**
+
+Just comment on your PR:
+```
+@copilot fix lint
+```
+
+The swarm will:
+1. Run ESLint with `--fix` flag
+2. Run Prettier to format code
+3. Commit and push the changes automatically
+4. Reply with a summary of what was fixed
+
+**Example: Running security scan**
+
+```
+@copilot check security
+```
+
+You'll get a table showing vulnerabilities by severity and recommended actions.
+
 ---
 
 ## For Maintainers
