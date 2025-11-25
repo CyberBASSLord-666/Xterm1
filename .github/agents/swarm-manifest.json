@@ -1,11 +1,16 @@
 {
   "$schema": "./agent-schema.json",
   "swarm_name": "Xterm1 Agentic Swarm",
-  "version": "1.0.0",
-  "description": "Enterprise-grade Agentic Swarm for comprehensive Angular 20 + TypeScript repository lifecycle management",
+  "version": "1.1.0",
+  "description": "Enterprise-grade Agentic Swarm for comprehensive Angular 20 + TypeScript repository lifecycle management with inter-agent communication",
   "repository": "CyberBASSLord-666/Xterm1",
   "last_updated": "2025-11-25",
-  "total_agents": 25,
+  "total_agents": 26,
+  "primary_interface": {
+    "agent": "swarm-interface",
+    "file": "swarm-interface.md",
+    "description": "Primary Copilot interface that serves as the main entry point for the swarm"
+  },
   "json_agents": {
     "count": 17,
     "agents": [
@@ -131,8 +136,15 @@
     ]
   },
   "markdown_agents": {
-    "count": 8,
+    "count": 9,
     "agents": [
+      {
+        "file": "swarm-interface.md",
+        "name": "swarm-interface",
+        "type": "copilot_custom_agent",
+        "role": "primary_interface",
+        "description": "Primary Copilot interface - main entry point for the swarm, handles delegation and coordination"
+      },
       {
         "file": "code-assistant.md",
         "name": "code-assistant",

@@ -41,13 +41,14 @@ These agents are structured as rigorously validated, standards-compliant JSON fi
 
 ### Markdown Format Agents (GitHub Copilot)
 
-**Total: 8 agents | Total Size: ~30 KB**
+**Total: 9 agents | Total Size: ~38 KB**
 
 These agents are formatted for GitHub Copilot custom agent integration.
 
 | # | Agent File | Size | Primary Function |
 |---|------------|------|------------------|
-| 1 | `code-assistant.md` | 2.9KB | General coding and implementation |
+| 🌟 | `swarm-interface.md` | 7.6KB | **PRIMARY INTERFACE - Main entry point, delegation, coordination** |
+| 1 | `code-assistant.md` | 4.5KB | General coding and implementation |
 | 2 | `lead-architect.md` | 3.7KB | Architecture enforcement, planning |
 | 3 | `qa-engineer.md` | 3.2KB | Testing suite management |
 | 4 | `security-specialist.md` | 3.4KB | Security audits and remediation |
@@ -55,6 +56,16 @@ These agents are formatted for GitHub Copilot custom agent integration.
 | 6 | `my-janitor.md` | 2.9KB | Code cleanup and refactoring |
 | 7 | `technical-scribe.md` | 3.3KB | Documentation writing and maintenance |
 | 8 | `refactor-agent.md` | 7.0KB | **Advanced refactoring, feedback analysis, suggestion application** |
+
+### Primary Interface Agent
+
+The `swarm-interface` agent is the **main Copilot interface** for this repository. It:
+- Serves as the primary point of contact for all user interactions
+- Can handle tasks directly or delegate to specialist agents
+- Coordinates multi-agent workflows for complex tasks
+- Synthesizes results from multiple agents
+
+When working with Copilot on this repository, Copilot acts as the swarm interface and can leverage all other agents.
 
 ---
 
