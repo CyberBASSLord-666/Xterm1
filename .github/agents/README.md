@@ -9,7 +9,7 @@
 
 ## Overview
 
-This directory contains the complete Agentic Swarm configuration for the Xterm1 (PolliWall) repository. The swarm provides comprehensive, automated management across all aspects of the software development lifecycle.
+This directory contains the complete Agentic Swarm configuration for the Xterm1 (PolliWall) repository, an Angular 20 + TypeScript SPA. The swarm provides comprehensive, automated management across all aspects of the software development lifecycle.
 
 ## Agent Files
 

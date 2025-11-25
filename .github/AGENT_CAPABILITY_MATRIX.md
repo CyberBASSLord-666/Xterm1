@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-This document provides a comprehensive overview of the Agentic Swarm established for the Xterm1 (PolliWall) repository. The swarm consists of 17 specialized JSON agents and 7 markdown-based agents providing complete lifecycle management from code quality to production monitoring.
+This document provides a comprehensive overview of the Agentic Swarm established for the Xterm1 (PolliWall) repository, an Angular 20 + TypeScript application. The swarm consists of 17 specialized JSON agents and 7 markdown-based agents providing complete lifecycle management from code quality to production monitoring.
 
 ### Swarm Architecture
 
