@@ -59,7 +59,7 @@ These agents are formatted for GitHub Copilot custom agent integration.
 
 ## Agent Schema
 
-All JSON agents follow this enterprise-grade schema:
+All JSON agents follow this enterprise-grade schema (see [`agent-schema.json`](./agent-schema.json) for full JSON Schema validation):
 
 ```json
 {
@@ -81,6 +81,10 @@ All JSON agents follow this enterprise-grade schema:
   }
 }
 ```
+
+### Swarm Manifest
+
+The [`swarm-manifest.json`](./swarm-manifest.json) file provides a complete inventory of all agents with their categories, priorities, and descriptions for programmatic discovery and integration.
 
 ---
 

@@ -1,7 +1,7 @@
 # How to Use the Agentic Swarm
 
 > **Quick Start Guide for Developers, Maintainers, and Operators**  
-> **Last Updated**: 2025-11-23
+> **Last Updated**: 2025-11-25
 
 ---
 
