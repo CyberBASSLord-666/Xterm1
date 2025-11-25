@@ -110,6 +110,15 @@ jobs:
             | \`@copilot apply suggestions\` | Apply pending review suggestions |
             | \`@copilot summarize\` | Generate a summary of PR changes |
             | \`@copilot status\` | Show swarm status for this PR |
+            
+            ### 🔧 Refactoring Commands
+            | Command | Description |
+            |---------|-------------|
+            | \`@copilot refactor\` | General code refactoring |
+            | \`@copilot modernize\` | Modernize code patterns |
+            | \`@copilot optimize\` | Performance optimization |
+            | \`@copilot simplify\` | Reduce code complexity |
+            | \`@copilot extract [type] [name] from [file]\` | Extract code to module |
 
             **Usage:** Just comment with one of the commands above and I'll handle it!
 

@@ -1,0 +1,345 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Xterm1 Swarm Inter-Agent Communication Protocol",
+  "description": "Defines the protocol for agents to communicate with and delegate tasks to other agents in the swarm",
+  "version": "1.0.0",
+  "last_updated": "2025-11-25",
+
+  "protocol": {
+    "name": "Swarm Inter-Agent Communication Protocol (SIACP)",
+    "version": "1.0",
+    "description": "Enables any agent in the swarm to request assistance from, delegate tasks to, or collaborate with any other agent"
+  },
+
+  "agent_registry": {
+    "description": "Complete registry of all agents with their capabilities, enabling dynamic discovery and delegation",
+    "agents": {
+      "code_quality_enforcer": {
+        "type": "json",
+        "capabilities": ["lint", "format", "complexity_analysis", "architectural_validation"],
+        "can_fix": true,
+        "input_types": ["file_path", "code_block", "pr_diff"],
+        "output_types": ["report", "fixed_code", "suggestions"]
+      },
+      "security_guardian": {
+        "type": "json",
+        "capabilities": ["vulnerability_scan", "secret_detection", "csp_validation", "dependency_audit"],
+        "can_fix": true,
+        "input_types": ["file_path", "dependency_list", "configuration"],
+        "output_types": ["report", "remediation_steps", "fixed_config"]
+      },
+      "test_automation_orchestrator": {
+        "type": "json",
+        "capabilities": ["unit_test", "e2e_test", "coverage_analysis", "accessibility_test"],
+        "can_fix": false,
+        "input_types": ["test_pattern", "file_path", "component_name"],
+        "output_types": ["test_results", "coverage_report", "failure_analysis"]
+      },
+      "ci_cd_pipeline_manager": {
+        "type": "json",
+        "capabilities": ["pipeline_orchestration", "deployment", "caching", "artifact_management"],
+        "can_fix": true,
+        "input_types": ["workflow_config", "environment", "deployment_target"],
+        "output_types": ["pipeline_status", "deployment_report", "artifact_urls"]
+      },
+      "dependency_lifecycle_manager": {
+        "type": "json",
+        "capabilities": ["dependency_update", "security_patch", "license_audit", "version_management"],
+        "can_fix": true,
+        "input_types": ["package_name", "version_constraint", "update_type"],
+        "output_types": ["update_report", "compatibility_analysis", "fixed_lockfile"]
+      },
+      "documentation_curator": {
+        "type": "json",
+        "capabilities": ["doc_generation", "changelog_update", "api_doc_sync", "link_validation"],
+        "can_fix": true,
+        "input_types": ["code_changes", "release_info", "doc_path"],
+        "output_types": ["documentation", "changelog_entry", "validation_report"]
+      },
+      "issue_triage_coordinator": {
+        "type": "json",
+        "capabilities": ["classification", "priority_assignment", "duplicate_detection", "sla_tracking"],
+        "can_fix": false,
+        "input_types": ["issue_content", "labels", "metadata"],
+        "output_types": ["classification_result", "priority", "related_issues"]
+      },
+      "performance_optimization_engineer": {
+        "type": "json",
+        "capabilities": ["bundle_analysis", "lighthouse_audit", "profiling", "optimization_suggestions"],
+        "can_fix": true,
+        "input_types": ["build_output", "url", "component_name"],
+        "output_types": ["performance_report", "optimization_plan", "fixed_code"]
+      },
+      "release_orchestration_manager": {
+        "type": "json",
+        "capabilities": ["version_calculation", "release_notes", "deployment_coordination", "rollback"],
+        "can_fix": false,
+        "input_types": ["commit_range", "version_type", "target_environment"],
+        "output_types": ["release_plan", "changelog", "deployment_status"]
+      },
+      "code_review_automation_agent": {
+        "type": "json",
+        "capabilities": ["automated_review", "pattern_detection", "security_review", "complexity_gating"],
+        "can_fix": false,
+        "input_types": ["pr_diff", "file_list", "review_scope"],
+        "output_types": ["review_comments", "approval_status", "suggestions"]
+      },
+      "monitoring_observability_specialist": {
+        "type": "json",
+        "capabilities": ["error_tracking", "uptime_monitoring", "incident_response", "alerting"],
+        "can_fix": false,
+        "input_types": ["error_log", "metrics", "alert_config"],
+        "output_types": ["incident_report", "root_cause_analysis", "remediation_steps"]
+      },
+      "accessibility_compliance_validator": {
+        "type": "json",
+        "capabilities": ["wcag_validation", "keyboard_nav_test", "screen_reader_test", "color_contrast"],
+        "can_fix": true,
+        "input_types": ["html_content", "component_name", "url"],
+        "output_types": ["accessibility_report", "violations", "fixed_code"]
+      },
+      "swarm_orchestration_coordinator": {
+        "type": "json",
+        "capabilities": ["workflow_orchestration", "task_routing", "conflict_resolution", "agent_delegation"],
+        "can_fix": false,
+        "input_types": ["task_description", "context", "priority"],
+        "output_types": ["execution_plan", "agent_assignments", "status_report"]
+      },
+      "database_schema_manager": {
+        "type": "json",
+        "capabilities": ["schema_migration", "query_optimization", "data_validation", "backup_restore"],
+        "can_fix": true,
+        "input_types": ["schema_definition", "migration_script", "query"],
+        "output_types": ["migration_result", "optimization_report", "validated_schema"]
+      },
+      "api_integration_validator": {
+        "type": "json",
+        "capabilities": ["contract_testing", "resilience_testing", "mock_generation", "documentation"],
+        "can_fix": true,
+        "input_types": ["api_spec", "endpoint", "request_payload"],
+        "output_types": ["test_results", "contract_report", "mock_config"]
+      },
+      "analytics_insights_agent": {
+        "type": "json",
+        "capabilities": ["data_analysis", "trend_detection", "anomaly_detection", "reporting"],
+        "can_fix": false,
+        "input_types": ["metrics_data", "time_range", "dimensions"],
+        "output_types": ["analysis_report", "visualizations", "insights"]
+      },
+      "compliance_audit_specialist": {
+        "type": "json",
+        "capabilities": ["license_audit", "gdpr_validation", "sbom_generation", "policy_enforcement"],
+        "can_fix": true,
+        "input_types": ["codebase_path", "policy_config", "audit_scope"],
+        "output_types": ["audit_report", "compliance_status", "remediation_plan"]
+      },
+      "code_assistant": {
+        "type": "markdown",
+        "capabilities": ["code_generation", "code_explanation", "debugging", "implementation"],
+        "can_fix": true,
+        "input_types": ["natural_language", "code_context", "requirements"],
+        "output_types": ["code", "explanation", "implementation_plan"]
+      },
+      "lead_architect": {
+        "type": "markdown",
+        "capabilities": ["architecture_review", "design_patterns", "system_design", "technical_decisions"],
+        "can_fix": true,
+        "input_types": ["architecture_question", "design_proposal", "system_context"],
+        "output_types": ["architecture_guidance", "design_review", "recommendations"]
+      },
+      "qa_engineer": {
+        "type": "markdown",
+        "capabilities": ["test_strategy", "test_generation", "quality_analysis", "bug_triage"],
+        "can_fix": true,
+        "input_types": ["feature_description", "code_to_test", "bug_report"],
+        "output_types": ["test_cases", "quality_report", "test_code"]
+      },
+      "security_specialist": {
+        "type": "markdown",
+        "capabilities": ["security_audit", "threat_modeling", "vulnerability_remediation", "secure_coding"],
+        "can_fix": true,
+        "input_types": ["code_to_review", "security_concern", "threat_scenario"],
+        "output_types": ["security_report", "remediation_code", "security_guidance"]
+      },
+      "devops_engineer": {
+        "type": "markdown",
+        "capabilities": ["pipeline_design", "infrastructure", "deployment_strategy", "monitoring_setup"],
+        "can_fix": true,
+        "input_types": ["deployment_requirement", "infrastructure_question", "pipeline_config"],
+        "output_types": ["pipeline_code", "infrastructure_config", "deployment_plan"]
+      },
+      "my_janitor": {
+        "type": "markdown",
+        "capabilities": ["code_cleanup", "refactoring", "dead_code_removal", "simplification"],
+        "can_fix": true,
+        "input_types": ["code_to_clean", "cleanup_scope", "refactoring_goal"],
+        "output_types": ["cleaned_code", "refactoring_report", "improvement_suggestions"]
+      },
+      "technical_scribe": {
+        "type": "markdown",
+        "capabilities": ["documentation_writing", "api_documentation", "tutorial_creation", "readme_updates"],
+        "can_fix": true,
+        "input_types": ["topic", "code_to_document", "documentation_type"],
+        "output_types": ["documentation", "tutorials", "api_docs"]
+      },
+      "refactor_agent": {
+        "type": "markdown",
+        "capabilities": [
+          "comprehensive_refactoring",
+          "feedback_analysis",
+          "suggestion_application",
+          "code_modernization"
+        ],
+        "can_fix": true,
+        "input_types": ["refactoring_request", "feedback_to_apply", "code_to_modernize"],
+        "output_types": ["refactored_code", "applied_suggestions", "modernization_report"]
+      }
+    }
+  },
+
+  "delegation_protocol": {
+    "description": "How agents request help from other agents",
+    "request_format": {
+      "requesting_agent": "string - Agent making the request",
+      "target_agent": "string - Agent being requested",
+      "task_type": "string - Type of task (from target's capabilities)",
+      "input": "object - Input data matching target's input_types",
+      "priority": "string - urgent | high | normal | low",
+      "context": "object - Additional context for the task",
+      "callback": "string - How to return results"
+    },
+    "response_format": {
+      "responding_agent": "string - Agent that handled the request",
+      "status": "string - success | partial | failed",
+      "output": "object - Output matching agent's output_types",
+      "suggestions": "array - Additional recommendations",
+      "delegated_to": "array - If this agent delegated further"
+    }
+  },
+
+  "collaboration_patterns": {
+    "chain": {
+      "description": "Sequential agent collaboration where output of one feeds into another",
+      "example": "code_quality_enforcer → test_automation_orchestrator → documentation_curator"
+    },
+    "parallel": {
+      "description": "Multiple agents work simultaneously on different aspects",
+      "example": "security_guardian + performance_optimization_engineer + accessibility_compliance_validator"
+    },
+    "hierarchical": {
+      "description": "One agent coordinates others as sub-tasks",
+      "example": "swarm_orchestration_coordinator delegates to specialized agents"
+    },
+    "consultative": {
+      "description": "Agent requests advice from specialist before proceeding",
+      "example": "refactor_agent consults lead_architect before major changes"
+    }
+  },
+
+  "common_workflows": {
+    "pr_validation": {
+      "coordinator": "swarm_orchestration_coordinator",
+      "stages": [
+        {
+          "stage": 1,
+          "name": "Static Analysis",
+          "agents": ["code_quality_enforcer", "security_guardian", "documentation_curator"],
+          "parallel": true
+        },
+        {
+          "stage": 2,
+          "name": "Testing",
+          "agents": ["test_automation_orchestrator"],
+          "depends_on": ["code_quality_enforcer"]
+        },
+        {
+          "stage": 3,
+          "name": "Specialized Validation",
+          "agents": ["accessibility_compliance_validator", "performance_optimization_engineer"],
+          "parallel": true,
+          "conditional": "based on changed files"
+        },
+        {
+          "stage": 4,
+          "name": "Review",
+          "agents": ["code_review_automation_agent"],
+          "depends_on": ["all previous stages"]
+        }
+      ]
+    },
+    "auto_fix": {
+      "coordinator": "refactor_agent",
+      "workflow": [
+        "Receive fix request",
+        "Consult code_quality_enforcer for lint issues",
+        "Consult security_guardian for security issues",
+        "Apply fixes",
+        "Request test_automation_orchestrator to verify",
+        "Request documentation_curator to update docs if needed",
+        "Commit changes"
+      ]
+    },
+    "incident_response": {
+      "coordinator": "monitoring_observability_specialist",
+      "workflow": [
+        "Detect incident",
+        "Consult security_guardian if security-related",
+        "Consult performance_optimization_engineer if performance-related",
+        "Request ci_cd_pipeline_manager for rollback if needed",
+        "Request documentation_curator to create incident report"
+      ]
+    }
+  },
+
+  "agent_invocation": {
+    "github_actions": {
+      "description": "How to invoke agents from GitHub Actions workflows",
+      "pattern": "workflow_dispatch with agent parameter",
+      "example": {
+        "workflow": "swarm-coordinator.yml",
+        "inputs": {
+          "target_agent": "refactor_agent",
+          "task": "apply_suggestions",
+          "context": "{\"pr_number\": 123}"
+        }
+      }
+    },
+    "copilot_chat": {
+      "description": "How to invoke agents from Copilot Chat",
+      "pattern": "@agent-name task description",
+      "examples": [
+        "@refactor-agent Please apply the review suggestions",
+        "@security-specialist Audit this code for vulnerabilities",
+        "@lead-architect Is this design pattern appropriate?"
+      ]
+    },
+    "pr_comments": {
+      "description": "How to invoke agents via PR comments",
+      "pattern": "@copilot command [target]",
+      "examples": ["@copilot fix lint", "@copilot refactor", "@copilot delegate to security-specialist"]
+    }
+  },
+
+  "inter_agent_commands": {
+    "delegate": {
+      "syntax": "@copilot delegate [task] to [agent]",
+      "description": "Explicitly delegate a task to a specific agent",
+      "example": "@copilot delegate security review to security-specialist"
+    },
+    "consult": {
+      "syntax": "@copilot consult [agent] about [topic]",
+      "description": "Get advice from a specialist agent",
+      "example": "@copilot consult lead-architect about this design"
+    },
+    "chain": {
+      "syntax": "@copilot chain [agent1] → [agent2] → [agent3]",
+      "description": "Create a processing chain across agents",
+      "example": "@copilot chain code-quality → tests → docs"
+    },
+    "parallel": {
+      "syntax": "@copilot parallel [agent1] + [agent2]",
+      "description": "Run multiple agents in parallel",
+      "example": "@copilot parallel security + performance + accessibility"
+    }
+  }
+}

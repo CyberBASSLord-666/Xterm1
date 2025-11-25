@@ -2,7 +2,7 @@
 
 > **Enterprise-Grade Repository Management Swarm**  
 > **Status**: ✅ Fully Operational  
-> **Total Agents**: 24 (17 JSON + 7 Markdown)  
+> **Total Agents**: 25 (17 JSON + 8 Markdown)  
 > **Coverage**: 100% Repository Lifecycle
 
 ---
@@ -41,7 +41,7 @@ These agents are structured as rigorously validated, standards-compliant JSON fi
 
 ### Markdown Format Agents (GitHub Copilot)
 
-**Total: 7 agents | Total Size: ~23 KB**
+**Total: 8 agents | Total Size: ~30 KB**
 
 These agents are formatted for GitHub Copilot custom agent integration.
 
@@ -54,6 +54,7 @@ These agents are formatted for GitHub Copilot custom agent integration.
 | 5 | `devops-engineer.md` | 3.2KB | CI/CD and deployment configuration |
 | 6 | `my-janitor.md` | 2.9KB | Code cleanup and refactoring |
 | 7 | `technical-scribe.md` | 3.3KB | Documentation writing and maintenance |
+| 8 | `refactor-agent.md` | 7.0KB | **Advanced refactoring, feedback analysis, suggestion application** |
 
 ---
 

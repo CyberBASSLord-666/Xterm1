@@ -11,15 +11,16 @@
 2. [For Developers](#for-developers)
 3. [For Maintainers](#for-maintainers)
 4. [For Operations](#for-operations)
-5. [Understanding Agent Interactions](#understanding-agent-interactions)
-6. [Customizing Agent Behavior](#customizing-agent-behavior)
-7. [Troubleshooting](#troubleshooting)
+5. [Inter-Agent Communication](#inter-agent-communication)
+6. [Understanding Agent Interactions](#understanding-agent-interactions)
+7. [Customizing Agent Behavior](#customizing-agent-behavior)
+8. [Troubleshooting](#troubleshooting)
 
 ---
 
 ## What is the Agentic Swarm?
 
-The Agentic Swarm is a collection of **24 specialized automation agents** that work together to manage every aspect of this Angular 20 + TypeScript repository's lifecycle. Think of it as having a team of expert robots that:
+The Agentic Swarm is a collection of **25 specialized automation agents** that work together to manage every aspect of this Angular 20 + TypeScript repository's lifecycle. Think of it as having a team of expert robots that:
 
 - ✅ Automatically review your code
 - ✅ Run tests and check coverage
@@ -29,8 +30,19 @@ The Agentic Swarm is a collection of **24 specialized automation agents** that w
 - ✅ Create releases
 - ✅ Triage issues
 - ✅ Generate documentation
+- ✅ **Refactor code and apply suggestions**
+- ✅ **Delegate tasks to each other automatically**
 
 **The swarm runs automatically** - you don't need to configure anything to get started!
+
+### Key Feature: Inter-Agent Communication
+
+Agents in this swarm can **call upon each other** for specialized tasks. This means:
+- The code review agent can ask the security agent to audit suspicious code
+- The refactor agent can consult the architect agent for design decisions
+- Any agent can delegate documentation updates to the technical writer
+
+This creates a truly collaborative swarm where agents work together intelligently.
 
 ---
 
@@ -119,13 +131,14 @@ git push
 
 ### Using GitHub Copilot Agents
 
-The 7 markdown agents work as **GitHub Copilot custom agents**. Use them directly in your IDE:
+The 8 markdown agents work as **GitHub Copilot custom agents**. Use them directly in your IDE:
 
 ```
 @code-assistant How do I implement a new feature?
 @lead-architect Is this architecture pattern correct?
 @qa-engineer What tests should I write?
 @security-specialist Is this code secure?
+@refactor-agent Please refactor this function to use async/await
 ```
 
 ### Using Swarm Commands in Comments
@@ -162,6 +175,167 @@ The swarm will:
 ```
 
 You'll get a table showing vulnerabilities by severity and recommended actions.
+
+### Refactoring Commands
+
+The swarm can perform comprehensive code refactoring via PR comments:
+
+| Command | Description |
+|---------|-------------|
+| `@copilot refactor` | General code refactoring (lint, format, cleanup) |
+| `@copilot modernize` | Update deprecated patterns to modern standards |
+| `@copilot optimize` | Performance optimization and improvements |
+| `@copilot simplify` | Reduce code complexity |
+| `@copilot apply suggestions` | Apply pending review suggestions from code review |
+| `@copilot extract [type] [name] from [file]` | Extract code to separate module |
+
+**Example: Applying all review suggestions**
+
+When reviewers leave suggestions using GitHub's suggestion blocks, you can apply them all at once:
+
+```
+@copilot apply suggestions
+```
+
+The swarm will:
+1. Find all pending `suggestion` blocks in review comments
+2. Apply each suggestion to the appropriate file
+3. Run lint and format on the changed files
+4. Commit and push the changes
+5. Report a summary of applied suggestions
+
+**Example: Modernizing code**
+
+```
+@copilot modernize src/services/
+```
+
+The swarm will:
+1. Analyze the target files for deprecated patterns
+2. Apply ESLint fixes for outdated syntax
+3. Update import patterns
+4. Commit with a clear description of changes
+
+**Example: Extracting a function to a module**
+
+```
+@copilot extract function validateEmail from src/utils/validators.ts
+```
+
+The swarm will:
+1. Find the `validateEmail` function in the source file
+2. Create a new file `src/utils/validateemail.function.ts`
+3. Move the function with proper exports
+4. Update the original file with an import statement
+5. Commit the extraction
+
+**Using the Refactor Agent in Copilot Chat**
+
+For more complex refactoring operations, use the `@refactor-agent` directly:
+
+```
+@refactor-agent Please convert all callbacks in this file to async/await
+@refactor-agent Simplify the UserService class
+@refactor-agent Apply the review feedback about splitting the validation logic
+```
+
+The refactor agent can:
+- Analyze natural language requests
+- Understand code review feedback
+- Perform structural refactoring
+- Modernize TypeScript patterns
+- Apply design patterns
+
+---
+
+## Inter-Agent Communication
+
+The swarm supports sophisticated inter-agent communication, allowing agents to delegate tasks to each other.
+
+### Inter-Agent Commands
+
+Use these commands in PR comments to orchestrate multiple agents:
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `@copilot delegate [task] to [agent]` | Send a task to a specific agent | `@copilot delegate security review to security-specialist` |
+| `@copilot consult [agent] about [topic]` | Get advice from a specialist | `@copilot consult lead-architect about this design` |
+| `@copilot chain [a1] → [a2] → [a3]` | Sequential agent processing | `@copilot chain code-quality → tests → docs` |
+| `@copilot parallel [a1] + [a2]` | Run agents simultaneously | `@copilot parallel security + performance + accessibility` |
+| `@copilot swarm [task]` | Let coordinator pick best agents | `@copilot swarm comprehensive code review` |
+
+### Agent Shortnames
+
+Use these shortnames in inter-agent commands:
+
+| Shortname | Agent | Capabilities |
+|-----------|-------|--------------|
+| `code-quality` | Code Quality Enforcer | Lint, format, complexity analysis |
+| `security` | Security Guardian | Vulnerability scan, secret detection |
+| `tests` | Test Orchestrator | Unit tests, E2E, coverage |
+| `performance` | Performance Engineer | Bundle analysis, Lighthouse |
+| `accessibility` | Accessibility Validator | WCAG compliance |
+| `docs` | Documentation Curator | Changelog, API docs |
+| `refactor` | Refactor Agent | Code modernization, suggestions |
+| `review` | Code Review Agent | Automated PR review |
+| `lead-architect` | Lead Architect | Architecture decisions |
+| `security-specialist` | Security Specialist | Security audits |
+| `qa` | QA Engineer | Test strategy |
+| `janitor` | My Janitor | Code cleanup |
+
+### Example: Comprehensive PR Validation
+
+```
+@copilot parallel security + performance + accessibility
+```
+
+This runs security scan, performance analysis, and accessibility validation **simultaneously**, returning results from all three agents.
+
+### Example: Sequential Processing Chain
+
+```
+@copilot chain code-quality → tests → docs
+```
+
+This:
+1. First runs code quality checks (lint, format)
+2. Then runs the test suite
+3. Finally updates documentation
+
+Each step passes its context to the next.
+
+### Example: Smart Agent Selection
+
+```
+@copilot swarm review this PR for production readiness
+```
+
+The Swarm Coordinator analyzes your request and automatically selects the best combination of agents:
+- Security Guardian for vulnerability scan
+- Performance Engineer for bundle analysis
+- Code Review Agent for quality assessment
+- Accessibility Validator for WCAG compliance
+
+### How Agents Collaborate
+
+When you invoke an agent, it can automatically delegate to other agents:
+
+```
+User: @code-assistant implement authentication
+
+Code Assistant:
+1. Implements the authentication feature
+2. Delegates security review to @security-specialist
+3. Delegates test generation to @qa-engineer
+4. Delegates documentation to @technical-scribe
+5. Coordinates all results into a complete solution
+```
+
+### Agent Registry
+
+The complete agent registry with all capabilities is defined in:
+- `.github/agents/inter-agent-protocol.json` - Protocol specification
+- `.github/agents/swarm-manifest.json` - Agent inventory
 
 ---
 
