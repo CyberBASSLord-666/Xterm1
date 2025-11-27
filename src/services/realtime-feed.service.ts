@@ -353,6 +353,8 @@ export class RealtimeFeedService implements OnDestroy {
   }
 
   private createState<TEvent extends FeedEvent>(type: FeedType, config: FeedConfig<TEvent>): FeedState<TEvent> {
+    const currentVisibility = this.document?.visibilityState as DocumentVisibilityState | undefined;
+    const isHidden = this.isVisibilityHidden(currentVisibility);
     return {
       type,
       config,
@@ -372,7 +374,7 @@ export class RealtimeFeedService implements OnDestroy {
       pausedBuffer: [],
       pausedBufferKeys: new Set<string>(),
       eventTimestamps: [],
-      monitoringSuspendedForVisibility: false,
+      monitoringSuspendedForVisibility: isHidden,
     };
   }
 
