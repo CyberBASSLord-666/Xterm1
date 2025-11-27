@@ -15,7 +15,7 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-      - run: npm ci --legacy-peer-deps
+      - run: npm ci
       - run: npm run lint --if-present
 
   test:
@@ -26,7 +26,7 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-      - run: npm ci --legacy-peer-deps
+      - run: npm ci
       - run: npm test -- --coverage --watchAll=false
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
@@ -54,7 +54,7 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-      - run: npm ci --legacy-peer-deps
+      - run: npm ci
       - run: npm run build -- --configuration=${{ matrix.configuration }}
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -79,7 +79,7 @@ jobs:
           name: dist-production
           path: dist/
       - name: Install dependencies (minimal)
-        run: npm ci --legacy-peer-deps --ignore-scripts
+        run: npm ci --ignore-scripts
       - name: Install Playwright (Chromium only)
         run: npx playwright install chromium --with-deps
       - name: Run Playwright Tests

@@ -249,7 +249,7 @@ The swarm is coordinating agents to handle your request.`
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+        run: npm ci
 
       - name: Execute delegated task
         id: execute
@@ -426,7 +426,7 @@ ${details}
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+        run: npm ci
 
       - name: Execute parallel tasks
         id: parallel
@@ -586,7 +586,7 @@ ${resultRows}
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+        run: npm ci
 
       - name: Execute chain
         id: chain

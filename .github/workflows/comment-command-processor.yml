@@ -85,7 +85,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.parse.outputs.is_pr == 'true'
-        run: npm ci --legacy-peer-deps
+        run: npm ci
 
       # ============ HELP COMMAND ============
       - name: Handle help command
