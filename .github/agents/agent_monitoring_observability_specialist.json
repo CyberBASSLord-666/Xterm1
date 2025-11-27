@@ -1,0 +1,370 @@
+{
+  "agent_name": "monitoring_observability_specialist",
+  "role": "Production Monitoring, Error Tracking, Performance Observability, and Alerting Infrastructure Manager",
+  "responsibilities": [
+    "Implement comprehensive error tracking and monitoring using structured logging, error aggregation, and real-time alerting for production errors, tracking error frequency trends, unique error signatures, affected user counts, and error resolution metrics with automatic issue creation for new error patterns",
+    "Monitor application performance metrics in production including page load times, API response times, database query performance, memory usage, CPU utilization, and user interaction latencies with automated anomaly detection and performance degradation alerts",
+    "Execute real user monitoring (RUM) tracking Core Web Vitals (LCP, FID, CLS), Time to Interactive (TTI), First Contentful Paint (FCP), and user journey completion rates across different browsers, devices, and geographic regions with automated regression detection",
+    "Implement uptime monitoring with synthetic transaction testing checking critical user flows (wallpaper generation, collection management, authentication) from multiple geographic locations at 5-minute intervals with cascade alerting on failures and automatic incident creation",
+    "Track and analyze user behavior metrics including feature adoption rates, user retention cohorts, session duration, bounce rates, conversion funnels, and usage patterns to identify usability issues and optimization opportunities with data-driven insights",
+    "Monitor infrastructure health including CDN performance, API gateway metrics, service worker effectiveness, IndexedDB operation success rates, and external API dependencies (Pollinations, Gemini) with automatic failover validation and degraded mode detection",
+    "Implement distributed tracing for request flows tracking complete request lifecycle from browser through service worker to external APIs, identifying bottlenecks, measuring service dependencies, and analyzing latency distribution with percentile breakdowns (p50, p95, p99)",
+    "Execute security monitoring including authentication failure tracking, rate limit violations, suspicious activity detection (repeated failed attempts, unusual access patterns), CSP violation reporting, and CORS error analysis with automated security incident response",
+    "Generate comprehensive observability dashboards consolidating metrics from multiple sources with customizable views for developers, operations, and business stakeholders, including real-time data, historical trends, and predictive analytics for capacity planning",
+    "Coordinate incident response workflows including automatic severity classification (SEV1-SEV4), stakeholder notification based on impact analysis, runbook execution guidance, post-incident review (PIR) generation, and continuous improvement recommendations"
+  ],
+  "configuration": {
+    "trigger_events": [
+      "deployment.status.success",
+      "schedule.cron.*/5_*_*_*_*",
+      "workflow_dispatch",
+      "repository_dispatch.type.alert"
+    ],
+    "error_tracking": {
+      "enabled": true,
+      "platforms": {
+        "sentry": {
+          "enabled": false,
+          "dsn": null,
+          "environment": "production",
+          "release_tracking": true
+        },
+        "custom_logger": {
+          "enabled": true,
+          "endpoint": "internal",
+          "batch_errors": true,
+          "sampling_rate": 1.0
+        }
+      },
+      "error_classification": {
+        "javascript_errors": true,
+        "unhandled_promise_rejections": true,
+        "api_errors": true,
+        "rendering_errors": true,
+        "security_errors": true
+      },
+      "error_grouping": {
+        "by_error_type": true,
+        "by_stack_trace": true,
+        "by_user_agent": true,
+        "by_url": true
+      },
+      "alerting": {
+        "new_error_pattern": {
+          "enabled": true,
+          "threshold_occurrences": 5,
+          "time_window_minutes": 15,
+          "severity": "high"
+        },
+        "error_spike": {
+          "enabled": true,
+          "threshold_increase_percent": 200,
+          "time_window_minutes": 10,
+          "severity": "critical"
+        },
+        "high_error_rate": {
+          "enabled": true,
+          "threshold_percent": 5,
+          "time_window_minutes": 5,
+          "severity": "critical"
+        }
+      }
+    },
+    "performance_monitoring": {
+      "enabled": true,
+      "metrics": {
+        "page_load_times": {
+          "track": true,
+          "threshold_p95_ms": 3000,
+          "alert_on_regression": true
+        },
+        "api_response_times": {
+          "track": true,
+          "threshold_p95_ms": 1000,
+          "alert_on_regression": true
+        },
+        "database_query_times": {
+          "track": true,
+          "threshold_p95_ms": 100,
+          "alert_on_slow_queries": true
+        },
+        "memory_usage": {
+          "track": true,
+          "threshold_mb": 150,
+          "alert_on_leak": true
+        },
+        "cpu_utilization": {
+          "track": true,
+          "threshold_percent": 80,
+          "alert_on_spike": true
+        }
+      },
+      "anomaly_detection": {
+        "enabled": true,
+        "algorithm": "statistical",
+        "sensitivity": "medium",
+        "baseline_period_days": 7
+      }
+    },
+    "real_user_monitoring": {
+      "enabled": true,
+      "core_web_vitals": {
+        "lcp": {
+          "track": true,
+          "threshold_good_ms": 2500,
+          "threshold_poor_ms": 4000
+        },
+        "fid": {
+          "track": true,
+          "threshold_good_ms": 100,
+          "threshold_poor_ms": 300
+        },
+        "cls": {
+          "track": true,
+          "threshold_good": 0.1,
+          "threshold_poor": 0.25
+        },
+        "ttfb": {
+          "track": true,
+          "threshold_good_ms": 800,
+          "threshold_poor_ms": 1800
+        },
+        "fcp": {
+          "track": true,
+          "threshold_good_ms": 1800,
+          "threshold_poor_ms": 3000
+        }
+      },
+      "segmentation": {
+        "by_browser": true,
+        "by_device_type": true,
+        "by_country": true,
+        "by_connection_type": true
+      },
+      "sampling_rate": 0.1
+    },
+    "uptime_monitoring": {
+      "enabled": true,
+      "synthetic_monitoring": {
+        "enabled": true,
+        "check_interval_minutes": 5,
+        "locations": ["us-east", "us-west", "eu-west", "ap-southeast"],
+        "critical_paths": [
+          {
+            "name": "Homepage Load",
+            "url": "/",
+            "expected_status": 200,
+            "timeout_seconds": 10
+          },
+          {
+            "name": "Wallpaper Generation",
+            "url": "/generate",
+            "expected_status": 200,
+            "timeout_seconds": 30
+          },
+          {
+            "name": "Collections",
+            "url": "/collections",
+            "expected_status": 200,
+            "timeout_seconds": 10
+          }
+        ]
+      },
+      "alerting": {
+        "on_failure": {
+          "enabled": true,
+          "consecutive_failures_required": 2,
+          "severity": "critical"
+        },
+        "on_slow_response": {
+          "enabled": true,
+          "threshold_ms": 5000,
+          "severity": "major"
+        }
+      }
+    },
+    "user_analytics": {
+      "enabled": true,
+      "tracked_events": {
+        "feature_usage": true,
+        "user_journeys": true,
+        "conversion_funnels": true,
+        "error_encounters": true,
+        "performance_events": true
+      },
+      "privacy": {
+        "anonymize_ip": true,
+        "respect_dnt": true,
+        "cookie_consent_required": false
+      },
+      "retention_analysis": {
+        "enabled": true,
+        "cohort_periods": ["daily", "weekly", "monthly"]
+      }
+    },
+    "infrastructure_monitoring": {
+      "enabled": true,
+      "components": {
+        "cdn": {
+          "track_cache_hit_rate": true,
+          "track_bandwidth": true,
+          "alert_on_degradation": true
+        },
+        "service_worker": {
+          "track_installation_rate": true,
+          "track_cache_effectiveness": true,
+          "track_update_success": true
+        },
+        "indexeddb": {
+          "track_operation_success_rate": true,
+          "track_quota_usage": true,
+          "alert_on_quota_exceeded": true
+        },
+        "external_apis": {
+          "pollinations": {
+            "track_availability": true,
+            "track_response_time": true,
+            "track_error_rate": true,
+            "alert_threshold_error_rate_percent": 10
+          },
+          "gemini": {
+            "track_availability": true,
+            "track_response_time": true,
+            "track_error_rate": true,
+            "alert_threshold_error_rate_percent": 10
+          }
+        }
+      }
+    },
+    "distributed_tracing": {
+      "enabled": false,
+      "trace_sampling_rate": 0.1,
+      "trace_components": ["browser", "service_worker", "api_gateway", "external_apis"],
+      "performance_budgets": {
+        "browser_to_service_worker_ms": 50,
+        "service_worker_to_api_ms": 100,
+        "api_to_external_service_ms": 1000
+      }
+    },
+    "security_monitoring": {
+      "enabled": true,
+      "tracked_events": {
+        "authentication_failures": {
+          "track": true,
+          "alert_threshold_count": 10,
+          "time_window_minutes": 5
+        },
+        "rate_limit_violations": {
+          "track": true,
+          "alert_threshold_count": 50,
+          "time_window_minutes": 1
+        },
+        "csp_violations": {
+          "track": true,
+          "alert_on_new_violation": true
+        },
+        "cors_errors": {
+          "track": true,
+          "alert_threshold_count": 20,
+          "time_window_minutes": 10
+        },
+        "suspicious_activity": {
+          "track": true,
+          "patterns": ["repeated_failures", "unusual_access_patterns", "geographic_anomalies"]
+        }
+      }
+    },
+    "dashboards": {
+      "enabled": true,
+      "refresh_interval_seconds": 30,
+      "dashboard_types": {
+        "overview": {
+          "metrics": ["uptime", "error_rate", "active_users", "response_time_p95"],
+          "time_range": "24h"
+        },
+        "performance": {
+          "metrics": ["lcp", "fid", "cls", "page_load_time", "api_response_time"],
+          "time_range": "7d"
+        },
+        "errors": {
+          "metrics": ["error_count", "error_rate", "unique_errors", "affected_users"],
+          "time_range": "24h"
+        },
+        "infrastructure": {
+          "metrics": ["cdn_cache_hit_rate", "service_worker_effectiveness", "external_api_health"],
+          "time_range": "24h"
+        }
+      }
+    },
+    "incident_management": {
+      "enabled": true,
+      "severity_levels": {
+        "sev1": {
+          "description": "Critical production outage",
+          "response_time_minutes": 15,
+          "notification": ["on_call", "management", "slack_critical"]
+        },
+        "sev2": {
+          "description": "Major functionality impaired",
+          "response_time_minutes": 60,
+          "notification": ["on_call", "slack_alerts"]
+        },
+        "sev3": {
+          "description": "Minor functionality impaired",
+          "response_time_minutes": 240,
+          "notification": ["slack_alerts"]
+        },
+        "sev4": {
+          "description": "No immediate impact",
+          "response_time_minutes": 1440,
+          "notification": ["issue_tracker"]
+        }
+      },
+      "auto_incident_creation": {
+        "enabled": true,
+        "severity_threshold": "sev2",
+        "include_context": true,
+        "assign_on_call": true
+      },
+      "post_incident_review": {
+        "required_for_severity": ["sev1", "sev2"],
+        "template": ".github/PIR_TEMPLATE.md",
+        "due_days_after_resolution": 5
+      }
+    },
+    "alerting_channels": {
+      "slack": {
+        "enabled": false,
+        "webhook_url": null,
+        "channels": {
+          "critical": "#alerts-critical",
+          "warnings": "#alerts",
+          "info": "#monitoring"
+        }
+      },
+      "email": {
+        "enabled": true,
+        "recipients": ["ops-team@example.com"]
+      },
+      "github_issues": {
+        "enabled": true,
+        "create_on_severity": ["critical", "high"],
+        "labels": ["monitoring", "auto-generated"]
+      }
+    },
+    "data_retention": {
+      "metrics_retention_days": 90,
+      "traces_retention_days": 7,
+      "logs_retention_days": 30,
+      "events_retention_days": 365
+    },
+    "execution_context": {
+      "runs_on": "ubuntu-latest",
+      "timeout_minutes": 10,
+      "permissions": {
+        "contents": "read",
+        "issues": "write"
+      }
+    }
+  }
+}

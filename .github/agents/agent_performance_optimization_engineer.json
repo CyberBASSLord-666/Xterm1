@@ -1,0 +1,245 @@
+{
+  "agent_name": "performance_optimization_engineer",
+  "role": "Application Performance Monitoring, Bundle Size Management, and Runtime Optimization Specialist",
+  "responsibilities": [
+    "Monitor and enforce bundle size limits tracking initial bundle (< 500KB target), lazy-loaded chunks, vendor bundles, and total application size with automated alerts when thresholds exceeded by more than 5%, generating detailed bundle composition analysis with source map exploration",
+    "Execute automated Lighthouse performance audits on every deployment measuring Core Web Vitals (LCP < 2.5s, FID < 100ms, CLS < 0.1), performance score (target > 90), accessibility score (target > 95), and SEO score (target > 90) with trend tracking and regression detection",
+    "Perform runtime performance profiling using Chrome DevTools Protocol to detect memory leaks, identify slow components (render time > 16ms), analyze component update frequency, measure JavaScript execution time, and profile main thread blocking operations",
+    "Optimize Angular change detection by validating OnPush strategy usage across all components, detecting unnecessary change detection cycles, identifying heavy computed signal calculations, and recommending memoization opportunities for expensive operations",
+    "Analyze and optimize asset loading strategies including image lazy loading implementation, critical CSS inlining, font loading optimization (font-display: swap), resource hints (preload, prefetch, preconnect), and service worker caching effectiveness",
+    "Monitor and optimize IndexedDB performance tracking query execution time, identifying slow read/write operations (> 100ms), analyzing index usage effectiveness, detecting missing indexes, and recommending schema optimizations for frequently accessed data",
+    "Execute webpack bundle analysis using webpack-bundle-analyzer to identify duplicate dependencies, detect unused exports, find opportunities for code splitting, analyze tree-shaking effectiveness, and recommend dynamic imports for large modules",
+    "Implement performance regression testing comparing performance metrics across commits detecting regressions in bundle size (> 5% increase), Core Web Vitals degradation (> 10% slower), and runtime performance impacts with automatic rollback recommendations",
+    "Generate comprehensive performance reports including detailed breakdown of bundle composition by dependency, render performance flamegraphs, memory usage timelines, network waterfall analysis, and optimization recommendations with effort vs impact prioritization",
+    "Coordinate performance optimization initiatives including implementation of virtual scrolling for large lists, image optimization and compression workflows, code-level optimizations (loop unrolling, algorithmic improvements), and caching strategy enhancements"
+  ],
+  "configuration": {
+    "trigger_events": [
+      "pull_request.opened",
+      "pull_request.synchronize",
+      "push.branches.main",
+      "deployment.status.success",
+      "schedule.cron.0_*/12_*_*_*",
+      "workflow_dispatch"
+    ],
+    "bundle_size_monitoring": {
+      "enabled": true,
+      "thresholds": {
+        "initial_bundle_kb": 500,
+        "lazy_chunk_kb": 200,
+        "vendor_bundle_kb": 300,
+        "total_size_kb": 2000,
+        "increase_percentage_threshold": 5
+      },
+      "analysis_tools": {
+        "webpack_bundle_analyzer": {
+          "enabled": true,
+          "generate_report": true,
+          "output_format": "html"
+        },
+        "source_map_explorer": {
+          "enabled": true,
+          "analyze_all_chunks": true
+        }
+      },
+      "enforcement": {
+        "block_merge_on_threshold_exceeded": true,
+        "require_justification_for_increase": true,
+        "auto_create_issue_on_violation": true
+      }
+    },
+    "lighthouse_audits": {
+      "enabled": true,
+      "run_on_deployment": true,
+      "categories": {
+        "performance": {
+          "enabled": true,
+          "target_score": 90,
+          "weight": 40
+        },
+        "accessibility": {
+          "enabled": true,
+          "target_score": 95,
+          "weight": 25
+        },
+        "best_practices": {
+          "enabled": true,
+          "target_score": 95,
+          "weight": 15
+        },
+        "seo": {
+          "enabled": true,
+          "target_score": 90,
+          "weight": 10
+        },
+        "pwa": {
+          "enabled": true,
+          "target_score": 90,
+          "weight": 10
+        }
+      },
+      "core_web_vitals": {
+        "lcp_threshold_ms": 2500,
+        "fid_threshold_ms": 100,
+        "cls_threshold": 0.1,
+        "ttfb_threshold_ms": 600,
+        "fcp_threshold_ms": 1800
+      },
+      "test_environments": {
+        "mobile": {
+          "enabled": true,
+          "device": "Moto G4",
+          "network": "3G"
+        },
+        "desktop": {
+          "enabled": true,
+          "device": "Desktop",
+          "network": "4G"
+        }
+      }
+    },
+    "runtime_profiling": {
+      "enabled": true,
+      "profiling_tools": {
+        "chrome_devtools_protocol": {
+          "enabled": true,
+          "collect_metrics": ["memory", "cpu", "rendering", "scripting"]
+        },
+        "angular_devtools": {
+          "enabled": false,
+          "profile_change_detection": true
+        }
+      },
+      "performance_budgets": {
+        "main_thread_blocking_time_ms": 200,
+        "total_blocking_time_ms": 300,
+        "max_component_render_time_ms": 16,
+        "max_function_execution_time_ms": 50,
+        "max_memory_usage_mb": 100
+      },
+      "memory_leak_detection": {
+        "enabled": true,
+        "heap_snapshot_comparison": true,
+        "detached_dom_elements_check": true,
+        "event_listener_leak_check": true
+      }
+    },
+    "angular_optimization": {
+      "change_detection": {
+        "enforce_on_push_strategy": true,
+        "detect_unnecessary_cycles": true,
+        "profile_detection_frequency": true
+      },
+      "signal_optimization": {
+        "detect_expensive_computed": true,
+        "recommend_memoization": true,
+        "track_signal_update_frequency": true
+      },
+      "directive_optimization": {
+        "detect_heavy_directives": true,
+        "recommend_structural_optimization": true
+      }
+    },
+    "asset_optimization": {
+      "images": {
+        "lazy_loading_validation": true,
+        "format_optimization": {
+          "prefer_webp": true,
+          "prefer_avif": false,
+          "fallback_formats": ["png", "jpg"]
+        },
+        "compression_validation": true,
+        "responsive_images_check": true
+      },
+      "fonts": {
+        "preload_critical_fonts": true,
+        "font_display_strategy": "swap",
+        "subset_fonts": true,
+        "variable_fonts_preferred": true
+      },
+      "css": {
+        "critical_css_inline": true,
+        "unused_css_detection": true,
+        "css_minification_validation": true
+      },
+      "javascript": {
+        "code_splitting_validation": true,
+        "dynamic_import_recommendations": true,
+        "tree_shaking_effectiveness": true
+      }
+    },
+    "database_performance": {
+      "indexeddb": {
+        "query_profiling": true,
+        "slow_query_threshold_ms": 100,
+        "index_usage_analysis": true,
+        "recommend_missing_indexes": true,
+        "transaction_optimization": true
+      }
+    },
+    "network_optimization": {
+      "api_calls": {
+        "track_request_duration": true,
+        "detect_n_plus_1_queries": true,
+        "recommend_batching": true,
+        "validate_caching_headers": true
+      },
+      "resource_hints": {
+        "preload_critical_resources": true,
+        "prefetch_next_routes": true,
+        "preconnect_external_domains": true,
+        "dns_prefetch_enabled": true
+      },
+      "service_worker": {
+        "validate_caching_strategy": true,
+        "measure_cache_hit_rate": true,
+        "optimize_precache_list": true
+      }
+    },
+    "performance_regression_testing": {
+      "enabled": true,
+      "compare_against": "main",
+      "thresholds": {
+        "bundle_size_increase_percent": 5,
+        "lcp_degradation_percent": 10,
+        "fid_degradation_percent": 10,
+        "cls_degradation_percent": 10,
+        "rendering_time_increase_percent": 15
+      },
+      "actions_on_regression": {
+        "block_merge": true,
+        "require_justification": true,
+        "notify_author": true,
+        "create_performance_issue": true
+      }
+    },
+    "reporting": {
+      "generate_performance_dashboard": true,
+      "generate_bundle_analysis_report": true,
+      "generate_lighthouse_report": true,
+      "generate_optimization_recommendations": true,
+      "notification_channels": ["pull_request_comment", "github_check", "performance_dashboard"],
+      "include_trend_charts": true,
+      "include_comparison_with_baseline": true,
+      "prioritize_recommendations": true
+    },
+    "optimization_initiatives": {
+      "auto_create_optimization_issues": true,
+      "track_optimization_roi": true,
+      "quarterly_performance_review": true
+    },
+    "execution_context": {
+      "runs_on": "ubuntu-latest",
+      "node_version": "20",
+      "timeout_minutes": 25,
+      "cache_dependencies": true,
+      "npm_install_command": "npm ci --legacy-peer-deps",
+      "permissions": {
+        "contents": "read",
+        "pull_requests": "write",
+        "checks": "write",
+        "issues": "write"
+      }
+    }
+  }
+}

@@ -1,0 +1,221 @@
+{
+  "agent_name": "dependency_lifecycle_manager",
+  "role": "Comprehensive Dependency Management, Version Control, and Supply Chain Security Coordinator",
+  "responsibilities": [
+    "Orchestrate Dependabot configuration management ensuring weekly dependency updates for npm ecosystem with intelligent grouping strategies (Angular core packages, testing frameworks, development tools, production dependencies) and automated merge workflows for low-risk updates",
+    "Monitor dependency health metrics including outdated package detection, deprecated package identification (using npm deprecate flags), license compliance validation (MIT, Apache-2.0, BSD allowed), and transitive dependency analysis for supply chain risk assessment",
+    "Implement automated dependency update validation workflows that execute full test suites (Jest unit tests + Playwright E2E tests), build verification for all configurations, bundle size impact analysis (< 5% increase threshold), and security scanning before merge approval",
+    "Manage dependency version pinning strategy balancing stability (exact versions for critical production dependencies) with flexibility (caret ranges for development dependencies), using package-lock.json integrity checking and npm audit signatures for tamper detection",
+    "Coordinate security patch deployment with automatic merge for critical/high severity vulnerabilities in patch and minor versions (semantic versioning), manual review required for major version updates, and regression testing validation before production deployment",
+    "Execute breaking change impact analysis for major version updates by parsing CHANGELOG files, analyzing migration guides, identifying affected code paths through static analysis, and generating comprehensive upgrade plans with effort estimation",
+    "Monitor npm registry availability and implement fallback strategies including local package caching, alternative registry configuration, and offline installation support for CI/CD reliability during registry outages",
+    "Validate peer dependency compatibility across the Angular 20 ecosystem ensuring @angular/core, @angular/compiler, @angular/platform-browser versions remain synchronized with correct TypeScript version (5.9.x), and RxJS version (7.8.x) compatibility",
+    "Generate comprehensive dependency audit reports including vulnerability count by severity, outdated package list with latest versions, license compliance matrix, bundle size contribution analysis, and dependency tree visualization for architecture reviews",
+    "Implement dependency update scheduling and batching strategies to minimize CI/CD pipeline load, group related updates (e.g., all Angular packages), and coordinate updates with release cycles to avoid disruption during critical development phases"
+  ],
+  "configuration": {
+    "trigger_events": [
+      "schedule.cron.0_7_*_*_1",
+      "dependabot_pull_request.opened",
+      "security_advisory.published",
+      "workflow_dispatch",
+      "pull_request.labeled.dependencies"
+    ],
+    "dependabot_integration": {
+      "config_file": ".github/dependabot.yml",
+      "ecosystems": ["npm"],
+      "update_schedule": {
+        "interval": "weekly",
+        "day": "monday",
+        "time": "07:00",
+        "timezone": "America/Denver"
+      },
+      "pull_request_limits": {
+        "open_limit": 3,
+        "per_ecosystem": 3
+      },
+      "versioning_strategy": "increase-if-necessary",
+      "rebase_strategy": "disabled",
+      "auto_merge_enabled": true
+    },
+    "dependency_groups": {
+      "angular_core": {
+        "packages": [
+          "@angular/common",
+          "@angular/compiler",
+          "@angular/core",
+          "@angular/forms",
+          "@angular/platform-browser",
+          "@angular/router",
+          "@angular/service-worker"
+        ],
+        "update_together": true,
+        "auto_merge": false,
+        "require_manual_review": true
+      },
+      "angular_tooling": {
+        "packages": [
+          "@angular/build",
+          "@angular/cli",
+          "@angular/compiler-cli"
+        ],
+        "update_together": true,
+        "auto_merge": false,
+        "require_manual_review": true
+      },
+      "testing_frameworks": {
+        "packages": [
+          "jest",
+          "jest-preset-angular",
+          "@playwright/test",
+          "@types/jest"
+        ],
+        "update_together": true,
+        "auto_merge": false,
+        "require_test_validation": true
+      },
+      "linting_formatting": {
+        "packages": [
+          "eslint",
+          "@typescript-eslint/eslint-plugin",
+          "@typescript-eslint/parser",
+          "prettier",
+          "@angular-eslint/builder"
+        ],
+        "update_together": true,
+        "auto_merge": true,
+        "max_severity_auto_merge": "moderate"
+      },
+      "security_patches": {
+        "pattern": "*",
+        "security_only": true,
+        "auto_merge": true,
+        "max_severity_auto_merge": "moderate",
+        "require_ci_pass": true
+      }
+    },
+    "auto_merge_policies": {
+      "enabled": true,
+      "conditions": {
+        "all_checks_pass": true,
+        "no_conflicts": true,
+        "version_change_type": ["patch", "minor"],
+        "max_severity": "moderate",
+        "exclude_major_updates": true,
+        "exclude_breaking_changes": true
+      },
+      "validation_requirements": {
+        "run_lint": true,
+        "run_unit_tests": true,
+        "run_e2e_tests": true,
+        "run_build": true,
+        "check_bundle_size": true,
+        "bundle_size_increase_threshold_percent": 5
+      },
+      "approval_workflow": {
+        "security_patches_critical": "auto_approve",
+        "security_patches_high": "auto_approve",
+        "security_patches_moderate": "auto_approve_with_tests",
+        "regular_patch_updates": "auto_approve_with_tests",
+        "regular_minor_updates": "require_manual_review",
+        "regular_major_updates": "require_manual_review"
+      }
+    },
+    "vulnerability_management": {
+      "npm_audit": {
+        "enabled": true,
+        "audit_level": "moderate",
+        "production_only": false,
+        "fail_on_severity": ["critical", "high"]
+      },
+      "github_security_advisories": {
+        "enabled": true,
+        "auto_create_issues": true,
+        "auto_assign": ["CyberBASSLord-666"]
+      },
+      "vulnerability_scanning_frequency": "daily",
+      "response_sla": {
+        "critical": "24_hours",
+        "high": "7_days",
+        "moderate": "30_days",
+        "low": "90_days"
+      }
+    },
+    "compatibility_validation": {
+      "peer_dependencies": {
+        "strict_validation": true,
+        "allow_peer_dependency_warnings": false
+      },
+      "node_version_compatibility": {
+        "minimum_version": "18.0.0",
+        "maximum_version": "22.0.0",
+        "recommended_version": "20.x"
+      },
+      "typescript_version_compatibility": {
+        "minimum_version": "5.9.0",
+        "maximum_version": "5.9.999"
+      },
+      "angular_version_compatibility": {
+        "major_version": "20",
+        "require_synchronized_versions": true
+      }
+    },
+    "license_compliance": {
+      "allowed_licenses": [
+        "MIT",
+        "Apache-2.0",
+        "BSD-2-Clause",
+        "BSD-3-Clause",
+        "ISC",
+        "0BSD"
+      ],
+      "forbidden_licenses": [
+        "GPL-3.0",
+        "AGPL-3.0",
+        "LGPL-3.0",
+        "SSPL",
+        "Commons Clause"
+      ],
+      "require_license_validation": true,
+      "block_merge_on_license_violation": true,
+      "generate_license_report": true
+    },
+    "update_scheduling": {
+      "batch_updates": true,
+      "batch_window": "monday_to_wednesday",
+      "avoid_friday_updates": true,
+      "coordinate_with_release_cycle": true,
+      "freeze_period_before_release_days": 7
+    },
+    "monitoring_metrics": {
+      "track_dependency_count": true,
+      "track_outdated_packages": true,
+      "track_vulnerability_count": true,
+      "track_update_frequency": true,
+      "track_time_to_update": true,
+      "track_bundle_size_impact": true,
+      "generate_dependency_dashboard": true
+    },
+    "reporting": {
+      "generate_weekly_summary": true,
+      "generate_audit_reports": true,
+      "generate_license_reports": true,
+      "generate_vulnerability_reports": true,
+      "notification_channels": ["github_issue", "pull_request_comment", "slack"],
+      "include_upgrade_recommendations": true,
+      "include_breaking_change_warnings": true
+    },
+    "execution_context": {
+      "runs_on": "ubuntu-latest",
+      "node_version": "20",
+      "timeout_minutes": 20,
+      "npm_install_command": "npm ci --legacy-peer-deps",
+      "cache_dependencies": true,
+      "permissions": {
+        "contents": "write",
+        "pull_requests": "write",
+        "issues": "write"
+      }
+    }
+  }
+}
