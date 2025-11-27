@@ -43,6 +43,8 @@
     "@angular/cli": "^20.2.0",
     "@angular/compiler-cli": "^20.3.3",
     "@angular/platform-browser-dynamic": "^20.3.7",
+    "@cfworker/json-schema": "^4.1.1",
+    "@modelcontextprotocol/sdk": "^1.23.0",
     "@playwright/test": "^1.45.0",
     "@tailwindcss/postcss": "^4.0.0-alpha.16",
     "@types/jest": "^30.0.0",
