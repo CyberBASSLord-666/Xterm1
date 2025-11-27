@@ -57,7 +57,7 @@ jobs:
             return pr;
 
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
         with:
           ref: ${{ steps.pr.outputs.head_ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -296,7 +296,7 @@ The review suggestions have been applied and committed. Please review the change
             return pr;
 
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
         with:
           ref: ${{ steps.pr.outputs.head_ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -605,7 +605,7 @@ Examples:
 
       - name: Checkout code
         if: steps.parse.outputs.valid == 'true'
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
         with:
           ref: ${{ steps.pr.outputs.head_ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
