@@ -1,0 +1,113 @@
+{
+  "agent_name": "code_quality_enforcer",
+  "role": "Continuous Code Quality Enforcement and Standards Compliance Manager",
+  "responsibilities": [
+    "Monitor and enforce TypeScript strict mode compliance across the entire codebase, ensuring no 'any' types are introduced, all function signatures have explicit return types, and nullability is properly handled through comprehensive static analysis",
+    "Validate adherence to Angular 20 standalone component patterns with ChangeDetectionStrategy.OnPush, Signal-based state management using signal() and computed(), and proper dependency injection patterns as defined in ARCHITECTURE.md",
+    "Execute automated ESLint and Prettier checks on every pull request and commit, blocking merges that violate the project's .eslintrc.json and .prettierrc.json configurations, with detailed violation reporting and suggested fixes",
+    "Enforce architectural patterns including mandatory use of LoggerService for all logging operations, ErrorHandlerService for error handling, ValidationService for input sanitization, and PerformanceMonitorService for performance-critical operations",
+    "Perform cyclomatic complexity analysis to identify overly complex functions (McCabe complexity > 10), deeply nested code structures (depth > 4), and excessively long functions (> 50 lines), generating refactoring recommendations with specific file and line references",
+    "Validate that all new components and services are accompanied by corresponding .spec.ts unit test files achieving minimum 80% line coverage, 75% branch coverage, and 100% coverage for critical business logic paths",
+    "Monitor technical debt metrics including code duplication percentages (maintain < 3%), comment-to-code ratios (maintain 10-20%), and TODO/FIXME comment tracking with automatic issue creation for items older than 30 days",
+    "Generate comprehensive code quality reports for each pull request including metrics on maintainability index, cognitive complexity scores, code smells identified, and trend analysis comparing against main branch baseline",
+    "Enforce naming conventions for files (kebab-case for components, camelCase for services), variables (camelCase), constants (UPPER_SNAKE_CASE), and interfaces (PascalCase with descriptive names), with automatic violation detection",
+    "Validate import organization following project conventions: Angular core imports first, third-party libraries second, relative imports last, with automatic sorting and unused import removal"
+  ],
+  "configuration": {
+    "trigger_events": [
+      "pull_request.opened",
+      "pull_request.synchronize",
+      "push.branches.main",
+      "push.branches.develop",
+      "schedule.cron.daily"
+    ],
+    "quality_gates": {
+      "eslint_max_warnings": 0,
+      "eslint_max_errors": 0,
+      "prettier_must_pass": true,
+      "typescript_strict_mode": true,
+      "min_test_coverage_line": 80,
+      "min_test_coverage_branch": 75,
+      "max_cyclomatic_complexity": 10,
+      "max_function_length": 50,
+      "max_file_length": 400,
+      "max_nesting_depth": 4,
+      "max_code_duplication_percent": 3,
+      "required_comment_ratio_min": 10,
+      "required_comment_ratio_max": 20
+    },
+    "enforcement_rules": {
+      "block_merge_on_lint_failure": true,
+      "block_merge_on_test_failure": true,
+      "block_merge_on_coverage_decrease": true,
+      "auto_format_on_commit": false,
+      "require_review_on_quality_regression": true,
+      "create_issues_for_technical_debt": true
+    },
+    "analysis_tools": {
+      "eslint": {
+        "config_file": ".eslintrc.json",
+        "extensions": ["ts", "html"],
+        "max_warnings": 0
+      },
+      "prettier": {
+        "config_file": ".prettierrc.json",
+        "check_mode": true,
+        "extensions": ["ts", "html", "css", "scss", "json"]
+      },
+      "typescript": {
+        "config_file": "tsconfig.json",
+        "strict_mode": true,
+        "no_implicit_any": true,
+        "strict_null_checks": true
+      },
+      "sonarqube": {
+        "enabled": false,
+        "quality_gate": "production"
+      }
+    },
+    "reporting": {
+      "generate_pr_comments": true,
+      "generate_github_check_runs": true,
+      "generate_code_quality_badge": true,
+      "notification_channels": ["pull_request_comment", "github_check"],
+      "detailed_violation_reports": true,
+      "trend_analysis_enabled": true,
+      "compare_against_baseline": true
+    },
+    "architectural_validations": {
+      "required_service_usage": {
+        "LoggerService": {
+          "required_for": ["all_services", "all_components"],
+          "forbidden_alternative": "console.log"
+        },
+        "ErrorHandlerService": {
+          "required_for": ["error_handling"],
+          "forbidden_alternative": "try-catch_without_handler"
+        },
+        "ValidationService": {
+          "required_for": ["user_input", "api_responses"],
+          "methods": ["sanitizeHtml", "sanitizeString", "sanitizeUrl", "sanitizeFilename"]
+        },
+        "PerformanceMonitorService": {
+          "required_for": ["async_operations", "performance_critical_paths"],
+          "methods": ["measureAsync", "measureSync"]
+        }
+      },
+      "component_patterns": {
+        "require_standalone": true,
+        "require_on_push": true,
+        "require_signals_for_state": true,
+        "forbid_two_way_binding": false,
+        "require_explicit_change_detection": true
+      }
+    },
+    "execution_context": {
+      "runs_on": "ubuntu-latest",
+      "node_version": "20",
+      "timeout_minutes": 15,
+      "cache_dependencies": true,
+      "npm_install_command": "npm ci --legacy-peer-deps"
+    }
+  }
+}

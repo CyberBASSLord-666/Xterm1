@@ -142,10 +142,7 @@ export class ServiceState<T> {
 /**
  * Create a typed injection token with default value
  */
-export function createInjectionToken<T>(
-  description: string,
-  factory?: () => T
-): InjectionToken<T> {
+export function createInjectionToken<T>(description: string, factory?: () => T): InjectionToken<T> {
   return new InjectionToken<T>(description, {
     providedIn: 'root',
     factory: factory as () => T,
@@ -180,7 +177,7 @@ export class LazyServiceLoader<T> {
       // Wait for loading to complete with maximum retry limit
       const maxRetries = 100; // 5 seconds max (50ms * 100)
       let retries = 0;
-      
+
       await new Promise<void>((resolve, reject) => {
         const checkLoading = (): void => {
           if (!this.loading) {

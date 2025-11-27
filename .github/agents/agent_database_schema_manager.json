@@ -1,0 +1,305 @@
+{
+  "agent_name": "database_schema_manager",
+  "role": "IndexedDB Schema Design, Migration Management, Data Integrity, and Storage Optimization Specialist",
+  "responsibilities": [
+    "Design and maintain IndexedDB schema architecture defining object stores for wallpapers, collections, preferences, cache with optimal index strategies (compound indexes for frequently queried combinations, unique constraints for IDs), versioning schema for backward compatibility, and data relationship modeling",
+    "Execute automated database migration workflows detecting schema version mismatches, generating migration scripts for schema changes (adding object stores, creating/dropping indexes, restructuring data), validating migration success through data integrity checks, and implementing rollback procedures for failed migrations",
+    "Monitor database performance and storage utilization tracking query execution times, identifying missing indexes through slow query analysis, measuring database size growth trends, detecting quota exceeded errors, and recommending optimization strategies (data pruning, index consolidation)",
+    "Implement data integrity validation ensuring referential integrity between related stores (wallpaper references in collections exist), validating data types and constraints, detecting orphaned records, preventing duplicate entries, and maintaining consistency during concurrent operations",
+    "Execute automated backup and recovery procedures implementing periodic IndexedDB export to JSON format, validating backup completeness and data integrity, testing restore procedures, managing backup retention policies, and providing point-in-time recovery capabilities",
+    "Optimize storage efficiency through compression strategies for large binary data (wallpaper images), implementing lazy loading for thumbnails, purging expired cache entries, archiving old data, and monitoring IndexedDB quota usage across browsers with automatic cleanup triggers",
+    "Validate cross-browser compatibility testing IndexedDB implementation across Chrome, Firefox, Safari, Edge with varying storage limits, ensuring consistent behavior for transaction isolation levels, handling browser-specific quota management policies, and providing fallback strategies",
+    "Implement data synchronization patterns coordinating IndexedDB with service worker cache, handling offline-first data persistence, managing conflict resolution for concurrent writes, implementing optimistic UI updates, and ensuring eventual consistency with external APIs",
+    "Generate database documentation including ER diagrams for object store relationships, index usage documentation, migration history tracking, storage quota guidelines, and API usage examples for developers with comprehensive troubleshooting guides",
+    "Coordinate database versioning strategy ensuring backward compatibility with older schema versions deployed in user browsers, managing deprecation timelines for old stores, communicating breaking changes to users, and providing seamless upgrade experiences"
+  ],
+  "configuration": {
+    "trigger_events": [
+      "pull_request.opened.paths.src/services/database/**",
+      "pull_request.opened.paths.src/services/storage/**",
+      "push.branches.main.paths.src/services/database/**",
+      "schedule.cron.0_0_*_*_0",
+      "workflow_dispatch"
+    ],
+    "indexeddb_schema": {
+      "database_name": "polliwall-db",
+      "current_version": 3,
+      "object_stores": {
+        "wallpapers": {
+          "key_path": "id",
+          "auto_increment": false,
+          "indexes": [
+            {
+              "name": "by_created_at",
+              "key_path": "createdAt",
+              "unique": false
+            },
+            {
+              "name": "by_prompt",
+              "key_path": "prompt",
+              "unique": false
+            },
+            {
+              "name": "by_style",
+              "key_path": "style",
+              "unique": false
+            },
+            {
+              "name": "by_created_prompt",
+              "key_path": ["createdAt", "prompt"],
+              "unique": false,
+              "compound": true
+            }
+          ],
+          "validation": {
+            "required_fields": ["id", "url", "prompt", "createdAt"],
+            "field_types": {
+              "id": "string",
+              "url": "string",
+              "prompt": "string",
+              "createdAt": "number",
+              "style": "string",
+              "seed": "number"
+            }
+          }
+        },
+        "collections": {
+          "key_path": "id",
+          "auto_increment": false,
+          "indexes": [
+            {
+              "name": "by_name",
+              "key_path": "name",
+              "unique": true
+            },
+            {
+              "name": "by_created_at",
+              "key_path": "createdAt",
+              "unique": false
+            }
+          ],
+          "validation": {
+            "required_fields": ["id", "name", "wallpaperIds", "createdAt"],
+            "field_types": {
+              "id": "string",
+              "name": "string",
+              "wallpaperIds": "array",
+              "createdAt": "number"
+            }
+          }
+        },
+        "preferences": {
+          "key_path": "key",
+          "auto_increment": false,
+          "indexes": [],
+          "validation": {
+            "required_fields": ["key", "value", "updatedAt"],
+            "field_types": {
+              "key": "string",
+              "value": "any",
+              "updatedAt": "number"
+            }
+          }
+        },
+        "cache": {
+          "key_path": "url",
+          "auto_increment": false,
+          "indexes": [
+            {
+              "name": "by_expires_at",
+              "key_path": "expiresAt",
+              "unique": false
+            }
+          ],
+          "validation": {
+            "required_fields": ["url", "data", "cachedAt", "expiresAt"],
+            "field_types": {
+              "url": "string",
+              "data": "any",
+              "cachedAt": "number",
+              "expiresAt": "number"
+            }
+          }
+        }
+      }
+    },
+    "migration_management": {
+      "enabled": true,
+      "migration_strategy": "versioned",
+      "migration_scripts": {
+        "1_to_2": {
+          "description": "Add collections object store",
+          "operations": [
+            "create_object_store_collections",
+            "create_index_collections_by_name"
+          ],
+          "rollback": "drop_object_store_collections"
+        },
+        "2_to_3": {
+          "description": "Add compound index for wallpapers",
+          "operations": [
+            "create_index_wallpapers_by_created_prompt"
+          ],
+          "rollback": "drop_index_wallpapers_by_created_prompt"
+        }
+      },
+      "validation": {
+        "pre_migration_backup": true,
+        "post_migration_validation": true,
+        "rollback_on_error": true,
+        "user_notification": true
+      }
+    },
+    "performance_monitoring": {
+      "enabled": true,
+      "metrics": {
+        "query_execution_time": {
+          "track": true,
+          "slow_query_threshold_ms": 100,
+          "alert_on_slow_queries": true
+        },
+        "index_usage": {
+          "track": true,
+          "identify_unused_indexes": true,
+          "recommend_missing_indexes": true
+        },
+        "database_size": {
+          "track": true,
+          "alert_threshold_mb": 100,
+          "growth_rate_monitoring": true
+        },
+        "transaction_duration": {
+          "track": true,
+          "long_transaction_threshold_ms": 500
+        }
+      }
+    },
+    "data_integrity": {
+      "validation_rules": {
+        "referential_integrity": {
+          "enabled": true,
+          "checks": [
+            {
+              "rule": "collection_wallpaper_ids_exist",
+              "description": "All wallpaper IDs in collections must exist in wallpapers store"
+            }
+          ]
+        },
+        "data_type_validation": {
+          "enabled": true,
+          "strict_mode": true
+        },
+        "constraint_validation": {
+          "enabled": true,
+          "unique_constraints": true,
+          "required_field_constraints": true
+        }
+      },
+      "orphan_detection": {
+        "enabled": true,
+        "cleanup_strategy": "manual_review",
+        "notification_on_orphans": true
+      }
+    },
+    "backup_recovery": {
+      "enabled": true,
+      "backup_frequency": "daily",
+      "backup_format": "json",
+      "backup_location": "user_downloads",
+      "retention_policy": {
+        "max_backups": 7,
+        "auto_delete_old": true
+      },
+      "restore_validation": {
+        "validate_schema_compatibility": true,
+        "validate_data_integrity": true,
+        "user_confirmation_required": true
+      }
+    },
+    "storage_optimization": {
+      "compression": {
+        "enabled": false,
+        "compress_large_blobs": false,
+        "compression_algorithm": "gzip"
+      },
+      "lazy_loading": {
+        "enabled": true,
+        "load_thumbnails_on_demand": true,
+        "virtualize_large_lists": true
+      },
+      "cache_expiration": {
+        "enabled": true,
+        "default_ttl_hours": 24,
+        "auto_cleanup_expired": true,
+        "cleanup_frequency_hours": 6
+      },
+      "data_archival": {
+        "enabled": true,
+        "archive_after_days": 90,
+        "archive_location": "external_storage"
+      },
+      "quota_management": {
+        "monitor_usage": true,
+        "warn_threshold_percent": 80,
+        "cleanup_threshold_percent": 90,
+        "cleanup_strategy": "lru"
+      }
+    },
+    "browser_compatibility": {
+      "tested_browsers": ["chrome", "firefox", "safari", "edge"],
+      "storage_limits": {
+        "chrome": "unlimited_with_prompt",
+        "firefox": "2gb_with_prompt",
+        "safari": "1gb_with_prompt",
+        "edge": "unlimited_with_prompt"
+      },
+      "fallback_strategy": {
+        "enabled": true,
+        "fallback_to_localstorage": false,
+        "fallback_to_memory": true
+      }
+    },
+    "synchronization": {
+      "service_worker_coordination": {
+        "enabled": true,
+        "sync_strategy": "background_sync",
+        "conflict_resolution": "last_write_wins"
+      },
+      "offline_support": {
+        "enabled": true,
+        "queue_offline_writes": true,
+        "sync_on_reconnect": true
+      },
+      "optimistic_updates": {
+        "enabled": true,
+        "rollback_on_failure": true
+      }
+    },
+    "documentation": {
+      "generate_er_diagrams": true,
+      "generate_api_docs": true,
+      "generate_migration_history": true,
+      "generate_troubleshooting_guide": true
+    },
+    "versioning_strategy": {
+      "backward_compatibility": {
+        "maintain_for_versions": 3,
+        "deprecation_notice_period_days": 90
+      },
+      "upgrade_experience": {
+        "seamless_upgrade": true,
+        "user_notification": false,
+        "background_migration": true
+      }
+    },
+    "execution_context": {
+      "runs_on": "ubuntu-latest",
+      "node_version": "20",
+      "timeout_minutes": 15,
+      "permissions": {
+        "contents": "read",
+        "pull_requests": "write"
+      }
+    }
+  }
+}

@@ -53,9 +53,7 @@ export function db(): Promise<IDBPDatabase<WallSchema>> {
         if (oldVersion < 2) {
           const imageStore = transaction.objectStore('images');
           imageStore.createIndex('by_collectionId', 'collectionId');
-          database
-            .createObjectStore('collections', { keyPath: 'id' })
-            .createIndex('by_name', 'name');
+          database.createObjectStore('collections', { keyPath: 'id' }).createIndex('by_name', 'name');
         }
       },
     });

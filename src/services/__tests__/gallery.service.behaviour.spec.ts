@@ -36,7 +36,7 @@ const createDbMock = () => ({
       return Array.from(images.values());
     }
     if (store === 'images' && index === 'by_collectionId') {
-      return Array.from(images.values()).filter(item => item.collectionId === value);
+      return Array.from(images.values()).filter((item) => item.collectionId === value);
     }
     return [];
   }),
@@ -108,11 +108,7 @@ describe('GalleryService integration behaviour', () => {
   });
 
   it('sorts images by createdAt in descending order', async () => {
-    const timestamps = [
-      '2024-07-01T10:00:00.000Z',
-      '2024-07-01T11:00:00.000Z',
-      '2024-07-01T12:00:00.000Z',
-    ];
+    const timestamps = ['2024-07-01T10:00:00.000Z', '2024-07-01T11:00:00.000Z', '2024-07-01T12:00:00.000Z'];
 
     for (const [index, createdAt] of timestamps.entries()) {
       await service.add({
@@ -132,7 +128,7 @@ describe('GalleryService integration behaviour', () => {
     }
 
     const list = await service.list();
-    expect(list.map(item => item.createdAt)).toEqual([...timestamps].reverse());
+    expect(list.map((item) => item.createdAt)).toEqual([...timestamps].reverse());
   });
 
   it('toggles favorites and updates persistence', async () => {
