@@ -1,243 +1,319 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>PolliWall - AI Wallpaper Studio</title>
-  <meta name="description" content="Create stunning AI-generated wallpapers with PolliWall. Professional-grade image generation powered by AI.">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
-  <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#f9fafb">
-  
-  <!-- Security: Content Security Policy -->
-  <!-- Note: CSP is configured via HTTP headers for production (see _headers, vercel.json, nginx.conf.example) -->
-  <!-- This meta tag serves as a fallback and for local development -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://aistudiocdn.com https://next.esm.sh https://esm.sh; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://image.pollinations.ai; connect-src 'self' https://image.pollinations.ai https://text.pollinations.ai https://generativelanguage.googleapis.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Inter', 'sans-serif'],
-            mono: ['"Roboto Mono"', 'monospace']
+  <head>
+    <meta charset="utf-8" />
+    <title>PolliWall - AI Wallpaper Studio</title>
+    <meta
+      name="description"
+      content="Create stunning AI-generated wallpapers with PolliWall. Professional-grade image generation powered by AI."
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="alternate icon" type="image/x-icon" href="favicon.ico" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <meta name="theme-color" content="#f9fafb" />
+
+    <!-- Security: Content Security Policy -->
+    <!-- Note: CSP is configured via HTTP headers for production (see _headers, vercel.json, nginx.conf.example) -->
+    <!-- This meta tag serves as a fallback and for local development -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://aistudiocdn.com https://next.esm.sh https://esm.sh; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://image.pollinations.ai; connect-src 'self' https://image.pollinations.ai https://text.pollinations.ai https://generativelanguage.googleapis.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              mono: ['"Roboto Mono"', 'monospace'],
+            },
+            colors: {
+              'primary-bg': 'var(--bg-primary)',
+              'secondary-bg': 'var(--bg-secondary)',
+              'primary-border': 'var(--border-primary)',
+              'secondary-border': 'var(--border-secondary)',
+              'primary-text': 'var(--text-primary)',
+              'secondary-text': 'var(--text-secondary)',
+              accent: 'var(--accent-primary)',
+              'accent-secondary': 'var(--accent-secondary)',
+              danger: 'var(--danger)',
+              success: 'var(--success)',
+            },
           },
-          colors: {
-            'primary-bg': 'var(--bg-primary)',
-            'secondary-bg': 'var(--bg-secondary)',
-            'primary-border': 'var(--border-primary)',
-            'secondary-border': 'var(--border-secondary)',
-            'primary-text': 'var(--text-primary)',
-            'secondary-text': 'var(--text-secondary)',
-            'accent': 'var(--accent-primary)',
-            'accent-secondary': 'var(--accent-secondary)',
-            'danger': 'var(--danger)',
-            'success': 'var(--success)',
-          }
+        },
+      };
+    </script>
+    <style>
+      /* Light theme (default) */
+      :root {
+        --bg-primary: #f9fafb;
+        --bg-secondary: #e5e7eb;
+        --border-primary: rgba(0, 0, 0, 0.1);
+        --border-secondary: rgba(0, 0, 0, 0.05);
+        --text-primary: #111827;
+        --text-secondary: #374151;
+        --accent-primary: #2563eb; /* blue-600 */
+        --accent-secondary: #1d4ed8; /* blue-700 */
+        --danger: #b91c1c; /* red-700 */
+        --success: #15803d; /* green-700 */
+      }
+
+      /* Dark theme overrides */
+      html.dark {
+        --bg-primary: #0a0a0a;
+        --bg-secondary: #111111;
+        --border-primary: rgba(255, 255, 255, 0.1);
+        --border-secondary: rgba(255, 255, 255, 0.05);
+        --text-primary: #e5e7eb;
+        --text-secondary: #9ca3af;
+        --accent-primary: #dc2626; /* red-600 */
+        --accent-secondary: #e11d48; /* rose-600 */
+        --danger: #be123c; /* rose-700 */
+        --success: #16a34a;
+      }
+
+      /* Base Animations */
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
         }
       }
-    }
-  </script>
-<style>
-  /* Light theme (default) */
-  :root {
-    --bg-primary: #f9fafb;
-    --bg-secondary: #e5e7eb;
-    --border-primary: rgba(0, 0, 0, 0.1);
-    --border-secondary: rgba(0, 0, 0, 0.05);
-    --text-primary: #111827;
-    --text-secondary: #374151;
-    --accent-primary: #2563eb; /* blue-600 */
-    --accent-secondary: #1d4ed8; /* blue-700 */
-    --danger: #b91c1c; /* red-700 */
-    --success: #15803d; /* green-700 */
-  }
+      @keyframes fade-in {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      @keyframes fade-in-up {
+        from {
+          opacity: 0;
+          transform: translateY(1rem);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      @keyframes slide-in-right {
+        from {
+          transform: translateX(100%);
+          opacity: 0.8;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+      @keyframes slide-down {
+        from {
+          max-height: 0;
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          max-height: 500px;
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      @keyframes pulse-core {
+        0%,
+        100% {
+          transform: scale(1);
+          filter: drop-shadow(0 0 8px var(--accent-primary));
+          opacity: 0.9;
+        }
+        50% {
+          transform: scale(1.1);
+          filter: drop-shadow(0 0 18px var(--accent-primary));
+          opacity: 1;
+        }
+      }
+      @keyframes particle-flicker {
+        0%,
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.5;
+          transform: scale(0.8);
+        }
+      }
+      @keyframes flicker {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.7;
+        }
+      }
 
-  /* Dark theme overrides */
-  html.dark {
-    --bg-primary: #0a0a0a;
-    --bg-secondary: #111111;
-    --border-primary: rgba(255, 255, 255, 0.1);
-    --border-secondary: rgba(255, 255, 255, 0.05);
-    --text-primary: #e5e7eb;
-    --text-secondary: #9ca3af;
-    --accent-primary: #dc2626; /* red-600 */
-    --accent-secondary: #e11d48; /* rose-600 */
-    --danger: #be123c; /* rose-700 */
-    --success: #16a34a;
-  }
+      .animate-fade-in {
+        animation: fade-in 0.3s ease-out forwards;
+      }
+      .animate-fade-in-up {
+        animation: fade-in-up 0.5s cubic-bezier(0.215, 0.61, 0.355, 1) forwards;
+      }
+      .animate-slide-in-right {
+        animation: slide-in-right 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+      }
+      .animate-slide-down {
+        overflow: hidden;
+        animation: slide-down 0.5s ease-in-out forwards;
+      }
+      .animate-flicker {
+        animation: flicker 1.5s infinite;
+      }
 
-  /* Base Animations */
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-  @keyframes fade-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-  @keyframes fade-in-up {
-    from { opacity: 0; transform: translateY(1rem); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes slide-in-right {
-    from { transform: translateX(100%); opacity: 0.8; }
-    to { transform: translateX(0); opacity: 1; }
-  }
-  @keyframes slide-down {
-      from { max-height: 0; opacity: 0; transform: translateY(-10px); }
-      to { max-height: 500px; opacity: 1; transform: translateY(0); }
-  }
-  @keyframes pulse-core {
-    0%, 100% { transform: scale(1); filter: drop-shadow(0 0 8px var(--accent-primary)); opacity: 0.9; }
-    50% { transform: scale(1.1); filter: drop-shadow(0 0 18px var(--accent-primary)); opacity: 1; }
-  }
-  @keyframes particle-flicker {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.5; transform: scale(0.8); }
-  }
-  @keyframes flicker {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
-  }
-  
-  .animate-fade-in {
-    animation: fade-in 0.3s ease-out forwards;
-  }
-  .animate-fade-in-up {
-    animation: fade-in-up 0.5s cubic-bezier(0.215, 0.610, 0.355, 1.000) forwards;
-  }
-  .animate-slide-in-right {
-    animation: slide-in-right 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-  }
-  .animate-slide-down {
-    overflow: hidden;
-    animation: slide-down 0.5s ease-in-out forwards;
-  }
-  .animate-flicker {
-    animation: flicker 1.5s infinite;
-  }
-  
-  /* Sinister Loader Animation */
-  .sinister-loader { width: 8rem; height: 8rem; }
-  .sinister-loader svg {
-    transform-origin: 50% 50%;
-    animation: spin 60s linear infinite reverse;
-  }
-  .central-orb {
-    fill: var(--accent-primary);
-    filter: drop-shadow(0 0 10px var(--accent-primary));
-    transform-origin: 50% 50%;
-    animation: pulse-core 2.5s infinite ease-in-out;
-  }
-  .orbit {
-    transform-origin: 50% 50%;
-    animation: spin 8s linear infinite;
-  }
-  .orbit-path {
-    stroke: var(--accent-secondary);
-    stroke-width: 0.5px;
-    stroke-dasharray: 2 4;
-    opacity: 0.6;
-  }
-  .particle {
-    fill: var(--accent-primary);
-    filter: drop-shadow(0 0 5px var(--accent-primary));
-    animation: particle-flicker 2s infinite ease-in-out;
-  }
-  .particle-2 { animation-delay: -1s; fill: var(--accent-secondary); }
+      /* Sinister Loader Animation */
+      .sinister-loader {
+        width: 8rem;
+        height: 8rem;
+      }
+      .sinister-loader svg {
+        transform-origin: 50% 50%;
+        animation: spin 60s linear infinite reverse;
+      }
+      .central-orb {
+        fill: var(--accent-primary);
+        filter: drop-shadow(0 0 10px var(--accent-primary));
+        transform-origin: 50% 50%;
+        animation: pulse-core 2.5s infinite ease-in-out;
+      }
+      .orbit {
+        transform-origin: 50% 50%;
+        animation: spin 8s linear infinite;
+      }
+      .orbit-path {
+        stroke: var(--accent-secondary);
+        stroke-width: 0.5px;
+        stroke-dasharray: 2 4;
+        opacity: 0.6;
+      }
+      .particle {
+        fill: var(--accent-primary);
+        filter: drop-shadow(0 0 5px var(--accent-primary));
+        animation: particle-flicker 2s infinite ease-in-out;
+      }
+      .particle-2 {
+        animation-delay: -1s;
+        fill: var(--accent-secondary);
+      }
 
-  /* Add a subtle background pattern */
-  body::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.05) 1px, transparent 0);
-    background-size: 2rem 2rem;
-    z-index: -1;
-    opacity: 0.5;
-  }
-  html.dark body::before {
-    background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.05) 1px, transparent 0);
-  }
-  html:not(.dark) body::before {
-    background-image: radial-gradient(circle at 1px 1px, rgba(0,0,0,0.05) 1px, transparent 0);
-  }
+      /* Add a subtle background pattern */
+      body::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.05) 1px, transparent 0);
+        background-size: 2rem 2rem;
+        z-index: -1;
+        opacity: 0.5;
+      }
+      html.dark body::before {
+        background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.05) 1px, transparent 0);
+      }
+      html:not(.dark) body::before {
+        background-image: radial-gradient(circle at 1px 1px, rgba(0, 0, 0, 0.05) 1px, transparent 0);
+      }
 
-  /* General Interactive Element Polish */
-  button[class*="bg-accent"], button[class*="bg-danger"], a.button {
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  }
+      /* General Interactive Element Polish */
+      button[class*='bg-accent'],
+      button[class*='bg-danger'],
+      a.button {
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      }
 
-  button[class*="bg-accent"]:not(:disabled):hover,
-  button[class*="bg-danger"]:not(:disabled):hover,
-  a.button:not(:disabled):hover {
-      transform: translateY(-2px) scale(1.02);
-      filter: brightness(1.1);
-      box-shadow: 0 4px 6px -1px rgba(0,0,0, .1), 0 2px 4px -2px rgba(0,0,0, .1);
-  }
+      button[class*='bg-accent']:not(:disabled):hover,
+      button[class*='bg-danger']:not(:disabled):hover,
+      a.button:not(:disabled):hover {
+        transform: translateY(-2px) scale(1.02);
+        filter: brightness(1.1);
+        box-shadow:
+          0 4px 6px -1px rgba(0, 0, 0, 0.1),
+          0 2px 4px -2px rgba(0, 0, 0, 0.1);
+      }
 
-  button[class*="bg-accent"]:not(:disabled):active,
-  button[class*="bg-danger"]:not(:disabled):active,
-  a.button:not(:disabled):active {
-      transform: translateY(-1px) scale(1.01);
-      filter: brightness(1.05);
-  }
+      button[class*='bg-accent']:not(:disabled):active,
+      button[class*='bg-danger']:not(:disabled):active,
+      a.button:not(:disabled):active {
+        transform: translateY(-1px) scale(1.01);
+        filter: brightness(1.05);
+      }
 
-  /* Subtle hover for secondary/icon buttons */
-  button:not([class*="bg-accent"]):not([class*="bg-danger"]):not(:disabled),
-  a:not([class*="bg-accent"]):not([class*="bg-danger"]):not(.button) {
-      transition: all 0.2s ease-in-out;
-  }
-  button:not([class*="bg-accent"]):not([class*="bg-danger"]):not(:disabled):hover,
-  a:not([class*="bg-accent"]):not([class*="bg-danger"]):not(.button):hover {
-      filter: brightness(1.2);
-      transform: scale(1.05);
-  }
+      /* Subtle hover for secondary/icon buttons */
+      button:not([class*='bg-accent']):not([class*='bg-danger']):not(:disabled),
+      a:not([class*='bg-accent']):not([class*='bg-danger']):not(.button) {
+        transition: all 0.2s ease-in-out;
+      }
+      button:not([class*='bg-accent']):not([class*='bg-danger']):not(:disabled):hover,
+      a:not([class*='bg-accent']):not([class*='bg-danger']):not(.button):hover {
+        filter: brightness(1.2);
+        transform: scale(1.05);
+      }
 
-  input[type="text"], input[type="url"], input[type="number"], textarea, select {
-      transition: box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out;
-  }
+      input[type='text'],
+      input[type='url'],
+      input[type='number'],
+      textarea,
+      select {
+        transition:
+          box-shadow 0.2s ease-in-out,
+          border-color 0.2s ease-in-out;
+      }
 
-  /* Override tailwind focus to make it more prominent */
-  input:focus, textarea:focus, select:focus {
-      --tw-ring-color: var(--accent-secondary);
-      --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
-      --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(3px + var(--tw-ring-offset-width)) var(--tw-ring-color);
-      box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000) !important;
-      border-color: var(--accent-primary) !important;
-  }
-</style>
-<!-- Preconnect to external font resources for performance -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700&family=Roboto+Mono:wght@700&display=swap" rel="stylesheet" crossorigin>
-<script type="importmap">
-{
-  "imports": {
-    "rxjs": "https://aistudiocdn.com/rxjs@^7.8.2?conditions=es2015",
-    "rxjs/operators": "https://aistudiocdn.com/rxjs@^7.8.2/operators?conditions=es2015",
-    "rxjs/ajax": "https://aistudiocdn.com/rxjs@^7.8.2/ajax?conditions=es2015",
-    "rxjs/webSocket": "https://aistudiocdn.com/rxjs@^7.8.2/webSocket?conditions=es2015",
-    "rxjs/testing": "https://aistudiocdn.com/rxjs@^7.8.2/testing?conditions=es2015",
-    "rxjs/fetch": "https://aistudiocdn.com/rxjs@^7.8.2/fetch?conditions=es2015",
-    "@angular/compiler": "https://next.esm.sh/@angular/compiler@^20.3.1?external=rxjs",
-    "@angular/platform-browser": "https://next.esm.sh/@angular/platform-browser@^20.3.1?external=rxjs",
-    "@angular/router": "https://next.esm.sh/@angular/router@^20.3.1?external=rxjs",
-    "@angular/core": "https://next.esm.sh/@angular/core@^20.3.1?external=rxjs",
-    "@angular/forms": "https://next.esm.sh/@angular/forms@^20.3.1?external=rxjs",
-    "@angular/service-worker": "https://next.esm.sh/@angular/service-worker@^20.3.1?external=rxjs",
-    "idb": "https://next.esm.sh/idb@^8.0.3?external=rxjs",
-    "@angular/core/rxjs-interop": "https://next.esm.sh/@angular/core@^20.3.1/rxjs-interop?external=rxjs",
-    "jszip": "https://next.esm.sh/jszip@^3.10.1?external=rxjs",
-    "@google/genai": "https://esm.sh/@google/genai"
-  }
-}
-</script>
-</head>
-<body class="bg-primary-bg text-primary-text font-sans antialiased font-medium transition-colors duration-300">
-  <app-root></app-root>
-</body>
+      /* Override tailwind focus to make it more prominent */
+      input:focus,
+      textarea:focus,
+      select:focus {
+        --tw-ring-color: var(--accent-secondary);
+        --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+        --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(3px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+        box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000) !important;
+        border-color: var(--accent-primary) !important;
+      }
+    </style>
+    <!-- Preconnect to external font resources for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700&family=Roboto+Mono:wght@700&display=swap"
+      rel="stylesheet"
+      crossorigin
+    />
+    <script type="importmap">
+      {
+        "imports": {
+          "rxjs": "https://aistudiocdn.com/rxjs@^7.8.2?conditions=es2015",
+          "rxjs/operators": "https://aistudiocdn.com/rxjs@^7.8.2/operators?conditions=es2015",
+          "rxjs/ajax": "https://aistudiocdn.com/rxjs@^7.8.2/ajax?conditions=es2015",
+          "rxjs/webSocket": "https://aistudiocdn.com/rxjs@^7.8.2/webSocket?conditions=es2015",
+          "rxjs/testing": "https://aistudiocdn.com/rxjs@^7.8.2/testing?conditions=es2015",
+          "rxjs/fetch": "https://aistudiocdn.com/rxjs@^7.8.2/fetch?conditions=es2015",
+          "@angular/compiler": "https://next.esm.sh/@angular/compiler@^20.3.1?external=rxjs",
+          "@angular/platform-browser": "https://next.esm.sh/@angular/platform-browser@^20.3.1?external=rxjs",
+          "@angular/router": "https://next.esm.sh/@angular/router@^20.3.1?external=rxjs",
+          "@angular/core": "https://next.esm.sh/@angular/core@^20.3.1?external=rxjs",
+          "@angular/forms": "https://next.esm.sh/@angular/forms@^20.3.1?external=rxjs",
+          "@angular/service-worker": "https://next.esm.sh/@angular/service-worker@^20.3.1?external=rxjs",
+          "idb": "https://next.esm.sh/idb@^8.0.3?external=rxjs",
+          "@angular/core/rxjs-interop": "https://next.esm.sh/@angular/core@^20.3.1/rxjs-interop?external=rxjs",
+          "jszip": "https://next.esm.sh/jszip@^3.10.1?external=rxjs",
+          "@google/genai": "https://esm.sh/@google/genai"
+        }
+      }
+    </script>
+  </head>
+  <body class="bg-primary-bg text-primary-text font-sans antialiased font-medium transition-colors duration-300">
+    <app-root></app-root>
+  </body>
 </html>

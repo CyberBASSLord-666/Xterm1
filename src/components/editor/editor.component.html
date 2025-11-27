@@ -8,12 +8,7 @@
             routerLink="/gallery"
             class="flex items-center gap-2 text-sm text-secondary-text hover:text-primary-text transition-colors mb-4"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-5 w-5"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
               <path
                 fill-rule="evenodd"
                 d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
@@ -23,13 +18,7 @@
             Back to Gallery
           </a>
           <div class="bg-secondary-bg/50 p-2 rounded-lg border border-primary-border">
-            <img
-              [src]="itemUrl()"
-              alt="original"
-              class="w-full rounded-md"
-              width="500"
-              height="888"
-            />
+            <img [src]="itemUrl()" alt="original" class="w-full rounded-md" width="500" height="888" />
           </div>
         </div>
       </section>
@@ -43,10 +32,9 @@
               class="mt-4 p-4 text-sm text-secondary-text space-y-2 bg-secondary-bg/50 rounded-lg border border-primary-border"
             >
               <p>
-                <strong class="font-mono tracking-wide">PROMPT:</strong><br /><span
-                  class="text-primary-text"
-                  >{{ it.prompt }}</span
-                >
+                <strong class="font-mono tracking-wide">PROMPT:</strong><br /><span class="text-primary-text">{{
+                  it.prompt
+                }}</span>
               </p>
               <div class="flex gap-4 pt-2 font-mono tracking-wide">
                 <p>
@@ -87,12 +75,7 @@
                 class="flex flex-col items-center justify-center p-2 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors h-20"
                 title="Download Image"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-6 w-6 mb-1"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-1" viewBox="0 0 20 20" fill="currentColor">
                   <path
                     fill-rule="evenodd"
                     d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
@@ -106,12 +89,7 @@
                 class="flex flex-col items-center justify-center p-2 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors h-20"
                 title="Share Image"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-6 w-6 mb-1"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-1" viewBox="0 0 20 20" fill="currentColor">
                   <path
                     d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.875-5.95l-4.94-2.47A3.001 3.001 0 0015 8z"
                   />
@@ -137,12 +115,7 @@
                     />
                   </svg>
                 } @else {
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="h-6 w-6 mb-1"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-1" viewBox="0 0 20 20" fill="currentColor">
                     <path
                       d="M10 2a6 6 0 00-6 6v3.586l-1.707 1.707A1 1 0 003 15v4a1 1 0 001 1h12a1 1 0 001-1v-4a1 1 0 00-.293-.707L16 11.586V8a6 6 0 00-6-6zM8 8a2 2 0 114 0v3a2 2 0 11-4 0V8z"
                     />
@@ -154,9 +127,7 @@
             <hr class="border-primary-border" />
             <div>
               <h3 class="text-lg font-bold text-white font-mono tracking-wider">Subtle Variant</h3>
-              <p class="text-sm text-secondary-text mt-1 mb-3">
-                Generate a slight variation, changing minor details.
-              </p>
+              <p class="text-sm text-secondary-text mt-1 mb-3">Generate a slight variation, changing minor details.</p>
               <button
                 (click)="makeVariant()"
                 [disabled]="working()"
@@ -169,14 +140,7 @@
                     fill="none"
                     viewBox="0 0 24 24"
                   >
-                    <circle
-                      class="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      stroke-width="4"
-                    ></circle>
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path
                       class="opacity-75"
                       fill="currentColor"
@@ -192,12 +156,8 @@
             <hr class="border-primary-border" />
             <div>
               <h3 class="text-lg font-bold text-white font-mono tracking-wider">Restyle</h3>
-              <p class="text-sm text-secondary-text mt-1 mb-3">
-                Apply a new style while preserving the composition.
-              </p>
-              <label for="restyle" class="block text-sm font-medium text-secondary-text mb-1"
-                >Style directive</label
-              >
+              <p class="text-sm text-secondary-text mt-1 mb-3">Apply a new style while preserving the composition.</p>
+              <label for="restyle" class="block text-sm font-medium text-secondary-text mb-1">Style directive</label>
               <input
                 id="restyle"
                 [value]="restyle()"
@@ -216,14 +176,7 @@
                     fill="none"
                     viewBox="0 0 24 24"
                   >
-                    <circle
-                      class="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      stroke-width="4"
-                    ></circle>
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path
                       class="opacity-75"
                       fill="currentColor"
@@ -245,10 +198,7 @@
               @if (lineage().parent; as parent) {
                 <div>
                   <h3 class="text-lg font-bold text-white mb-2 font-mono tracking-wider">Parent</h3>
-                  <a
-                    [routerLink]="['/edit', parent.id]"
-                    class="group block rounded-md overflow-hidden relative"
-                  >
+                  <a [routerLink]="['/edit', parent.id]" class="group block rounded-md overflow-hidden relative">
                     <img
                       [src]="lineageUrls().get(parent.id)!"
                       [alt]="parent.prompt"
@@ -266,9 +216,7 @@
               }
               @if (lineage().children.length > 0) {
                 <div>
-                  <h3 class="text-lg font-bold text-white mb-2 font-mono tracking-wider">
-                    Children
-                  </h3>
+                  <h3 class="text-lg font-bold text-white mb-2 font-mono tracking-wider">Children</h3>
                   <div class="grid grid-cols-2 gap-2">
                     @for (child of lineage().children; track child.id; let i = $index) {
                       <a

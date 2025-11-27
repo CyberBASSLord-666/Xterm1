@@ -1,0 +1,41 @@
+name: GPT – Update File Map
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: {}
+
+jobs:
+  generate-file-map:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Generate gpt/file-map.json
+        run: |
+          chmod +x scripts/generate-file-map.mjs || true
+          node scripts/generate-file-map.mjs
+
+      - name: Commit and push if changed
+        run: |
+          if git diff --quiet gpt/file-map.json; then
+            echo "No changes in gpt/file-map.json"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add gpt/file-map.json
+          git commit -m "chore(gpt): update file-map.json"
+          git push

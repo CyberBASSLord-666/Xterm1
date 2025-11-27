@@ -55,11 +55,7 @@ export class AppInitializerService {
           if (environment.production && bootstrapConfig?.failOnMissingGeminiKey === true) {
             throw new Error('Missing Gemini API key in production environment.');
           }
-          this.logger.warn(
-            'No Gemini API key found. AI features will be limited.',
-            undefined,
-            'AppInitializer'
-          );
+          this.logger.warn('No Gemini API key found. AI features will be limited.', undefined, 'AppInitializer');
         }
 
         // Initialize analytics if measurement ID is available
@@ -67,11 +63,7 @@ export class AppInitializerService {
         if (analyticsMeasurementId) {
           this.analytics.setEnabled(true);
           this.analytics.initialize(analyticsMeasurementId);
-          this.logger.info(
-            'Analytics initialized',
-            { measurementId: analyticsMeasurementId },
-            'AppInitializer'
-          );
+          this.logger.info('Analytics initialized', { measurementId: analyticsMeasurementId }, 'AppInitializer');
         } else {
           this.logger.debug('Analytics not configured', undefined, 'AppInitializer');
         }
@@ -115,11 +107,7 @@ export class AppInitializerService {
       }
       if (runtimeConfig.analyticsMeasurementId) {
         this.config.setAnalyticsMeasurementId(runtimeConfig.analyticsMeasurementId);
-        this.logger.debug(
-          'Analytics measurement ID loaded from runtime config',
-          undefined,
-          'AppInitializer'
-        );
+        this.logger.debug('Analytics measurement ID loaded from runtime config', undefined, 'AppInitializer');
       }
       return; // Runtime config takes precedence, skip other sources
     }
@@ -131,9 +119,7 @@ export class AppInitializerService {
       const analyticsIdMeta = bootstrapConfig.meta.analyticsMeasurementId;
 
       if (geminiKeyMeta) {
-        const geminiMeta = document.querySelector(
-          `meta[name="${geminiKeyMeta}"]`
-        ) as HTMLMetaElement;
+        const geminiMeta = document.querySelector(`meta[name="${geminiKeyMeta}"]`) as HTMLMetaElement;
         if (geminiMeta) {
           const content = geminiMeta.getAttribute('content');
           if (content) {
@@ -144,18 +130,12 @@ export class AppInitializerService {
       }
 
       if (analyticsIdMeta) {
-        const analyticsMeta = document.querySelector(
-          `meta[name="${analyticsIdMeta}"]`
-        ) as HTMLMetaElement;
+        const analyticsMeta = document.querySelector(`meta[name="${analyticsIdMeta}"]`) as HTMLMetaElement;
         if (analyticsMeta) {
           const content = analyticsMeta.getAttribute('content');
           if (content) {
             this.config.setAnalyticsMeasurementId(content);
-            this.logger.debug(
-              'Analytics measurement ID loaded from meta tag',
-              undefined,
-              'AppInitializer'
-            );
+            this.logger.debug('Analytics measurement ID loaded from meta tag', undefined, 'AppInitializer');
           }
         }
       }

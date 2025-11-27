@@ -2,7 +2,7 @@ import { Injectable, inject, SecurityContext } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { VALIDATION_RULES, ERROR_MESSAGES } from '../constants';
 // CJS/ESM interop shim for sanitize-html across build configs.
-import * as sanitizeHtmlLib from 'sanitize-html';
+import sanitizeHtml from 'sanitize-html';
 
 type SanitizeHtmlOptions = Record<string, unknown>;
 type SanitizeHtmlFn = (html: string, options: SanitizeHtmlOptions) => string;

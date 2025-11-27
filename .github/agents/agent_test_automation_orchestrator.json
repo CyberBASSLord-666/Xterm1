@@ -1,0 +1,175 @@
+{
+  "agent_name": "test_automation_orchestrator",
+  "role": "Comprehensive Test Execution, Coverage Analysis, and Quality Assurance Coordinator",
+  "responsibilities": [
+    "Execute complete Jest unit test suite on every pull request and commit, validating 100% test pass rate with minimum 80% line coverage, 75% branch coverage, and 80% function coverage as defined in jest.config.ts, generating detailed HTML and LCOV coverage reports",
+    "Orchestrate Playwright end-to-end test execution in headless mode across Chromium, Firefox, and WebKit browsers, validating critical user journeys including wallpaper generation, collection management, theme toggling, and accessibility compliance with axe-core integration",
+    "Perform comprehensive accessibility testing using Playwright's accessibility tree analysis and axe-core WCAG 2.1 AA validation, detecting violations in color contrast (4.5:1 minimum), keyboard navigation, ARIA attributes, and screen reader compatibility",
+    "Monitor test suite execution performance tracking test duration trends, identifying slow tests (> 5 seconds for unit tests, > 30 seconds for E2E tests), flaky tests (< 95% pass rate), and recommending optimization strategies",
+    "Generate mutation testing reports using Stryker or equivalent to validate test suite effectiveness by introducing code mutations and verifying that tests detect the changes, targeting minimum 80% mutation score",
+    "Validate test isolation ensuring no test dependencies, shared state, or execution order requirements by running tests in random order and parallel execution modes, detecting and reporting inter-test coupling",
+    "Execute visual regression testing for UI components comparing screenshot baselines against current implementation, detecting unintended visual changes with pixel-level and structural diff analysis across multiple viewports and themes",
+    "Perform integration testing for external API interactions with Pollinations AI and Google Gemini, using mock servers and contract testing to validate request/response schemas, error handling, and retry logic under various failure scenarios",
+    "Generate comprehensive test quality metrics including test-to-code ratio (maintain > 1.0), assertion density (average assertions per test), test complexity (cyclomatic complexity of test code), and coverage trends over time",
+    "Coordinate test data management including fixture generation, test database seeding for IndexedDB operations, and cleanup procedures ensuring reproducible test environments with isolated state"
+  ],
+  "configuration": {
+    "trigger_events": [
+      "pull_request.opened",
+      "pull_request.synchronize",
+      "push.branches.main",
+      "push.branches.develop",
+      "schedule.cron.0_*/6_*_*_*",
+      "workflow_dispatch"
+    ],
+    "test_frameworks": {
+      "jest": {
+        "enabled": true,
+        "config_file": "jest.config.ts",
+        "setup_file": "setup-jest.ts",
+        "coverage_enabled": true,
+        "coverage_reporters": ["html", "lcov", "text-summary", "json"],
+        "coverage_thresholds": {
+          "global": {
+            "lines": 80,
+            "branches": 75,
+            "functions": 80,
+            "statements": 80
+          },
+          "critical_paths": {
+            "lines": 100,
+            "branches": 100,
+            "functions": 100,
+            "statements": 100
+          }
+        },
+        "test_environment": "jsdom",
+        "max_workers": "50%",
+        "timeout_milliseconds": 10000,
+        "verbose": true,
+        "bail": false,
+        "collect_coverage_from": ["src/**/*.ts", "!src/**/*.spec.ts", "!src/**/__tests__/**"]
+      },
+      "playwright": {
+        "enabled": true,
+        "config_file": "playwright.config.ts",
+        "test_directory": "playwright/e2e",
+        "browsers": ["chromium", "firefox", "webkit"],
+        "headless": true,
+        "base_url": "http://localhost:4200",
+        "workers": 4,
+        "timeout_milliseconds": 30000,
+        "retry_count": 2,
+        "screenshot_on_failure": true,
+        "video_on_failure": true,
+        "trace_on_failure": true
+      }
+    },
+    "test_execution_strategies": {
+      "unit_tests": {
+        "run_on_every_commit": true,
+        "parallel_execution": true,
+        "watch_mode_for_local_dev": false,
+        "fail_fast": false,
+        "coverage_required": true,
+        "mutation_testing_enabled": false
+      },
+      "integration_tests": {
+        "run_on_pull_request": true,
+        "run_on_main_merge": true,
+        "use_test_containers": false,
+        "mock_external_apis": true
+      },
+      "e2e_tests": {
+        "run_on_pull_request": true,
+        "run_on_main_merge": true,
+        "run_on_deploy": true,
+        "cross_browser_testing": true,
+        "mobile_viewport_testing": true,
+        "accessibility_testing": true,
+        "visual_regression_testing": false
+      }
+    },
+    "quality_gates": {
+      "minimum_coverage_line": 80,
+      "minimum_coverage_branch": 75,
+      "minimum_coverage_function": 80,
+      "minimum_test_pass_rate": 100,
+      "maximum_test_duration_unit_seconds": 5,
+      "maximum_test_duration_e2e_seconds": 30,
+      "minimum_mutation_score": 80,
+      "maximum_flaky_test_percentage": 5,
+      "block_merge_on_test_failure": true,
+      "block_merge_on_coverage_decrease": true
+    },
+    "accessibility_testing": {
+      "wcag_version": "2.1",
+      "conformance_level": "AA",
+      "axe_core_rules": {
+        "enabled_rules": ["color-contrast", "label", "button-name", "link-name", "image-alt", "aria-*"],
+        "disabled_rules": [],
+        "severity_threshold": "moderate"
+      },
+      "keyboard_navigation": {
+        "test_tab_order": true,
+        "test_focus_indicators": true,
+        "test_keyboard_shortcuts": true,
+        "test_escape_key_behavior": true
+      },
+      "screen_reader_testing": {
+        "test_aria_labels": true,
+        "test_semantic_html": true,
+        "test_live_regions": true,
+        "test_role_attributes": true
+      }
+    },
+    "test_data_management": {
+      "fixtures_directory": "playwright/fixtures",
+      "use_factory_pattern": true,
+      "seed_test_database": true,
+      "cleanup_after_tests": true,
+      "snapshot_testing_enabled": true,
+      "snapshot_directory": "src/__tests__/__snapshots__"
+    },
+    "performance_testing": {
+      "track_test_duration": true,
+      "identify_slow_tests_threshold_seconds": 5,
+      "parallel_test_execution": true,
+      "cache_test_results": true,
+      "optimize_test_setup": true
+    },
+    "reporting": {
+      "generate_html_report": true,
+      "generate_junit_xml": true,
+      "generate_coverage_badge": true,
+      "upload_coverage_to_codecov": true,
+      "generate_accessibility_report": true,
+      "generate_test_trend_report": true,
+      "notification_channels": ["pull_request_comment", "github_check", "slack"],
+      "detailed_failure_reports": true,
+      "include_screenshots": true,
+      "include_videos": true,
+      "include_traces": true
+    },
+    "artifact_management": {
+      "upload_coverage_reports": true,
+      "upload_test_results": true,
+      "upload_playwright_reports": true,
+      "upload_screenshots": true,
+      "upload_videos": true,
+      "retention_days": 7
+    },
+    "execution_context": {
+      "runs_on": "ubuntu-latest",
+      "node_version": "20",
+      "timeout_minutes": 30,
+      "cache_dependencies": true,
+      "npm_install_command": "npm ci --legacy-peer-deps",
+      "permissions": {
+        "contents": "read",
+        "pull_requests": "write",
+        "checks": "write"
+      }
+    }
+  }
+}

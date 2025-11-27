@@ -1,53 +1,849 @@
 # API Documentation
 
+> **Regenerated during Operation Bedrock Phase 1.2**  
+> **Lead Architect + Technical Scribe**  
+> **Date**: 2025-11-08
+
+---
+
 ## Table of Contents
 
-1. [Services](#services)
-2. [Types](#types)
-3. [Components](#components)
-4. [Directives](#directives)
+1. [Foundation Services](#foundation-services)
+   - [LoggerService](#loggerservice)
+   - [ErrorHandlerService](#errorhandlerservice)
+   - [ValidationService](#validationservice)
+2. [Performance & Monitoring](#performance--monitoring)
+   - [PerformanceMonitorService](#performancemonitorservice)
+   - [AnalyticsService](#analyticsservice)
+   - [RequestCacheService](#requestcacheservice)
+3. [Resource Management](#resource-management)
+   - [BlobUrlManagerService](#bloburlmanagerservice)
+   - [ImageUtilService](#imageutilservice)
+4. [User Experience](#user-experience)
+   - [KeyboardShortcutsService](#keyboardshortcutsservice)
+   - [ToastService](#toastservice)
+   - [AccessibilityService](#accessibilityservice)
+5. [Feature Services](#feature-services)
+   - [GalleryService](#galleryservice)
+   - [GenerationService](#generationservice)
+   - [SettingsService](#settingsservice)
+6. [Infrastructure](#infrastructure)
+   - [ConfigService](#configservice)
+   - [DeviceService](#deviceservice)
+   - [AppInitializerService](#appinitializerservice)
+   - [GlobalErrorHandler](#globalerrorhandler)
+7. [API Clients](#api-clients)
+   - [PollinationsClient](#pollinationsclient)
+8. [Components](#components)
+9. [Directives](#directives)
+10. [Utilities](#utilities)
 
-## Services
+---
 
-### Pollinations Client Service
+## Foundation Services
+
+### LoggerService
+
+**File**: `src/services/logger.service.ts`  
+**Injectable**: `{ providedIn: 'root' }`
+
+Centralized logging service with configurable log levels and history tracking.
+
+#### Public API
+
+```typescript
+enum LogLevel {
+  DEBUG = 0,
+  INFO = 1,
+  WARN = 2,
+  ERROR = 3,
+  NONE = 4
+}
+
+interface LogEntry {
+  timestamp: Date;
+  level: LogLevel;
+  message: string;
+  data?: unknown;
+  source?: string;
+}
+
+class LoggerService {
+  setLogLevel(level: LogLevel): void
+  debug(message: string, data?: unknown, source?: string): void
+  info(message: string, data?: unknown, source?: string): void
+  warn(message: string, data?: unknown, source?: string): void
+  error(message: string, error?: unknown, source?: string): void
+  getHistory(): LogEntry[]
+  clearHistory(): void
+  exportLogs(): string
+}
+```
+
+#### Usage Example
+
+```typescript
+import { inject } from '@angular/core';
+import { LoggerService, LogLevel } from './services/logger.service';
+
+export class MyComponent {
+  private logger = inject(LoggerService);
+  
+  ngOnInit() {
+    this.logger.setLogLevel(LogLevel.INFO);
+    this.logger.info('Component initialized', { id: this.id }, 'MyComponent');
+  }
+  
+  onError(error: Error) {
+    this.logger.error('Operation failed', error, 'MyComponent');
+  }
+}
+```
+
+#### Best Practices
+
+- ✅ Use appropriate log level for message importance
+- ✅ Include source context (component/service name)
+- ✅ Provide structured data in data parameter
+- ❌ Never use `console.log` directly - always use LoggerService
+
+---
+
+### ErrorHandlerService
+
+**File**: `src/services/error-handler.service.ts`  
+**Injectable**: `{ providedIn: 'root' }`
+
+Centralized error handling with logging and user notification.
+
+#### Public API
+
+```typescript
+class AppError extends Error {
+  constructor(
+    message: string,
+    code?: string,
+    isUserFriendly?: boolean,
+    details?: unknown
+  )
+}
+
+class ErrorHandlerService {
+  handleError(error: unknown, source: string, showToast?: boolean): void
+  createAppError(message: string, code?: string, isUserFriendly?: boolean): AppError
+}
+```
+
+#### Usage Example
+
+```typescript
+import { inject } from '@angular/core';
+import { ErrorHandlerService, AppError } from './services/error-handler.service';
+
+export class MyService {
+  private errorHandler = inject(ErrorHandlerService);
+  
+  async performOperation(): Promise<void> {
+    try {
+      await this.riskyOperation();
+    } catch (error) {
+      // Logs error and shows toast notification
+      this.errorHandler.handleError(error, 'MyService');
+      throw error; // Re-throw if caller needs to handle
+    }
+  }
+  
+  validateInput(input: string): void {
+    if (!input) {
+      throw this.errorHandler.createAppError(
+        'Input is required',
+        'INVALID_INPUT',
+        true // User-friendly message
+      );
+    }
+  }
+}
+```
+
+#### Best Practices
+
+- ✅ Use for all error handling
+- ✅ Provide source context
+- ✅ Use AppError for user-facing errors
+- ✅ Always use try-catch-finally for async operations
+
+---
+
+### ValidationService
+
+**File**: `src/services/validation.service.ts`  
+**Injectable**: `{ providedIn: 'root' }`
+
+Input validation and XSS prevention with 5-layer defense-in-depth.
+
+#### Public API
+
+```typescript
+interface ValidationResult {
+  isValid: boolean;
+  errors: string[];
+}
+
+class ValidationService {
+  // Validation methods
+  validatePrompt(prompt: string): ValidationResult
+  validateImageUrl(url: string): ValidationResult
+  validateSeed(seed: number | undefined): ValidationResult
+  validateDimensions(width: number, height: number): ValidationResult
+  validateApiKey(key: string): ValidationResult
+  
+  // Sanitization methods (5-layer XSS prevention)
+  sanitizeHtml(html: string): string
+  sanitizeHtmlForAngular(html: string): string
+  sanitizeUrl(url: string): string
+}
+```
+
+#### Usage Example
+
+```typescript
+import { inject } from '@angular/core';
+import { ValidationService } from './services/validation.service';
+
+export class WizardComponent {
+  private validation = inject(ValidationService);
+  
+  validateAndGenerate(prompt: string): void {
+    const result = this.validation.validatePrompt(prompt);
+    
+    if (!result.isValid) {
+      console.error('Validation errors:', result.errors);
+      return;
+    }
+    
+    // Safe to use prompt
+    this.generate(prompt);
+  }
+  
+  displayUserContent(html: string): void {
+    // Always sanitize user-generated content
+    this.safeHtml = this.validation.sanitizeHtml(html);
+  }
+}
+```
+
+#### 5-Layer XSS Defense
+
+1. **sanitize-html library**: Strict tag/attribute filtering
+2. **Event handler removal**: Strips all `on*` handlers
+3. **Protocol blocking**: Blocks `javascript:`, `data:`, `vbscript:`
+4. **CSS sanitization**: Removes dangerous CSS patterns
+5. **Navigation tag removal**: Strips `<meta>`, `<link>`, `<base>`
+
+#### Best Practices
+
+- ✅ Validate ALL user inputs
+- ✅ Check `isValid` before processing
+- ✅ Display validation errors to users
+- ✅ Sanitize HTML before using `innerHTML`
+- ❌ Never trust user input without validation
+
+---
+
+## Performance & Monitoring
+
+### PerformanceMonitorService
+
+**File**: `src/services/performance-monitor.service.ts`  
+**Injectable**: `{ providedIn: 'root' }`
+
+Track and monitor application performance metrics.
+
+#### Public API
+
+```typescript
+interface PerformanceMetric {
+  name: string;
+  duration: number;
+  timestamp: Date;
+}
+
+class PerformanceMonitorService {
+  measureSync<T>(name: string, fn: () => T): T
+  measureAsync<T>(name: string, fn: () => Promise<T>): Promise<T>
+  getMetrics(): PerformanceMetric[]
+  clearMetrics(): void
+  getAverageTime(name: string): number
+}
+```
+
+#### Usage Example
+
+```typescript
+import { inject } from '@angular/core';
+import { PerformanceMonitorService } from './services/performance-monitor.service';
+
+export class ImageService {
+  private perf = inject(PerformanceMonitorService);
+  
+  async generateImage(prompt: string): Promise<Blob> {
+    return this.perf.measureAsync('image-generation', async () => {
+      // Operation automatically timed
+      return await this.api.generate(prompt);
+    });
+  }
+  
+  processImage(blob: Blob): ImageData {
+    return this.perf.measureSync('image-processing', () => {
+      return this.process(blob);
+    });
+  }
+}
+```
+
+---
+
+### AnalyticsService
+
+**File**: `src/services/analytics.service.ts`  
+**Injectable**: `{ providedIn: 'root' }`
+
+Event tracking with batch sending and Google Analytics 4 integration.
+
+#### Public API
+
+```typescript
+interface AnalyticsEvent {
+  name: string;
+  category: string;
+  action: string;
+  label?: string;
+  value?: number;
+  timestamp: Date;
+  metadata?: Record<string, string | number | boolean>;
+}
+
+class AnalyticsService {
+  initialize(trackingId?: string): void
+  trackPageView(path: string, title?: string): void
+  trackEvent(event: Omit<AnalyticsEvent, 'timestamp'>): void
+  trackImageGeneration(model: string, duration: number): void
+  trackError(error: string, source: string): void
+  trackFeatureUsage(feature: string, action: string): void
+  trackInteraction(element: string, action: string): void
+  flush(): void
+  setEnabled(enabled: boolean): void
+}
+```
+
+#### Usage Example
+
+```typescript
+import { inject } from '@angular/core';
+import { AnalyticsService } from './services/analytics.service';
+
+export class WizardComponent {
+  private analytics = inject(AnalyticsService);
+  
+  async generateImage(): Promise<void> {
+    const startTime = Date.now();
+    
+    try {
+      await this.generate();
+      const duration = Date.now() - startTime;
+      
+      this.analytics.trackImageGeneration(this.model, duration);
+      this.analytics.trackFeatureUsage('wizard', 'generate');
+    } catch (error) {
+      this.analytics.trackError(String(error), 'WizardComponent');
+    }
+  }
+}
+```
+
+#### Best Practices
+
+- ✅ Track significant user actions
+- ✅ Include duration for performance tracking
+- ✅ Respect GDPR (analytics disabled in dev mode)
+- ✅ Use batch sending (automatic)
+
+---
+
+### RequestCacheService
+
+**File**: `src/services/request-cache.service.ts`  
+**Injectable**: `{ providedIn: 'root' }`
+
+HTTP request caching and deduplication.
+
+#### Public API
+
+```typescript
+class RequestCacheService {
+  get<T>(key: string): T | null
+  set<T>(key: string, value: T, ttl?: number): void
+  has(key: string): boolean
+  delete(key: string): void
+  clear(): void
+}
+```
+
+---
+
+## Resource Management
+
+### BlobUrlManagerService
+
+**File**: `src/services/blob-url-manager.service.ts`  
+**Injectable**: `{ providedIn: 'root' }`
+
+Prevent memory leaks from blob URLs with automatic cleanup.
+
+#### Public API
+
+```typescript
+class BlobUrlManagerService {
+  createObjectURL(blob: Blob, destroyRef?: DestroyRef): string
+  revokeObjectURL(url: string): void
+  revokeAll(): void
+}
+```
+
+#### Usage Example
+
+```typescript
+import { inject, DestroyRef } from '@angular/core';
+import { BlobUrlManagerService } from './services/blob-url-manager.service';
+
+export class ImageComponent implements OnInit {
+  private blobManager = inject(BlobUrlManagerService);
+  private destroyRef = inject(DestroyRef);
+  
+  imageUrl = signal<string>('');
+  
+  loadImage(blob: Blob): void {
+    // Automatically cleaned up when component destroys
+    const url = this.blobManager.createObjectURL(blob, this.destroyRef);
+    this.imageUrl.set(url);
+  }
+}
+```
+
+#### Best Practices
+
+- ✅ ALWAYS use BlobUrlManagerService for blob URLs
+- ✅ Pass DestroyRef for automatic cleanup
+- ✅ Call revokeObjectURL manually if not using DestroyRef
+- ❌ Never use `URL.createObjectURL` directly
+
+---
+
+### ImageUtilService
+
+**File**: `src/services/image-util.service.ts`  
+**Injectable**: `{ providedIn: 'root' }`
+
+Image processing, compression, and optimization.
+
+#### Public API
+
+```typescript
+class ImageUtilService {
+  createThumbnail(blob: Blob, maxWidth: number, maxHeight: number): Promise<Blob>
+  compress(blob: Blob, quality: number): Promise<Blob>
+  convertFormat(blob: Blob, format: 'image/jpeg' | 'image/png' | 'image/webp'): Promise<Blob>
+  getDimensions(blob: Blob): Promise<{ width: number; height: number }>
+}
+```
+
+---
+
+## User Experience
+
+### KeyboardShortcutsService
+
+**File**: `src/services/keyboard-shortcuts.service.ts`  
+**Injectable**: `{ providedIn: 'root' }`
+
+Keyboard navigation and accessibility shortcuts.
+
+#### Public API
+
+```typescript
+interface ShortcutConfig {
+  [key: string]: () => void;
+}
+
+class KeyboardShortcutsService {
+  register(key: string, handler: () => void, scope?: string): void
+  unregister(key: string, scope?: string): void
+  registerDefaultShortcuts(config: ShortcutConfig): void
+  disable(): void
+  enable(): void
+}
+```
+
+#### Usage Example
+
+```typescript
+import { inject, OnInit, OnDestroy } from '@angular/core';
+import { KeyboardShortcutsService } from './services/keyboard-shortcuts.service';
+
+export class GalleryComponent implements OnInit, OnDestroy {
+  private shortcuts = inject(KeyboardShortcutsService);
+  
+  ngOnInit(): void {
+    this.shortcuts.registerDefaultShortcuts({
+      'ctrl+s': () => this.save(),
+      'delete': () => this.confirmDelete(),
+      'escape': () => this.cancel(),
+      '?': () => this.showHelp()
+    });
+  }
+  
+  ngOnDestroy(): void {
+    this.shortcuts.unregister('ctrl+s');
+    this.shortcuts.unregister('delete');
+    this.shortcuts.unregister('escape');
+    this.shortcuts.unregister('?');
+  }
+}
+```
+
+#### Best Practices
+
+- ✅ Register shortcuts in `ngOnInit()`
+- ✅ Unregister in `ngOnDestroy()`
+- ✅ Use standard shortcuts (Ctrl+S, Delete, Escape)
+- ✅ Provide '?' for help overlay
+
+---
+
+### ToastService
+
+**File**: `src/services/toast.service.ts`  
+**Injectable**: `{ providedIn: 'root' }`
+
+User notifications and feedback messages.
+
+#### Public API
+
+```typescript
+type ToastType = 'success' | 'error' | 'info';
+
+class ToastService {
+  show(message: string, type?: ToastType, duration?: number): void
+}
+```
+
+#### Usage Example
+
+```typescript
+import { inject } from '@angular/core';
+import { ToastService } from './services/toast.service';
+
+export class SaveComponent {
+  private toast = inject(ToastService);
+  
+  async save(): Promise<void> {
+    try {
+      await this.saveData();
+      this.toast.show('Saved successfully!', 'success');
+    } catch (error) {
+      this.toast.show('Save failed', 'error');
+    }
+  }
+}
+```
+
+---
+
+## Feature Services
+
+### GalleryService
+
+**File**: `src/services/gallery.service.ts`  
+**Injectable**: `{ providedIn: 'root' }`
+
+Gallery CRUD operations with IndexedDB persistence.
+
+#### Public API
+
+```typescript
+interface GalleryItem {
+  id: string;
+  prompt: string;
+  blobUrl: string;
+  createdAt: Date;
+  model?: string;
+  aspect?: string;
+  isFavorite?: boolean;
+  collectionIds?: string[];
+}
+
+interface Collection {
+  id: string;
+  name: string;
+  createdAt: Date;
+  itemCount: number;
+}
+
+class GalleryService {
+  // Gallery Items
+  readonly items: Signal<GalleryItem[]>
+  addItem(item: Omit<GalleryItem, 'id' | 'createdAt'>): Promise<GalleryItem>
+  updateItem(id: string, updates: Partial<GalleryItem>): Promise<void>
+  deleteItem(id: string): Promise<void>
+  deleteItems(ids: string[]): Promise<void>
+  getItem(id: string): Promise<GalleryItem | undefined>
+  toggleFavorite(id: string): Promise<void>
+  
+  // Collections
+  readonly collections: Signal<Collection[]>
+  createCollection(name: string): Promise<Collection>
+  renameCollection(id: string, name: string): Promise<void>
+  deleteCollection(id: string): Promise<void>
+  addToCollection(itemId: string, collectionId: string): Promise<void>
+  removeFromCollection(itemId: string, collectionId: string): Promise<void>
+  
+  // Import/Export
+  exportGallery(): Promise<Blob>
+  importGallery(file: File): Promise<{ imported: number; failed: number }>
+}
+```
+
+---
+
+### GenerationService
+
+**File**: `src/services/generation.service.ts`  
+**Injectable**: `{ providedIn: 'root' }`
+
+Coordinate image generation workflow.
+
+#### Public API
+
+```typescript
+type GenerationStatus = 'idle' | 'generating' | 'saving' | 'error';
+
+interface GenerationResult {
+  blobUrl: string;
+  prompt: string;
+  model: string;
+}
+
+class GenerationService {
+  readonly status: Signal<GenerationStatus>
+  readonly statusMessage: Signal<string>
+  readonly currentGenerationResult: Signal<GenerationResult | null>
+  
+  generate(prompt: string, options: ImageOptions): Promise<GenerationResult>
+  saveToGallery(): Promise<void>
+  reset(): void
+}
+```
+
+---
+
+### SettingsService
+
+**File**: `src/services/settings.service.ts`  
+**Injectable**: `{ providedIn: 'root' }`
+
+User preferences with localStorage persistence.
+
+#### Public API
+
+```typescript
+class SettingsService {
+  readonly themeDark: WritableSignal<boolean>
+  readonly defaultModel: WritableSignal<string>
+  readonly defaultQuality: WritableSignal<number>
+  readonly geminiApiKey: WritableSignal<string>
+  
+  saveSettings(): void
+  loadSettings(): void
+  resetToDefaults(): void
+  exportSettings(): string
+  importSettings(json: string): void
+}
+```
+
+---
+
+## Infrastructure
+
+### ConfigService
+
+**File**: `src/services/config.service.ts`  
+**Injectable**: `{ providedIn: 'root' }`
+
+Environment configuration and secrets management.
+
+#### Public API
+
+```typescript
+class ConfigService {
+  readonly isProduction: boolean
+  readonly apiEndpoint: string
+  
+  getApiKey(provider: string): string | undefined
+  setApiKey(provider: string, key: string): void
+}
+```
+
+---
+
+### DeviceService
+
+**File**: `src/services/device.service.ts`  
+**Injectable**: `{ providedIn: 'root' }`
+
+Device capability detection.
+
+#### Public API
+
+```typescript
+interface DeviceInfo {
+  width: number;
+  height: number;
+  pixelRatio: number;
+  isMobile: boolean;
+  isTablet: boolean;
+  isDesktop: boolean;
+}
+
+class DeviceService {
+  getDeviceInfo(): DeviceInfo
+  isTouchDevice(): boolean
+}
+```
+
+---
+
+## API Clients
+
+### PollinationsClient
 
 **File**: `src/services/pollinations.client.ts`
 
-Main API client for interacting with the Pollinations AI service.
+Main API client for Pollinations AI integration.
 
-#### Functions
+#### Public API
 
-##### `initializeGeminiClient(apiKey: string): void`
-
-Initialize the Gemini AI client with an API key.
-
-**Parameters**:
-- `apiKey` (string): The Gemini API key
-
-**Example**:
 ```typescript
-import { initializeGeminiClient } from './services/pollinations.client';
+interface ImageOptions {
+  model?: string;
+  seed?: number;
+  enhance?: boolean;
+  nologo?: boolean;
+}
 
-initializeGeminiClient('your-api-key-here');
+// Functions
+function initializeGeminiClient(apiKey: string): void
+function generateImage(prompt: string, width: number, height: number, options?: ImageOptions): Promise<Blob>
+function enhancePrompt(prompt: string): Promise<string>
+function listImageModels(): string[]
 ```
 
-##### `generateImage(prompt: string, width: number, height: number, options?: ImageOptions): Promise<Blob>`
+---
 
-Generate an image using the Pollinations AI API.
+## Components
 
-**Parameters**:
-- `prompt` (string): The text description of the desired image
-- `width` (number): Image width in pixels
-- `height` (number): Image height in pixels
-- `options` (ImageOptions): Optional generation parameters
+All components are standalone with OnPush change detection and Signal-based state.
 
-**Returns**: Promise<Blob> - The generated image as a blob
+### Component API Overview
 
-**Example**:
+| Component | Route | Purpose |
+|-----------|-------|---------|
+| **WizardComponent** | `/` | Image generation interface |
+| **GalleryComponent** | `/gallery` | Saved images management |
+| **CollectionsComponent** | `/collections` | Collection organization |
+| **FeedComponent** | `/feed` | Community feed (future) |
+| **EditorComponent** | `/edit/:id` | Image editing |
+| **SettingsComponent** | `/settings` | App configuration |
+| **ToastComponent** | N/A | Notification display |
+| **ShortcutsHelpComponent** | N/A | Keyboard help overlay |
+| **SkeletonComponent** | N/A | Loading placeholder |
+
+---
+
+## Directives
+
+### LazyImageDirective
+
+**File**: `src/directives/lazy-image.directive.ts`
+
+Lazy load images with IntersectionObserver.
+
+#### Usage
+
+```html
+<img lazyImage [src]="imageUrl" [alt]="description" />
+```
+
+---
+
+## Utilities
+
+### Component Helpers
+
+**File**: `src/utils/component-helpers.ts`
+
 ```typescript
-const blob = await generateImage(
-  'A beautiful sunset over mountains',
-  1920,
+function createLoadingState(): LoadingState
+function createSelectionState<T>(): SelectionState<T>
+function createFormField<T>(initialValue: T): FormField<T>
+```
+
+### Type Guards
+
+**File**: `src/utils/type-guards.ts`
+
+```typescript
+function isString(value: unknown): value is string
+function isNumber(value: unknown): value is number
+function isError(value: unknown): value is Error
+function getErrorMessage(error: unknown): string
+```
+
+---
+
+## Best Practices Summary
+
+### Service Integration
+- ✅ Inject services via constructor or `inject()` function
+- ✅ Use LoggerService for all logging
+- ✅ Use ErrorHandlerService for all errors
+- ✅ Use ValidationService for all inputs
+- ✅ Use BlobUrlManagerService for all blob URLs
+
+### Component Patterns
+- ✅ Standalone components only
+- ✅ OnPush change detection
+- ✅ Signal-based state
+- ✅ computed() for derived state
+- ✅ Register keyboard shortcuts in ngOnInit
+- ✅ Unregister in ngOnDestroy
+
+### Error Handling
+- ✅ try-catch-finally for async operations
+- ✅ Always use finally for cleanup (e.g., loading states)
+- ✅ Log errors with context
+- ✅ Show user-friendly messages
+
+### Performance
+- ✅ Wrap operations with PerformanceMonitorService
+- ✅ Use RequestCacheService for repeated calls
+- ✅ Lazy load components
+- ✅ Optimize images with ImageUtilService
+
+---
+
+*This API documentation is the authoritative reference for all public-facing APIs in PolliWall.*  
+*Last Updated: 2025-11-08 | Operation Bedrock Phase 1.2*
+
   1080,
   { model: 'flux', seed: 42 }
 );

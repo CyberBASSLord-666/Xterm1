@@ -59,7 +59,7 @@ describe('pollinations.client integration', () => {
     generateContentMock.mockResolvedValueOnce({ text: 'Restyled prompt' });
     const restyledPrompt = await composeRestylePrompt('Base prompt', 'Golden hour');
     expect(restyledPrompt).toBe('Restyled prompt');
-    expect((GoogleGenAI as jest.Mock)).toHaveBeenCalledWith({ apiKey: 'api-key' });
+    expect(GoogleGenAI as jest.Mock).toHaveBeenCalledWith({ apiKey: 'api-key' });
   });
 
   it('queues image generation requests and returns blobs', async () => {
@@ -73,7 +73,7 @@ describe('pollinations.client integration', () => {
 
     const result = await generateImage('sunset', 512, 512);
     expect(result).toBe(blob);
-    expect((globalThis.fetch as jest.Mock)).toHaveBeenCalledWith(expect.stringContaining('sunset'), expect.any(Object));
+    expect(globalThis.fetch as jest.Mock).toHaveBeenCalledWith(expect.stringContaining('sunset'), expect.any(Object));
   });
 
   it('retries transient failures when generating text content', async () => {
@@ -83,7 +83,7 @@ describe('pollinations.client integration', () => {
 
     const text = await generateTextGet('status report');
     expect(text).toBe('completed');
-    expect((globalThis.fetch as jest.Mock)).toHaveBeenCalledTimes(2);
+    expect(globalThis.fetch as jest.Mock).toHaveBeenCalledTimes(2);
   });
 
   it('throws informative errors for non-image responses', async () => {
@@ -113,7 +113,6 @@ describe('pollinations.client integration', () => {
     await expect(promise).rejects.toThrow('Invalid prompt');
     jest.useRealTimers();
   });
-
 
   it('computes exact fit targets and creates device wallpapers', async () => {
     (globalThis.fetch as jest.Mock).mockImplementation(() =>
@@ -181,5 +180,171 @@ describe('pollinations.client integration', () => {
 
     delete (window as any).speechSynthesis;
     expect(() => textToSpeech('Hi')).toThrow('Text-to-Speech is not supported');
+  });
+
+  describe('initializeGeminiClient', () => {
+    it('should warn when called with empty API key', () => {
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+      initializeGeminiClient('');
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('empty'));
+      consoleSpy.mockRestore();
+    });
+
+    it('should warn when called with whitespace-only API key', () => {
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+      initializeGeminiClient('   ');
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('empty'));
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe('computeExactFitTarget', () => {
+    it('should find constrained mode when no suitable resolution exists', () => {
+      const target = computeExactFitTarget(
+        { width: 4000, height: 3000, dpr: 1 },
+        {
+          '4:3': [
+            { w: 1024, h: 768 },
+            { w: 1280, h: 960 },
+          ],
+        }
+      );
+
+      expect(target.mode).toBe('constrained');
+      expect(target.width).toBe(1280);
+      expect(target.height).toBe(960);
+    });
+
+    it('should find best matching aspect ratio', () => {
+      const target = computeExactFitTarget(
+        { width: 1920, height: 1080, dpr: 1 },
+        {
+          '16:9': [{ w: 1920, h: 1080 }],
+          '4:3': [{ w: 1280, h: 960 }],
+          '1:1': [{ w: 1024, h: 1024 }],
+        }
+      );
+
+      expect(target.aspect).toBe('16:9');
+    });
+
+    it('should handle portrait orientations', () => {
+      const target = computeExactFitTarget(
+        { width: 1080, height: 1920, dpr: 1 },
+        {
+          '9:16': [
+            { w: 1080, h: 1920 },
+            { w: 720, h: 1280 },
+          ],
+          '16:9': [{ w: 1920, h: 1080 }],
+        }
+      );
+
+      expect(target.aspect).toBe('9:16');
+    });
+
+    it('should select smallest suitable resolution', () => {
+      const target = computeExactFitTarget(
+        { width: 800, height: 600, dpr: 1 },
+        {
+          '4:3': [
+            { w: 640, h: 480 },
+            { w: 800, h: 600 },
+            { w: 1024, h: 768 },
+            { w: 1280, h: 960 },
+          ],
+        }
+      );
+
+      expect(target.width).toBe(800);
+      expect(target.height).toBe(600);
+      expect(target.mode).toBe('exact');
+    });
+  });
+
+  describe('Image generation options', () => {
+    it('should pass all options to URL query string', async () => {
+      (globalThis.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        headers: { get: () => 'image/png' },
+        blob: jest.fn().mockResolvedValue(new Blob(['test'])),
+      });
+
+      await generateImage('test prompt', 1024, 768, {
+        model: 'flux',
+        nologo: true,
+        private: true,
+        safe: true,
+        seed: 12345,
+        enhance: true,
+      });
+
+      const calledUrl = (globalThis.fetch as jest.Mock).mock.calls[0][0];
+      expect(calledUrl).toContain('model=flux');
+      expect(calledUrl).toContain('nologo=true');
+      expect(calledUrl).toContain('private=true');
+      expect(calledUrl).toContain('safe=true');
+      expect(calledUrl).toContain('seed=12345');
+      expect(calledUrl).toContain('enhance=true');
+    });
+
+    it('should exclude undefined options from query string', async () => {
+      (globalThis.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        headers: { get: () => 'image/png' },
+        blob: jest.fn().mockResolvedValue(new Blob(['test'])),
+      });
+
+      await generateImage('test', 512, 512, { model: undefined, nologo: undefined });
+
+      const calledUrl = (globalThis.fetch as jest.Mock).mock.calls[0][0];
+      expect(calledUrl).not.toContain('model=');
+      expect(calledUrl).not.toContain('nologo=');
+    });
+  });
+
+  describe('Gemini prompt composition', () => {
+    beforeEach(() => {
+      initializeGeminiClient('test-api-key');
+    });
+
+    it('should handle composePromptForDevice without base prompt', async () => {
+      generateContentMock.mockResolvedValueOnce({ text: 'Creative concept prompt' });
+
+      const prompt = await composePromptForDevice(
+        { width: 1080, height: 1920, dpr: 2 },
+        { styles: ['minimalist', 'nature'] }
+      );
+
+      expect(prompt).toBe('Creative concept prompt');
+      expect(generateContentMock).toHaveBeenCalled();
+    });
+
+    it('should throw when Gemini returns no text for device prompt', async () => {
+      generateContentMock.mockResolvedValueOnce({ text: null });
+
+      await expect(
+        composePromptForDevice({ width: 1080, height: 1920, dpr: 2 }, { styles: ['abstract'] })
+      ).rejects.toThrow('No text response');
+    });
+
+    it('should throw when Gemini returns no text for variant prompt', async () => {
+      generateContentMock.mockResolvedValueOnce({ text: null });
+
+      await expect(composeVariantPrompt('base prompt')).rejects.toThrow('No text response');
+    });
+
+    it('should throw when Gemini returns no text for restyle prompt', async () => {
+      generateContentMock.mockResolvedValueOnce({ text: null });
+
+      await expect(composeRestylePrompt('base prompt', 'vintage')).rejects.toThrow('No text response');
+    });
+
+    it('should trim whitespace from generated prompts', async () => {
+      generateContentMock.mockResolvedValueOnce({ text: '  trimmed prompt  ' });
+
+      const prompt = await composeVariantPrompt('original');
+      expect(prompt).toBe('trimmed prompt');
+    });
   });
 });

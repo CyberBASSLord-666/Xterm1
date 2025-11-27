@@ -81,9 +81,18 @@ describe('KeyboardShortcutsService', () => {
 
   it('matches shortcuts using modifier combinations', () => {
     const variants: Array<{ config: ShortcutConfig; event: KeyboardEventInit }> = [
-      { config: { key: 'z', ctrl: true, shift: true, description: 'Redo', handler: jest.fn() }, event: { key: 'Z', ctrlKey: true, shiftKey: true } },
-      { config: { key: 'f', ctrl: true, alt: true, description: 'Search', handler: jest.fn() }, event: { key: 'f', ctrlKey: true, altKey: true } },
-      { config: { key: 'Delete', description: 'Remove', handler: jest.fn(), preventDefault: true }, event: { key: 'Delete' } },
+      {
+        config: { key: 'z', ctrl: true, shift: true, description: 'Redo', handler: jest.fn() },
+        event: { key: 'Z', ctrlKey: true, shiftKey: true },
+      },
+      {
+        config: { key: 'f', ctrl: true, alt: true, description: 'Search', handler: jest.fn() },
+        event: { key: 'f', ctrlKey: true, altKey: true },
+      },
+      {
+        config: { key: 'Delete', description: 'Remove', handler: jest.fn(), preventDefault: true },
+        event: { key: 'Delete' },
+      },
     ];
 
     variants.forEach(({ config, event }, index) => {
@@ -112,7 +121,7 @@ describe('KeyboardShortcutsService', () => {
     expect(registered).toHaveLength(7);
     registered.forEach(({ config }) => config.handler());
 
-    Object.values(handlers).forEach(fn => expect(fn).toHaveBeenCalled());
+    Object.values(handlers).forEach((fn) => expect(fn).toHaveBeenCalled());
   });
 
   it('cleans up listeners and handlers when destroyed', () => {

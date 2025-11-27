@@ -1,0 +1,335 @@
+# ============================================================================
+# Swarm Coordinator Workflow for PolliWall (Xterm1)
+# ============================================================================
+# This is the high-level orchestrator that coordinates multiple agents,
+# analyzes context, and dispatches appropriate actions based on events.
+#
+# Features:
+# - Coordinates multiple agent workflows
+# - Analyzes PR/issue context to determine needed actions
+# - Routes tasks to appropriate specialized agents
+# - Provides unified reporting and status updates
+# - Handles escalation for complex issues
+# ============================================================================
+
+name: Swarm Coordinator
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+  pull_request_review:
+    types: [submitted]
+  issues:
+    types: [opened, labeled]
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        type: choice
+        options:
+          - full-analysis
+          - security-scan
+          - performance-check
+          - documentation-sync
+          - release-prepare
+      target_ref:
+        description: 'Target branch or PR number'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: write
+  security-events: read
+
+jobs:
+  # ============ CONTEXT ANALYSIS ============
+  analyze-context:
+    runs-on: ubuntu-latest
+    outputs:
+      needs_lint: ${{ steps.analyze.outputs.needs_lint }}
+      needs_tests: ${{ steps.analyze.outputs.needs_tests }}
+      needs_security: ${{ steps.analyze.outputs.needs_security }}
+      needs_docs: ${{ steps.analyze.outputs.needs_docs }}
+      needs_performance: ${{ steps.analyze.outputs.needs_performance }}
+      needs_a11y: ${{ steps.analyze.outputs.needs_a11y }}
+      changed_files: ${{ steps.changes.outputs.files }}
+      is_critical: ${{ steps.analyze.outputs.is_critical }}
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changes
+        uses: actions/github-script@v7
+        with:
+          script: |
+            if (context.eventName === 'pull_request') {
+              const { data: files } = await github.rest.pulls.listFiles({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.payload.pull_request.number
+              });
+              
+              const changedFiles = files.map(f => f.filename);
+              core.setOutput('files', changedFiles.join(','));
+              return changedFiles;
+            }
+            return [];
+
+      - name: Analyze what's needed
+        id: analyze
+        run: |
+          CHANGED="${{ steps.changes.outputs.files }}"
+          
+          # Check for TypeScript/code changes
+          if echo "$CHANGED" | grep -qE '\.(ts|html)$'; then
+            echo "needs_lint=true" >> $GITHUB_OUTPUT
+            echo "needs_tests=true" >> $GITHUB_OUTPUT
+          else
+            echo "needs_lint=false" >> $GITHUB_OUTPUT
+            echo "needs_tests=false" >> $GITHUB_OUTPUT
+          fi
+          
+          # Check for security-sensitive changes
+          if echo "$CHANGED" | grep -qE '(security|auth|password|token|config|\.env)'; then
+            echo "needs_security=true" >> $GITHUB_OUTPUT
+            echo "is_critical=true" >> $GITHUB_OUTPUT
+          else
+            echo "needs_security=false" >> $GITHUB_OUTPUT
+            echo "is_critical=false" >> $GITHUB_OUTPUT
+          fi
+          
+          # Check for documentation changes
+          if echo "$CHANGED" | grep -qE '\.(md|txt)$'; then
+            echo "needs_docs=true" >> $GITHUB_OUTPUT
+          else
+            echo "needs_docs=false" >> $GITHUB_OUTPUT
+          fi
+          
+          # Check for performance-impacting changes
+          if echo "$CHANGED" | grep -qE '(component|service|pipe|directive)\.ts$'; then
+            echo "needs_performance=true" >> $GITHUB_OUTPUT
+          else
+            echo "needs_performance=false" >> $GITHUB_OUTPUT
+          fi
+          
+          # Check for UI/accessibility changes
+          if echo "$CHANGED" | grep -qE '\.(html|css|scss)$'; then
+            echo "needs_a11y=true" >> $GITHUB_OUTPUT
+          else
+            echo "needs_a11y=false" >> $GITHUB_OUTPUT
+          fi
+
+  # ============ LINT & FIX ============
+  lint-fix:
+    needs: analyze-context
+    if: needs.analyze-context.outputs.needs_lint == 'true'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint with auto-fix
+        run: npx eslint "src/**/*.{ts,html}" --fix || true
+
+      - name: Run Prettier
+        run: npx prettier --write "src/**/*.{ts,html,css,scss,json}" || true
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if [[ -n $(git status --porcelain) ]]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit fixes
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add -A
+          git commit -m "🤖 Swarm: Auto-fix lint and formatting issues"
+          git push
+
+  # ============ RUN TESTS ============
+  run-tests:
+    needs: [analyze-context, lint-fix]
+    if: always() && needs.analyze-context.outputs.needs_tests == 'true'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests with coverage
+        id: test
+        run: npm test -- --coverage --watchAll=false
+        continue-on-error: true
+
+      - name: Report test results
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const testResult = '${{ steps.test.outcome }}';
+            const status = testResult === 'success' ? '✅' : '❌';
+            
+            if (context.eventName === 'pull_request') {
+              // Check if we already posted a test summary
+              const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number
+              });
+              
+              const existing = comments.find(c => 
+                c.user.login === 'github-actions[bot]' && 
+                c.body.includes('Swarm Test Results')
+              );
+              
+              if (!existing) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.payload.pull_request.number,
+                  body: `## ${status} Swarm Test Results
+
+            | Check | Status |
+            |-------|--------|
+            | Unit Tests | ${status} ${testResult} |
+            | Coverage | See artifacts |
+
+            ---
+            *Generated by Swarm Coordinator*`
+                });
+              }
+            }
+
+  # ============ SECURITY SCAN ============
+  security-scan:
+    needs: analyze-context
+    if: needs.analyze-context.outputs.needs_security == 'true' || needs.analyze-context.outputs.is_critical == 'true'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run npm audit
+        id: audit
+        run: |
+          npm audit --json > audit-results.json 2>&1 || true
+          VULNS=$(cat audit-results.json | jq '.metadata.vulnerabilities.total // 0')
+          echo "vulnerabilities=$VULNS" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Report security findings
+        if: steps.audit.outputs.vulnerabilities != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const vulns = '${{ steps.audit.outputs.vulnerabilities }}';
+            
+            if (context.eventName === 'pull_request' && parseInt(vulns) > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                body: `## ⚠️ Security Alert
+
+            Found **${vulns}** vulnerabilities in dependencies.
+
+            **Recommended Actions:**
+            1. Run \`npm audit fix\` to auto-fix safe updates
+            2. Review breaking changes for major updates
+            3. Consider alternative packages if unpatched
+
+            ---
+            *Generated by Swarm Security Guardian*`
+              });
+            }
+
+  # ============ STATUS SUMMARY ============
+  swarm-summary:
+    needs: [analyze-context, lint-fix, run-tests, security-scan]
+    if: always()
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Generate swarm summary
+        uses: actions/github-script@v7
+        with:
+          script: |
+            if (context.eventName !== 'pull_request') return;
+            
+            const lintStatus = '${{ needs.lint-fix.result }}';
+            const testStatus = '${{ needs.run-tests.result }}';
+            const securityStatus = '${{ needs.security-scan.result }}';
+            
+            const getEmoji = (status) => {
+              if (status === 'success') return '✅';
+              if (status === 'failure') return '❌';
+              if (status === 'skipped') return '⏭️';
+              return '⚪';
+            };
+            
+            const summary = `## 🤖 Swarm Coordinator Summary
+
+            | Agent | Status | Result |
+            |-------|--------|--------|
+            | Code Quality | ${getEmoji(lintStatus)} | ${lintStatus} |
+            | Test Automation | ${getEmoji(testStatus)} | ${testStatus} |
+            | Security Guardian | ${getEmoji(securityStatus)} | ${securityStatus} |
+
+            ${lintStatus === 'success' && testStatus === 'success' && securityStatus !== 'failure' 
+              ? '### ✅ All checks passed! Ready for review.' 
+              : '### ⚠️ Some checks need attention.'}
+
+            ---
+            *Generated by the Agentic Swarm Coordinator*`;
+            
+            // Post summary
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: summary
+            });
