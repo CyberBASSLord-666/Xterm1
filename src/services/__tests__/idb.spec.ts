@@ -3,8 +3,6 @@
  * Tests for database initialization, schema, and upgrade logic
  */
 
-import { db, GalleryItem, Collection } from '../idb';
-
 // Store upgrade callback for testing
 let capturedUpgradeCallback:
   | ((database: any, oldVersion: number, newVersion: number | null, transaction: any) => void)
@@ -34,9 +32,17 @@ jest.mock('idb', () => ({
 }));
 
 describe('IDB Service', () => {
+  // Import db fresh for each test to reset the singleton
+  let db: () => Promise<any>;
+
   beforeEach(() => {
     jest.clearAllMocks();
     capturedUpgradeCallback = undefined;
+    // Reset the module to clear the cached dbp promise
+    jest.resetModules();
+    // Re-import the module fresh
+    const idbModule = require('../idb');
+    db = idbModule.db;
   });
 
   describe('db function', () => {
@@ -124,13 +130,13 @@ describe('IDB Service', () => {
 
   describe('GalleryItem interface', () => {
     it('should have correct structure', () => {
-      const item: GalleryItem = {
+      const item = {
         id: 'test-id',
         createdAt: new Date().toISOString(),
         width: 1920,
         height: 1080,
         aspect: '16:9',
-        mode: 'exact',
+        mode: 'exact' as const,
         model: 'flux',
         prompt: 'Test prompt',
         blob: new Blob(['test'], { type: 'image/png' }),
@@ -145,13 +151,13 @@ describe('IDB Service', () => {
     });
 
     it('should support optional fields', () => {
-      const item: GalleryItem = {
+      const item = {
         id: 'test-id',
         createdAt: new Date().toISOString(),
         width: 1920,
         height: 1080,
         aspect: '16:9',
-        mode: 'constrained',
+        mode: 'constrained' as const,
         model: 'flux',
         prompt: 'Test prompt',
         blob: new Blob(['test'], { type: 'image/png' }),
@@ -160,7 +166,7 @@ describe('IDB Service', () => {
         collectionId: 'collection-1',
         seed: 12345,
         presetName: 'My Preset',
-        lineage: { parentId: 'parent-1', kind: 'variant' },
+        lineage: { parentId: 'parent-1', kind: 'variant' as const },
         meta: { custom: 'data' },
       };
 
@@ -171,20 +177,20 @@ describe('IDB Service', () => {
     });
 
     it('should support restyle lineage kind', () => {
-      const item: GalleryItem = {
+      const item = {
         id: 'test-id',
         createdAt: new Date().toISOString(),
         width: 1920,
         height: 1080,
         aspect: '16:9',
-        mode: 'exact',
+        mode: 'exact' as const,
         model: 'flux',
         prompt: 'Test prompt',
         blob: new Blob(['test'], { type: 'image/png' }),
         thumb: new Blob(['thumb'], { type: 'image/png' }),
         isFavorite: false,
         collectionId: null,
-        lineage: { kind: 'restyle' },
+        lineage: { kind: 'restyle' as const } as { parentId?: string; kind: 'restyle' },
       };
 
       expect(item.lineage?.kind).toBe('restyle');
@@ -194,7 +200,7 @@ describe('IDB Service', () => {
 
   describe('Collection interface', () => {
     it('should have correct structure', () => {
-      const collection: Collection = {
+      const collection = {
         id: 'collection-id',
         name: 'My Collection',
         createdAt: new Date().toISOString(),
@@ -206,7 +212,7 @@ describe('IDB Service', () => {
     });
 
     it('should support various collection names', () => {
-      const collections: Collection[] = [
+      const collections = [
         { id: '1', name: 'Landscapes', createdAt: new Date().toISOString() },
         { id: '2', name: 'Portraits', createdAt: new Date().toISOString() },
         { id: '3', name: 'Abstract Art', createdAt: new Date().toISOString() },
