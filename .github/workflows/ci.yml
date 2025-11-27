@@ -104,11 +104,18 @@ jobs:
       - name: Start static server
         run: |
           npx serve dist/app --listen 8080 &
-          sleep 3
+          sleep 5
       - name: Run Lighthouse CI
-        uses: treosh/lighthouse-ci-action@v10
+        uses: treosh/lighthouse-ci-action@v12
         with:
           urls: |
             http://localhost:8080
-          uploadArtifacts: true
+          uploadArtifacts: false
           temporaryPublicStorage: true
+      - name: Upload Lighthouse results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lighthouse-results-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .lighthouseci/
+          retention-days: 7
