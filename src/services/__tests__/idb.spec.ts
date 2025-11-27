@@ -6,7 +6,9 @@
 import { db, GalleryItem, Collection } from '../idb';
 
 // Store upgrade callback for testing
-let capturedUpgradeCallback: ((database: any, oldVersion: number, newVersion: number | null, transaction: any) => void) | undefined;
+let capturedUpgradeCallback:
+  | ((database: any, oldVersion: number, newVersion: number | null, transaction: any) => void)
+  | undefined;
 
 // Mock IndexedDB with upgrade callback capture
 const mockObjectStore = {

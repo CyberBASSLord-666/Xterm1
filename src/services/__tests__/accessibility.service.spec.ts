@@ -403,9 +403,7 @@ describe('AccessibilityService', () => {
 
       const issues = service.audit();
 
-      const skipIssue = issues.find(
-        (i) => i.rule === 'heading-order' && i.message.includes('skipped')
-      );
+      const skipIssue = issues.find((i) => i.rule === 'heading-order' && i.message.includes('skipped'));
       expect(skipIssue).toBeDefined();
     });
 
@@ -438,9 +436,7 @@ describe('AccessibilityService', () => {
 
       const issues = service.audit();
 
-      const linkWarning = issues.find(
-        (i) => i.rule === 'link-name' && i.type === 'warning' && i.element === link
-      );
+      const linkWarning = issues.find((i) => i.rule === 'link-name' && i.type === 'warning' && i.element === link);
       expect(linkWarning).toBeUndefined();
     });
 
@@ -456,9 +452,7 @@ describe('AccessibilityService', () => {
 
       const issues = service.audit();
 
-      const warnings = issues.filter(
-        (i) => i.rule === 'link-name' && i.type === 'warning'
-      );
+      const warnings = issues.filter((i) => i.rule === 'link-name' && i.type === 'warning');
       expect(warnings.length).toBeGreaterThanOrEqual(genericTexts.length);
     });
   });
@@ -531,9 +525,7 @@ describe('AccessibilityService', () => {
 
       const issues = service.audit();
 
-      const labelIssue = issues.find(
-        (i) => i.rule === 'label' && i.element === input
-      );
+      const labelIssue = issues.find((i) => i.rule === 'label' && i.element === input);
       expect(labelIssue).toBeUndefined();
     });
   });
