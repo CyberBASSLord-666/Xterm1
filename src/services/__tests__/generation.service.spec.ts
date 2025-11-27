@@ -163,13 +163,8 @@ describe('GenerationService', () => {
     it('should set status to generating when starting', async () => {
       createDeviceWallpaperMock.mockImplementation(() => new Promise(() => {})); // Never resolves
 
-      const generatePromise = service.generateWallpaper(
-        'test prompt',
-        mockOptions,
-        mockDevice,
-        mockSupported,
-        'Test Preset'
-      );
+      // Start generation but don't await - we're testing the in-progress status
+      void service.generateWallpaper('test prompt', mockOptions, mockDevice, mockSupported, 'Test Preset');
 
       // Wait for the promise to start
       await new Promise((resolve) => setTimeout(resolve, 10));
