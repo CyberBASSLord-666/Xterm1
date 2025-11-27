@@ -65,6 +65,7 @@ jobs:
 
   e2e:
     runs-on: ubuntu-latest
+    needs: build
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -72,19 +73,27 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-      - run: npm ci --legacy-peer-deps
-      - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-production
+          path: dist/
+      - name: Install dependencies (minimal)
+        run: npm ci --legacy-peer-deps --ignore-scripts
+      - name: Install Playwright (Chromium only)
+        run: npx playwright install chromium --with-deps
       - name: Run Playwright Tests
         run: npm run e2e:headless
+        env:
+          CI: true
         continue-on-error: true
       - name: Upload Playwright Report
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: playwright-report
+          name: playwright-report-${{ github.run_id }}
           path: playwright-report/
-          retention-days: 30
+          retention-days: 7
 
   lighthouse:
     runs-on: ubuntu-latest
