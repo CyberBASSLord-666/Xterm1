@@ -36,7 +36,7 @@ jobs:
           name: codecov-umbrella
 
       - name: Upload coverage artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: coverage-report
@@ -57,7 +57,7 @@ jobs:
       - run: npm ci --legacy-peer-deps
       - run: npm run build -- --configuration=${{ matrix.configuration }}
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: dist-${{ matrix.configuration }}
           path: dist/
@@ -79,7 +79,7 @@ jobs:
         run: npm run e2e:headless
         continue-on-error: true
       - name: Upload Playwright Report
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: playwright-report
@@ -96,7 +96,7 @@ jobs:
         with:
           node-version: '20'
       - name: Download build artifacts
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v4
         with:
           name: dist-production
           path: dist/
