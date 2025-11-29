@@ -1,0 +1,482 @@
+# ============================================================================
+# AI-Powered Issue Fixer Workflow for PolliWall (Xterm1)
+# ============================================================================
+# This workflow uses AI to understand and fix code issues:
+# - Analyzes error context to understand root causes
+# - Generates intelligent fixes rather than pattern-based replacements
+# - Can fix complex issues that static rules can't handle
+# - Posts AI-generated explanations of what was fixed and why
+#
+# Prerequisites:
+# - (Optional) OPENAI_API_KEY secret for AI-powered fixes
+# - GH_TOKEN for pushing commits
+#
+# Trigger: Workflow dispatch, repository dispatch, or comment commands
+# ============================================================================
+
+name: AI Fix Issues
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_type:
+        description: 'Type of issue to fix'
+        required: true
+        type: choice
+        options:
+          - lint
+          - types
+          - security
+          - performance
+          - all
+        default: 'all'
+      target_branch:
+        description: 'Branch to fix'
+        required: false
+        type: string
+      ai_mode:
+        description: 'Enable AI-powered fixes'
+        required: false
+        type: boolean
+        default: true
+      create_pr:
+        description: 'Create PR with fixes instead of direct commit'
+        required: false
+        type: boolean
+        default: false
+
+  repository_dispatch:
+    types: [ai-fix-requested]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ============ ANALYZE ISSUES ============
+  analyze:
+    runs-on: ubuntu-latest
+    outputs:
+      lint_issues: ${{ steps.analyze.outputs.lint_issues }}
+      type_issues: ${{ steps.analyze.outputs.type_issues }}
+      security_issues: ${{ steps.analyze.outputs.security_issues }}
+      has_issues: ${{ steps.analyze.outputs.has_issues }}
+      issues_json: ${{ steps.analyze.outputs.issues_json }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_branch || github.ref }}
+          token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Analyze codebase issues
+        id: analyze
+        run: |
+          echo "🔍 Analyzing codebase for issues..."
+          
+          ISSUES=()
+          
+          # Lint issues
+          set +e
+          npx eslint "src/**/*.ts" --format json > /tmp/eslint-report.json 2>&1
+          set -e
+          
+          LINT_COUNT=$(cat /tmp/eslint-report.json | jq '[.[] | .errorCount + .warningCount] | add // 0')
+          echo "lint_issues=$LINT_COUNT" >> $GITHUB_OUTPUT
+          
+          # Type issues
+          set +e
+          npx tsc --noEmit 2>&1 | grep "error TS" > /tmp/tsc-errors.txt
+          set -e
+          
+          TYPE_COUNT=$(wc -l < /tmp/tsc-errors.txt | tr -d ' ')
+          echo "type_issues=$TYPE_COUNT" >> $GITHUB_OUTPUT
+          
+          # Security issues
+          npm audit --json > /tmp/audit.json 2>&1 || true
+          SECURITY_COUNT=$(cat /tmp/audit.json | jq '.metadata.vulnerabilities.total // 0')
+          echo "security_issues=$SECURITY_COUNT" >> $GITHUB_OUTPUT
+          
+          # Determine if there are issues to fix
+          TOTAL=$((LINT_COUNT + TYPE_COUNT + SECURITY_COUNT))
+          if [ "$TOTAL" -gt 0 ]; then
+            echo "has_issues=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_issues=false" >> $GITHUB_OUTPUT
+          fi
+          
+          # Create a summary JSON
+          echo "issues_json={\"lint\":$LINT_COUNT,\"types\":$TYPE_COUNT,\"security\":$SECURITY_COUNT}" >> $GITHUB_OUTPUT
+          
+          echo "## Issue Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "| Category | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint | $LINT_COUNT |" >> $GITHUB_STEP_SUMMARY
+          echo "| Type | $TYPE_COUNT |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security | $SECURITY_COUNT |" >> $GITHUB_STEP_SUMMARY
+
+  # ============ AI-POWERED FIX ============
+  ai-fix:
+    runs-on: ubuntu-latest
+    needs: analyze
+    if: needs.analyze.outputs.has_issues == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_branch || github.ref }}
+          token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply standard fixes
+        id: standard_fixes
+        run: |
+          echo "🔧 Applying standard auto-fixes..."
+          
+          FIXES_APPLIED=""
+          
+          # ESLint auto-fix
+          if [ "${{ inputs.issue_type }}" = "lint" ] || [ "${{ inputs.issue_type }}" = "all" ]; then
+            echo "Running ESLint auto-fix..."
+            npx eslint "src/**/*.{ts,html}" --fix 2>&1 || true
+            FIXES_APPLIED="${FIXES_APPLIED}eslint,"
+          fi
+          
+          # Prettier formatting
+          if [ "${{ inputs.issue_type }}" = "lint" ] || [ "${{ inputs.issue_type }}" = "all" ]; then
+            echo "Running Prettier..."
+            npx prettier --write "src/**/*.{ts,html,css,scss,json}" 2>&1 || true
+            FIXES_APPLIED="${FIXES_APPLIED}prettier,"
+          fi
+          
+          # Security fixes
+          if [ "${{ inputs.issue_type }}" = "security" ] || [ "${{ inputs.issue_type }}" = "all" ]; then
+            echo "Running npm audit fix..."
+            npm audit fix 2>&1 || true
+            FIXES_APPLIED="${FIXES_APPLIED}security,"
+          fi
+          
+          echo "fixes_applied=$FIXES_APPLIED" >> $GITHUB_OUTPUT
+
+      - name: AI-Powered Type Error Analysis
+        if: (inputs.issue_type == 'types' || inputs.issue_type == 'all') && inputs.ai_mode == true && env.OPENAI_API_KEY != ''
+        id: ai_type_fix
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          echo "🤖 Running AI-powered type error analysis..."
+          
+          # Collect type errors with context
+          set +e
+          npx tsc --noEmit 2>&1 > /tmp/tsc-full-output.txt
+          set -e
+          
+          # Get the first few errors with file context
+          head -20 /tmp/tsc-full-output.txt > /tmp/type-errors-sample.txt
+          
+          if [ ! -s /tmp/type-errors-sample.txt ]; then
+            echo "No type errors to analyze"
+            echo "ai_suggestions=" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # For each error file, get the relevant source
+          ERROR_FILES=$(grep -oP "src/[^:]+\.ts" /tmp/type-errors-sample.txt | sort -u | head -5)
+          
+          echo "Analyzing type errors in: $ERROR_FILES"
+          
+          # Build context for AI
+          CONTEXT=""
+          for file in $ERROR_FILES; do
+            if [ -f "$file" ]; then
+              CONTEXT="${CONTEXT}\n\n=== ${file} ===\n$(head -100 "$file")"
+            fi
+          done
+          
+          # Call OpenAI for suggestions
+          PROMPT="You are a TypeScript expert. Analyze these type errors and the related source code. Provide specific, actionable fixes in the form of code snippets that can be directly applied. Format your response as a list of fixes with file paths and the exact code changes needed.
+
+          Type Errors:
+          $(cat /tmp/type-errors-sample.txt)
+
+          Source Context:
+          ${CONTEXT}"
+          
+          RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $OPENAI_API_KEY" \
+            -d @- << EOF
+          {
+            "model": "gpt-4o-mini",
+            "messages": [
+              {"role": "system", "content": "You are a TypeScript expert that provides precise, minimal code fixes."},
+              {"role": "user", "content": "$(echo "$PROMPT" | head -c 4000 | sed 's/"/\\"/g' | tr '\n' ' ')"}
+            ],
+            "max_tokens": 1500,
+            "temperature": 0.2
+          }
+          EOF
+          )
+          
+          AI_SUGGESTIONS=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "No suggestions available"')
+          echo "$AI_SUGGESTIONS" > /tmp/ai-suggestions.md
+          echo "ai_suggestions_available=true" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: AI-Powered Performance Analysis
+        if: (inputs.issue_type == 'performance' || inputs.issue_type == 'all') && inputs.ai_mode == true && env.OPENAI_API_KEY != ''
+        id: ai_perf_fix
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          echo "🤖 Running AI-powered performance analysis..."
+          
+          # Find potential performance issues
+          PERF_ISSUES=""
+          
+          # Large files
+          LARGE_FILES=$(find src -name "*.ts" -size +20k 2>/dev/null | head -5)
+          if [ -n "$LARGE_FILES" ]; then
+            PERF_ISSUES="${PERF_ISSUES}\nLarge files (>20KB): ${LARGE_FILES}"
+          fi
+          
+          # Console logs
+          CONSOLE_COUNT=$(grep -r "console\." src --include="*.ts" 2>/dev/null | wc -l)
+          PERF_ISSUES="${PERF_ISSUES}\nConsole statements: ${CONSOLE_COUNT}"
+          
+          # Namespace imports
+          NAMESPACE_IMPORTS=$(grep -r "import \* as" src --include="*.ts" 2>/dev/null | wc -l)
+          PERF_ISSUES="${PERF_ISSUES}\nNamespace imports (may affect tree-shaking): ${NAMESPACE_IMPORTS}"
+          
+          if [ -z "$PERF_ISSUES" ]; then
+            echo "No performance issues detected"
+            exit 0
+          fi
+          
+          # Get AI suggestions for performance
+          RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $OPENAI_API_KEY" \
+            -d @- << EOF
+          {
+            "model": "gpt-4o-mini",
+            "messages": [
+              {"role": "system", "content": "You are a performance optimization expert for TypeScript/React applications."},
+              {"role": "user", "content": "Analyze these potential performance issues and provide specific optimization recommendations:\n${PERF_ISSUES}"}
+            ],
+            "max_tokens": 1000,
+            "temperature": 0.3
+          }
+          EOF
+          )
+          
+          PERF_SUGGESTIONS=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "No suggestions available"')
+          echo "$PERF_SUGGESTIONS" >> /tmp/ai-suggestions.md
+        continue-on-error: true
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if [[ -n $(git status --porcelain) ]]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            CHANGED_COUNT=$(git status --porcelain | wc -l)
+            echo "changed_count=$CHANGED_COUNT" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "changed_count=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create fix branch (if PR mode)
+        if: steps.changes.outputs.has_changes == 'true' && inputs.create_pr == true
+        id: create_branch
+        run: |
+          BRANCH_NAME="ai-fix/$(date +%Y%m%d-%H%M%S)"
+          git checkout -b "$BRANCH_NAME"
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+
+      - name: Commit fixes
+        if: steps.changes.outputs.has_changes == 'true'
+        id: commit
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add -A
+          
+          # Build commit message
+          COMMIT_MSG="🤖 AI Fix: Applied intelligent code fixes
+
+          Issue Type: ${{ inputs.issue_type }}
+          AI Mode: ${{ inputs.ai_mode }}
+          
+          Fixes Applied:
+          - ${{ steps.standard_fixes.outputs.fixes_applied }}
+          
+          Files Changed: ${{ steps.changes.outputs.changed_count }}
+          
+          This commit was automatically generated by the AI Fix Issues workflow."
+          
+          git commit -m "$COMMIT_MSG"
+          git push ${{ inputs.create_pr == true && format('origin {0}', steps.create_branch.outputs.branch_name) || '' }}
+          
+          echo "committed=true" >> $GITHUB_OUTPUT
+          echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Create Pull Request
+        if: steps.commit.outputs.committed == 'true' && inputs.create_pr == true
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            
+            let aiSuggestions = '';
+            try {
+              if (fs.existsSync('/tmp/ai-suggestions.md')) {
+                aiSuggestions = fs.readFileSync('/tmp/ai-suggestions.md', 'utf8');
+              }
+            } catch (e) {
+              console.log('No AI suggestions available');
+            }
+            
+            const body = `## 🤖 AI-Powered Code Fixes
+
+            This PR contains automatically generated fixes for code issues.
+
+            ### Issue Summary
+            - **Lint Issues Found**: ${{ needs.analyze.outputs.lint_issues }}
+            - **Type Issues Found**: ${{ needs.analyze.outputs.type_issues }}
+            - **Security Issues Found**: ${{ needs.analyze.outputs.security_issues }}
+
+            ### Fixes Applied
+            - ${{ steps.standard_fixes.outputs.fixes_applied }}
+
+            ${aiSuggestions ? `### 🧠 AI Analysis & Suggestions\n\n${aiSuggestions}` : ''}
+
+            ### Review Notes
+            Please review these changes carefully. While the AI has attempted to make intelligent fixes, human verification is recommended.
+
+            ---
+            *Generated by AI Fix Issues Workflow*`;
+            
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🤖 AI Fix: Automated code improvements',
+              body: body,
+              head: '${{ steps.create_branch.outputs.branch_name }}',
+              base: '${{ inputs.target_branch || github.ref_name }}'
+            });
+            
+            console.log(`Created PR #${pr.number}`);
+            
+            // Add labels
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              labels: ['ai-generated', 'automated', 'needs-review']
+            });
+
+      - name: Generate fix report
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const hasChanges = '${{ steps.changes.outputs.has_changes }}' === 'true';
+            const committed = '${{ steps.commit.outputs.committed }}' === 'true';
+            const changedCount = '${{ steps.changes.outputs.changed_count }}';
+            const sha = '${{ steps.commit.outputs.sha }}';
+            const createPR = '${{ inputs.create_pr }}' === 'true';
+            
+            let aiSuggestions = '';
+            try {
+              if (fs.existsSync('/tmp/ai-suggestions.md')) {
+                aiSuggestions = fs.readFileSync('/tmp/ai-suggestions.md', 'utf8');
+              }
+            } catch (e) {
+              console.log('No AI suggestions file');
+            }
+            
+            let report = `## 🤖 AI Fix Report
+
+            ### Issues Analyzed
+            | Category | Before | Status |
+            |----------|--------|--------|
+            | Lint Issues | ${{ needs.analyze.outputs.lint_issues }} | ${committed ? '✅ Fixed' : '⏳ Pending'} |
+            | Type Issues | ${{ needs.analyze.outputs.type_issues }} | ${committed ? '🔄 Analyzed' : '⏳ Pending'} |
+            | Security Issues | ${{ needs.analyze.outputs.security_issues }} | ${committed ? '✅ Fixed' : '⏳ Pending'} |
+
+            `;
+            
+            if (committed) {
+              report += `### ✅ Fixes Applied
+
+            | Metric | Value |
+            |--------|-------|
+            | Files Changed | ${changedCount} |
+            | Commit | \`${sha}\` |
+            | Mode | ${createPR ? 'Pull Request' : 'Direct Commit'} |
+
+            `;
+            } else if (!hasChanges) {
+              report += `### ✨ No Changes Needed
+
+            The codebase is already in good shape!
+
+            `;
+            }
+            
+            if (aiSuggestions) {
+              report += `### 🧠 AI Suggestions
+
+            ${aiSuggestions}
+
+            `;
+            }
+            
+            report += `---
+            *Generated by AI Fix Issues Workflow*`;
+            
+            // Write to job summary
+            await core.summary
+              .addRaw(report)
+              .write();
+
+  # ============ NO ISSUES FOUND ============
+  no-issues:
+    runs-on: ubuntu-latest
+    needs: analyze
+    if: needs.analyze.outputs.has_issues == 'false'
+
+    steps:
+      - name: Report clean state
+        run: |
+          echo "## ✨ No Issues Found" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The codebase is clean! No lint, type, or security issues were detected." >> $GITHUB_STEP_SUMMARY

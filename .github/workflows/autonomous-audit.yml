@@ -1,0 +1,834 @@
+# ============================================================================
+# Autonomous Audit Workflow for PolliWall (Xterm1)
+# ============================================================================
+# This workflow performs comprehensive code quality analysis including:
+# - Code complexity and duplication detection
+# - Bundle size analysis and reporting
+# - Accessibility audit (axe-core)
+# - Performance audit (Lighthouse metrics)
+# - Dependency health check (outdated, deprecated, vulnerable)
+# - Generates comprehensive audit report
+#
+# Trigger: Manual dispatch, scheduled, or via @copilot audit command
+# ============================================================================
+
+name: Autonomous Audit
+
+on:
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: 'Audit scope'
+        required: false
+        type: choice
+        options:
+          - full
+          - code-quality
+          - bundle-size
+          - accessibility
+          - performance
+          - dependencies
+        default: 'full'
+      create_issue:
+        description: 'Create issue with findings'
+        required: false
+        type: boolean
+        default: false
+
+  schedule:
+    # Run weekly on Saturdays at 6 AM UTC
+    - cron: '0 6 * * 6'
+
+  repository_dispatch:
+    types: [audit-requested]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+  security-events: read
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ============ CODE QUALITY ANALYSIS ============
+  code-quality:
+    runs-on: ubuntu-latest
+    if: inputs.scope == 'full' || inputs.scope == 'code-quality' || github.event_name == 'schedule' || github.event_name == 'repository_dispatch'
+    outputs:
+      complexity_issues: ${{ steps.complexity.outputs.issues }}
+      duplication_percentage: ${{ steps.duplication.outputs.percentage }}
+      dead_code_files: ${{ steps.dead_code.outputs.count }}
+      lint_errors: ${{ steps.lint.outputs.errors }}
+      lint_warnings: ${{ steps.lint.outputs.warnings }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint analysis
+        id: lint
+        run: |
+          set +e
+          npx eslint "src/**/*.{ts,html}" --format json > eslint-report.json 2>&1
+          set -e
+          
+          ERRORS=$(cat eslint-report.json | jq '[.[] | .errorCount] | add // 0')
+          WARNINGS=$(cat eslint-report.json | jq '[.[] | .warningCount] | add // 0')
+          
+          echo "errors=$ERRORS" >> $GITHUB_OUTPUT
+          echo "warnings=$WARNINGS" >> $GITHUB_OUTPUT
+          
+          echo "## ESLint Report" >> $GITHUB_STEP_SUMMARY
+          echo "- Errors: $ERRORS" >> $GITHUB_STEP_SUMMARY
+          echo "- Warnings: $WARNINGS" >> $GITHUB_STEP_SUMMARY
+        continue-on-error: true
+
+      - name: Analyze code complexity
+        id: complexity
+        run: |
+          echo "📊 Analyzing code complexity..."
+          
+          # Check for complex functions using ESLint complexity rule
+          set +e
+          npx eslint "src/**/*.ts" --rule '{"complexity": ["error", 15]}' --format json > complexity-report.json 2>&1
+          set -e
+          
+          ISSUES=$(cat complexity-report.json | jq '[.[] | .errorCount] | add // 0')
+          echo "issues=$ISSUES" >> $GITHUB_OUTPUT
+          
+          echo "### Code Complexity" >> $GITHUB_STEP_SUMMARY
+          echo "- High complexity functions: $ISSUES" >> $GITHUB_STEP_SUMMARY
+        continue-on-error: true
+
+      - name: Check for code duplication
+        id: duplication
+        run: |
+          echo "🔍 Checking for code duplication..."
+          
+          # Use a simple grep-based approach to detect similar patterns
+          TOTAL_LINES=$(find src -name "*.ts" -exec wc -l {} + | tail -1 | awk '{print $1}')
+          
+          # Count potential duplicates (lines appearing more than 3 times)
+          DUPLICATE_PATTERNS=$(find src -name "*.ts" -exec cat {} + | sort | uniq -c | sort -rn | awk '$1 > 3 && length($0) > 30' | wc -l)
+          
+          # Estimate duplication percentage (rough approximation)
+          if [ "$TOTAL_LINES" -gt 0 ]; then
+            PERCENTAGE=$((DUPLICATE_PATTERNS * 100 / TOTAL_LINES))
+          else
+            PERCENTAGE=0
+          fi
+          
+          echo "percentage=$PERCENTAGE" >> $GITHUB_OUTPUT
+          
+          echo "### Code Duplication" >> $GITHUB_STEP_SUMMARY
+          echo "- Estimated duplication: ${PERCENTAGE}%" >> $GITHUB_STEP_SUMMARY
+        continue-on-error: true
+
+      - name: Detect unused/dead code
+        id: dead_code
+        run: |
+          echo "🗑️ Detecting unused code..."
+          
+          # Find TypeScript files that are not imported anywhere
+          DEAD_CODE_COUNT=0
+          
+          for file in $(find src -name "*.ts" ! -name "*.spec.ts" ! -name "*.d.ts" ! -name "main.ts" ! -name "index.ts"); do
+            basename=$(basename "$file" .ts)
+            # Check if this file is imported anywhere
+            if ! grep -rq "from.*['\"].*${basename}['\"]" src --include="*.ts" 2>/dev/null; then
+              if ! grep -rq "import.*${basename}" src --include="*.ts" 2>/dev/null; then
+                DEAD_CODE_COUNT=$((DEAD_CODE_COUNT + 1))
+                echo "Potentially unused: $file" >> dead-code-candidates.txt
+              fi
+            fi
+          done
+          
+          echo "count=$DEAD_CODE_COUNT" >> $GITHUB_OUTPUT
+          
+          echo "### Dead Code Detection" >> $GITHUB_STEP_SUMMARY
+          echo "- Potentially unused files: $DEAD_CODE_COUNT" >> $GITHUB_STEP_SUMMARY
+        continue-on-error: true
+
+      - name: Upload code quality artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-quality-report
+          path: |
+            eslint-report.json
+            complexity-report.json
+            dead-code-candidates.txt
+          retention-days: 30
+          if-no-files-found: ignore
+
+  # ============ BUNDLE SIZE ANALYSIS ============
+  bundle-analysis:
+    runs-on: ubuntu-latest
+    if: inputs.scope == 'full' || inputs.scope == 'bundle-size' || github.event_name == 'schedule' || github.event_name == 'repository_dispatch'
+    outputs:
+      main_bundle_kb: ${{ steps.analyze.outputs.main_kb }}
+      total_bundle_kb: ${{ steps.analyze.outputs.total_kb }}
+      lazy_chunks: ${{ steps.analyze.outputs.lazy_count }}
+      budget_status: ${{ steps.analyze.outputs.budget_status }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Analyze bundle sizes
+        id: analyze
+        run: |
+          echo "📦 Analyzing bundle sizes..."
+          
+          # Find the dist directory
+          if [ -d "dist/app/browser" ]; then
+            DIST_DIR="dist/app/browser"
+          elif [ -d "dist/app" ]; then
+            DIST_DIR="dist/app"
+          else
+            echo "Build directory not found"
+            exit 0
+          fi
+          
+          cd "$DIST_DIR"
+          
+          # Main bundle size
+          MAIN_BUNDLE=$(ls main*.js 2>/dev/null | head -1 || echo "")
+          if [ -n "$MAIN_BUNDLE" ] && [ -f "$MAIN_BUNDLE" ]; then
+            MAIN_KB=$(wc -c < "$MAIN_BUNDLE" | awk '{print int($1/1024)}')
+          else
+            MAIN_KB=0
+          fi
+          
+          # Total initial bundle size
+          TOTAL_KB=$(find . -maxdepth 1 -name "*.js" -exec wc -c {} \; 2>/dev/null | awk '{total+=$1} END {print int(total/1024)}')
+          TOTAL_KB=${TOTAL_KB:-0}
+          
+          # Lazy chunk count
+          LAZY_COUNT=$(ls chunk-*.js 2>/dev/null | wc -l || echo "0")
+          
+          # Budget check (1MB = 1000KB initial budget)
+          BUDGET_KB=1000
+          if [ "$TOTAL_KB" -gt "$BUDGET_KB" ]; then
+            BUDGET_STATUS="exceeded"
+          else
+            BUDGET_STATUS="within"
+          fi
+          
+          echo "main_kb=$MAIN_KB" >> $GITHUB_OUTPUT
+          echo "total_kb=$TOTAL_KB" >> $GITHUB_OUTPUT
+          echo "lazy_count=$LAZY_COUNT" >> $GITHUB_OUTPUT
+          echo "budget_status=$BUDGET_STATUS" >> $GITHUB_OUTPUT
+          
+          echo "## Bundle Size Report" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Size |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Main Bundle | ${MAIN_KB}KB |" >> $GITHUB_STEP_SUMMARY
+          echo "| Total Initial | ${TOTAL_KB}KB |" >> $GITHUB_STEP_SUMMARY
+          echo "| Lazy Chunks | $LAZY_COUNT |" >> $GITHUB_STEP_SUMMARY
+          echo "| Budget Status | $BUDGET_STATUS |" >> $GITHUB_STEP_SUMMARY
+        continue-on-error: true
+
+      - name: Check for optimization opportunities
+        id: optimization
+        run: |
+          echo "🔧 Checking for bundle optimization opportunities..."
+          
+          OPPORTUNITIES=""
+          
+          # Check if source maps are included (shouldn't be in prod)
+          if find dist -name "*.map" | head -1 | grep -q .; then
+            OPPORTUNITIES="${OPPORTUNITIES}\n- Source maps detected in production build"
+          fi
+          
+          # Check for potential tree-shaking issues
+          if grep -rq "import \* as" src --include="*.ts" 2>/dev/null; then
+            OPPORTUNITIES="${OPPORTUNITIES}\n- Namespace imports detected (may prevent tree-shaking)"
+          fi
+          
+          # Check for moment.js or other known large libraries
+          if grep -q "moment" package.json 2>/dev/null; then
+            OPPORTUNITIES="${OPPORTUNITIES}\n- Consider replacing moment.js with date-fns or dayjs"
+          fi
+          
+          if grep -q "lodash\"" package.json 2>/dev/null; then
+            OPPORTUNITIES="${OPPORTUNITIES}\n- Consider using lodash-es or individual lodash functions"
+          fi
+          
+          echo -e "$OPPORTUNITIES" > bundle-opportunities.txt
+          
+          if [ -n "$OPPORTUNITIES" ]; then
+            echo "### Optimization Opportunities" >> $GITHUB_STEP_SUMMARY
+            echo -e "$OPPORTUNITIES" >> $GITHUB_STEP_SUMMARY
+          fi
+        continue-on-error: true
+
+  # ============ ACCESSIBILITY AUDIT ============
+  accessibility:
+    runs-on: ubuntu-latest
+    if: inputs.scope == 'full' || inputs.scope == 'accessibility' || github.event_name == 'schedule' || github.event_name == 'repository_dispatch'
+    outputs:
+      violations: ${{ steps.a11y.outputs.violations }}
+      critical_count: ${{ steps.a11y.outputs.critical }}
+      serious_count: ${{ steps.a11y.outputs.serious }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Install axe-core
+        run: npm install -g @axe-core/cli
+
+      - name: Start static server
+        run: |
+          npx serve dist/app --listen 8080 &
+          sleep 5
+        continue-on-error: true
+
+      - name: Run accessibility audit
+        id: a11y
+        run: |
+          echo "♿ Running accessibility audit..."
+          
+          # Run axe-core on the built app
+          set +e
+          npx axe http://localhost:8080 --save a11y-report.json 2>&1 || true
+          set -e
+          
+          if [ -f "a11y-report.json" ]; then
+            VIOLATIONS=$(cat a11y-report.json | jq '.violations | length' 2>/dev/null || echo "0")
+            CRITICAL=$(cat a11y-report.json | jq '[.violations[] | select(.impact == "critical")] | length' 2>/dev/null || echo "0")
+            SERIOUS=$(cat a11y-report.json | jq '[.violations[] | select(.impact == "serious")] | length' 2>/dev/null || echo "0")
+          else
+            VIOLATIONS=0
+            CRITICAL=0
+            SERIOUS=0
+          fi
+          
+          echo "violations=$VIOLATIONS" >> $GITHUB_OUTPUT
+          echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
+          echo "serious=$SERIOUS" >> $GITHUB_OUTPUT
+          
+          echo "## Accessibility Report" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Total Violations | $VIOLATIONS |" >> $GITHUB_STEP_SUMMARY
+          echo "| Critical | $CRITICAL |" >> $GITHUB_STEP_SUMMARY
+          echo "| Serious | $SERIOUS |" >> $GITHUB_STEP_SUMMARY
+        continue-on-error: true
+
+      - name: Upload accessibility report
+        uses: actions/upload-artifact@v4
+        with:
+          name: a11y-report
+          path: a11y-report.json
+          retention-days: 30
+          if-no-files-found: ignore
+
+  # ============ PERFORMANCE AUDIT ============
+  performance:
+    runs-on: ubuntu-latest
+    if: inputs.scope == 'full' || inputs.scope == 'performance' || github.event_name == 'schedule' || github.event_name == 'repository_dispatch'
+    outputs:
+      performance_score: ${{ steps.lighthouse.outputs.performance }}
+      accessibility_score: ${{ steps.lighthouse.outputs.accessibility }}
+      best_practices_score: ${{ steps.lighthouse.outputs.best_practices }}
+      seo_score: ${{ steps.lighthouse.outputs.seo }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Start static server
+        run: |
+          npx serve dist/app --listen 8080 &
+          sleep 5
+
+      - name: Run Lighthouse audit
+        id: lighthouse
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          urls: http://localhost:8080
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+        continue-on-error: true
+
+      - name: Parse Lighthouse results
+        run: |
+          echo "## Performance Audit (Lighthouse)" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -d ".lighthouseci" ]; then
+            for file in .lighthouseci/lhr-*.json; do
+              if [ -f "$file" ]; then
+                PERF=$(cat "$file" | jq '.categories.performance.score * 100' 2>/dev/null || echo "N/A")
+                A11Y=$(cat "$file" | jq '.categories.accessibility.score * 100' 2>/dev/null || echo "N/A")
+                BP=$(cat "$file" | jq '.categories["best-practices"].score * 100' 2>/dev/null || echo "N/A")
+                SEO=$(cat "$file" | jq '.categories.seo.score * 100' 2>/dev/null || echo "N/A")
+                
+                echo "| Metric | Score |" >> $GITHUB_STEP_SUMMARY
+                echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+                echo "| Performance | ${PERF}% |" >> $GITHUB_STEP_SUMMARY
+                echo "| Accessibility | ${A11Y}% |" >> $GITHUB_STEP_SUMMARY
+                echo "| Best Practices | ${BP}% |" >> $GITHUB_STEP_SUMMARY
+                echo "| SEO | ${SEO}% |" >> $GITHUB_STEP_SUMMARY
+                break
+              fi
+            done
+          fi
+        continue-on-error: true
+
+  # ============ DEPENDENCY HEALTH CHECK ============
+  dependency-health:
+    runs-on: ubuntu-latest
+    if: inputs.scope == 'full' || inputs.scope == 'dependencies' || github.event_name == 'schedule' || github.event_name == 'repository_dispatch'
+    outputs:
+      outdated_count: ${{ steps.outdated.outputs.count }}
+      vulnerable_count: ${{ steps.security.outputs.vulnerabilities }}
+      critical_vulnerabilities: ${{ steps.security.outputs.critical }}
+      deprecated_count: ${{ steps.deprecated.outputs.count }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check for outdated dependencies
+        id: outdated
+        run: |
+          echo "📦 Checking for outdated dependencies..."
+          
+          npm outdated --json > outdated.json 2>&1 || true
+          
+          COUNT=$(cat outdated.json | jq 'length' 2>/dev/null || echo "0")
+          echo "count=$COUNT" >> $GITHUB_OUTPUT
+          
+          echo "### Outdated Dependencies" >> $GITHUB_STEP_SUMMARY
+          echo "Total outdated: $COUNT" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "$COUNT" -gt 0 ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Package | Current | Wanted | Latest |" >> $GITHUB_STEP_SUMMARY
+            echo "|---------|---------|--------|--------|" >> $GITHUB_STEP_SUMMARY
+            cat outdated.json | jq -r 'to_entries | .[:10][] | "| \(.key) | \(.value.current) | \(.value.wanted) | \(.value.latest) |"' >> $GITHUB_STEP_SUMMARY 2>/dev/null || true
+          fi
+        continue-on-error: true
+
+      - name: Run security audit
+        id: security
+        run: |
+          echo "🔒 Running security audit..."
+          
+          npm audit --json > audit.json 2>&1 || true
+          
+          VULNS=$(cat audit.json | jq '.metadata.vulnerabilities.total // 0' 2>/dev/null || echo "0")
+          CRITICAL=$(cat audit.json | jq '.metadata.vulnerabilities.critical // 0' 2>/dev/null || echo "0")
+          HIGH=$(cat audit.json | jq '.metadata.vulnerabilities.high // 0' 2>/dev/null || echo "0")
+          MODERATE=$(cat audit.json | jq '.metadata.vulnerabilities.moderate // 0' 2>/dev/null || echo "0")
+          
+          echo "vulnerabilities=$VULNS" >> $GITHUB_OUTPUT
+          echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
+          echo "high=$HIGH" >> $GITHUB_OUTPUT
+          
+          echo "### Security Vulnerabilities" >> $GITHUB_STEP_SUMMARY
+          echo "| Severity | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔴 Critical | $CRITICAL |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🟠 High | $HIGH |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🟡 Moderate | $MODERATE |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Total** | **$VULNS** |" >> $GITHUB_STEP_SUMMARY
+        continue-on-error: true
+
+      - name: Check for deprecated packages
+        id: deprecated
+        run: |
+          echo "⚠️ Checking for deprecated packages..."
+          
+          DEPRECATED_COUNT=0
+          
+          # Check npm registry for deprecation warnings
+          for pkg in $(cat package.json | jq -r '.dependencies + .devDependencies | keys[]' 2>/dev/null); do
+            INFO=$(npm view "$pkg" deprecated 2>/dev/null || echo "")
+            if [ -n "$INFO" ]; then
+              DEPRECATED_COUNT=$((DEPRECATED_COUNT + 1))
+              echo "$pkg: $INFO" >> deprecated-packages.txt
+            fi
+          done
+          
+          echo "count=$DEPRECATED_COUNT" >> $GITHUB_OUTPUT
+          
+          echo "### Deprecated Packages" >> $GITHUB_STEP_SUMMARY
+          echo "Total deprecated: $DEPRECATED_COUNT" >> $GITHUB_STEP_SUMMARY
+        continue-on-error: true
+
+      - name: Upload dependency reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-reports
+          path: |
+            outdated.json
+            audit.json
+            deprecated-packages.txt
+          retention-days: 30
+          if-no-files-found: ignore
+
+  # ============ AI-POWERED ARCHITECTURAL ANALYSIS ============
+  ai-analysis:
+    runs-on: ubuntu-latest
+    if: inputs.scope == 'full' || github.event_name == 'schedule' || github.event_name == 'repository_dispatch'
+    outputs:
+      ai_recommendations: ${{ steps.ai_analyze.outputs.recommendations }}
+      architecture_issues: ${{ steps.ai_analyze.outputs.architecture_issues }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Collect codebase structure
+        id: structure
+        run: |
+          echo "📁 Analyzing codebase structure..."
+          
+          # Get directory structure
+          find src -type d | head -30 > /tmp/dir-structure.txt
+          
+          # Get file counts by type
+          TS_FILES=$(find src -name "*.ts" ! -name "*.spec.ts" | wc -l)
+          TEST_FILES=$(find src -name "*.spec.ts" | wc -l)
+          COMPONENT_FILES=$(find src -name "*.component.ts" 2>/dev/null | wc -l || echo "0")
+          SERVICE_FILES=$(find src -name "*.service.ts" 2>/dev/null | wc -l || echo "0")
+          
+          echo "ts_files=$TS_FILES" >> $GITHUB_OUTPUT
+          echo "test_files=$TEST_FILES" >> $GITHUB_OUTPUT
+          echo "component_files=$COMPONENT_FILES" >> $GITHUB_OUTPUT
+          echo "service_files=$SERVICE_FILES" >> $GITHUB_OUTPUT
+          
+          # Get imports analysis
+          echo "Analyzing import patterns..."
+          grep -rh "^import" src --include="*.ts" 2>/dev/null | sort | uniq -c | sort -rn | head -20 > /tmp/import-frequency.txt
+          
+          # Check for circular dependencies (basic)
+          echo "Checking for potential circular dependencies..."
+          for file in $(find src -name "*.ts" ! -name "*.spec.ts" | head -50); do
+            BASENAME=$(basename "$file" .ts)
+            if grep -l "from.*$BASENAME" "$file" >/dev/null 2>&1; then
+              echo "Potential self-import: $file" >> /tmp/circular-deps.txt
+            fi
+          done
+
+      - name: AI-Powered Code Analysis
+        id: ai_analyze
+        if: env.OPENAI_API_KEY != ''
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          echo "🤖 Running AI-powered architectural analysis..."
+          
+          # Collect context for AI
+          cat > /tmp/codebase-context.txt << 'EOF'
+          Codebase Structure:
+          - TypeScript files: ${{ steps.structure.outputs.ts_files }}
+          - Test files: ${{ steps.structure.outputs.test_files }}
+          - Component files: ${{ steps.structure.outputs.component_files }}
+          - Service files: ${{ steps.structure.outputs.service_files }}
+          
+          Directory Structure:
+          $(cat /tmp/dir-structure.txt 2>/dev/null | head -20)
+          
+          Top Import Patterns:
+          $(cat /tmp/import-frequency.txt 2>/dev/null | head -15)
+          EOF
+          
+          # Get sample of complex files for analysis
+          find src -name "*.ts" -size +5k ! -name "*.spec.ts" | head -5 | while read file; do
+            echo -e "\n=== $file ===" >> /tmp/complex-files.txt
+            head -50 "$file" >> /tmp/complex-files.txt
+          done
+          
+          # Call OpenAI for architectural analysis
+          RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $OPENAI_API_KEY" \
+            -d @- << 'APICALL'
+          {
+            "model": "gpt-4o-mini",
+            "messages": [
+              {"role": "system", "content": "You are a senior software architect reviewing a TypeScript/React codebase. Analyze the structure and provide: 1) Architectural observations, 2) Potential issues or anti-patterns, 3) Specific recommendations for improvement. Be concise and actionable."},
+              {"role": "user", "content": "$(cat /tmp/codebase-context.txt | head -c 2000 | sed 's/"/\\"/g' | tr '\n' ' ')\n\nSample complex files:\n$(cat /tmp/complex-files.txt 2>/dev/null | head -c 2000 | sed 's/"/\\"/g' | tr '\n' ' ')"}
+            ],
+            "max_tokens": 1500,
+            "temperature": 0.3
+          }
+          APICALL
+          )
+          
+          AI_ANALYSIS=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "AI analysis not available"')
+          echo "$AI_ANALYSIS" > /tmp/ai-architecture-analysis.md
+          
+          # Extract key points
+          ARCH_ISSUES=$(echo "$AI_ANALYSIS" | grep -c "issue\|problem\|concern\|anti-pattern" || echo "0")
+          
+          echo "recommendations<<EOF" >> $GITHUB_OUTPUT
+          echo "$AI_ANALYSIS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "architecture_issues=$ARCH_ISSUES" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Upload AI analysis artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-analysis
+          path: |
+            /tmp/ai-architecture-analysis.md
+            /tmp/dir-structure.txt
+            /tmp/import-frequency.txt
+          retention-days: 30
+          if-no-files-found: ignore
+
+  # ============ GENERATE COMPREHENSIVE REPORT ============
+  generate-report:
+    runs-on: ubuntu-latest
+    needs: [code-quality, bundle-analysis, accessibility, performance, dependency-health, ai-analysis]
+    if: always()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate comprehensive audit report
+        id: report
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const now = new Date().toISOString().split('T')[0];
+            
+            // Code quality results
+            const lintErrors = '${{ needs.code-quality.outputs.lint_errors }}' || '0';
+            const lintWarnings = '${{ needs.code-quality.outputs.lint_warnings }}' || '0';
+            const complexityIssues = '${{ needs.code-quality.outputs.complexity_issues }}' || '0';
+            const duplicationPct = '${{ needs.code-quality.outputs.duplication_percentage }}' || '0';
+            const deadCodeFiles = '${{ needs.code-quality.outputs.dead_code_files }}' || '0';
+            
+            // Bundle results
+            const mainBundleKb = '${{ needs.bundle-analysis.outputs.main_bundle_kb }}' || 'N/A';
+            const totalBundleKb = '${{ needs.bundle-analysis.outputs.total_bundle_kb }}' || 'N/A';
+            const lazyChunks = '${{ needs.bundle-analysis.outputs.lazy_chunks }}' || '0';
+            const budgetStatus = '${{ needs.bundle-analysis.outputs.budget_status }}' || 'unknown';
+            
+            // Accessibility results
+            const a11yViolations = '${{ needs.accessibility.outputs.violations }}' || '0';
+            const a11yCritical = '${{ needs.accessibility.outputs.critical_count }}' || '0';
+            const a11ySerious = '${{ needs.accessibility.outputs.serious_count }}' || '0';
+            
+            // Dependency results
+            const outdatedCount = '${{ needs.dependency-health.outputs.outdated_count }}' || '0';
+            const vulnerableCount = '${{ needs.dependency-health.outputs.vulnerable_count }}' || '0';
+            const criticalVulns = '${{ needs.dependency-health.outputs.critical_vulnerabilities }}' || '0';
+            const deprecatedCount = '${{ needs.dependency-health.outputs.deprecated_count }}' || '0';
+            
+            // Calculate health score
+            let healthScore = 100;
+            healthScore -= Math.min(parseInt(lintErrors) * 2, 20);
+            healthScore -= Math.min(parseInt(complexityIssues) * 3, 15);
+            healthScore -= Math.min(parseInt(a11yCritical) * 5, 15);
+            healthScore -= Math.min(parseInt(criticalVulns) * 10, 30);
+            healthScore -= budgetStatus === 'exceeded' ? 10 : 0;
+            healthScore = Math.max(0, healthScore);
+            
+            const getHealthEmoji = (score) => {
+              if (score >= 90) return '🟢';
+              if (score >= 70) return '🟡';
+              if (score >= 50) return '🟠';
+              return '🔴';
+            };
+            
+            const report = `# 📊 Autonomous Audit Report
+            
+            **Date:** ${now}
+            **Overall Health Score:** ${getHealthEmoji(healthScore)} ${healthScore}/100
+            
+            ## Executive Summary
+            
+            This comprehensive audit analyzed code quality, bundle size, accessibility, performance, and dependency health.
+            
+            ---
+            
+            ## 📝 Code Quality
+            
+            | Metric | Value | Status |
+            |--------|-------|--------|
+            | Lint Errors | ${lintErrors} | ${parseInt(lintErrors) === 0 ? '✅' : '❌'} |
+            | Lint Warnings | ${lintWarnings} | ${parseInt(lintWarnings) < 10 ? '✅' : '⚠️'} |
+            | High Complexity Functions | ${complexityIssues} | ${parseInt(complexityIssues) === 0 ? '✅' : '⚠️'} |
+            | Code Duplication | ~${duplicationPct}% | ${parseInt(duplicationPct) < 10 ? '✅' : '⚠️'} |
+            | Potentially Unused Files | ${deadCodeFiles} | ${parseInt(deadCodeFiles) === 0 ? '✅' : 'ℹ️'} |
+            
+            ## 📦 Bundle Size
+            
+            | Metric | Value | Status |
+            |--------|-------|--------|
+            | Main Bundle | ${mainBundleKb}KB | ℹ️ |
+            | Total Initial | ${totalBundleKb}KB | ${budgetStatus === 'within' ? '✅' : '⚠️'} |
+            | Lazy Chunks | ${lazyChunks} | ℹ️ |
+            | Budget (1000KB) | ${budgetStatus} | ${budgetStatus === 'within' ? '✅' : '⚠️'} |
+            
+            ## ♿ Accessibility
+            
+            | Metric | Count | Status |
+            |--------|-------|--------|
+            | Total Violations | ${a11yViolations} | ${parseInt(a11yViolations) === 0 ? '✅' : '⚠️'} |
+            | Critical Issues | ${a11yCritical} | ${parseInt(a11yCritical) === 0 ? '✅' : '🔴'} |
+            | Serious Issues | ${a11ySerious} | ${parseInt(a11ySerious) === 0 ? '✅' : '🟠'} |
+            
+            ## 📚 Dependency Health
+            
+            | Metric | Count | Status |
+            |--------|-------|--------|
+            | Outdated Packages | ${outdatedCount} | ${parseInt(outdatedCount) < 10 ? '✅' : '⚠️'} |
+            | Security Vulnerabilities | ${vulnerableCount} | ${parseInt(vulnerableCount) === 0 ? '✅' : '⚠️'} |
+            | Critical Vulnerabilities | ${criticalVulns} | ${parseInt(criticalVulns) === 0 ? '✅' : '🔴'} |
+            | Deprecated Packages | ${deprecatedCount} | ${parseInt(deprecatedCount) === 0 ? '✅' : '⚠️'} |
+            
+            ---
+            
+            ## 🎯 Recommendations
+            
+            ${parseInt(lintErrors) > 0 ? '1. **Fix lint errors** - Run `npm run lint:fix` to address auto-fixable issues\n' : ''}
+            ${parseInt(criticalVulns) > 0 ? '2. **Address security vulnerabilities** - Run `npm audit fix` to fix known vulnerabilities\n' : ''}
+            ${parseInt(a11yCritical) > 0 ? '3. **Fix accessibility issues** - Address critical accessibility violations for WCAG compliance\n' : ''}
+            ${budgetStatus === 'exceeded' ? '4. **Optimize bundle size** - Consider code splitting or removing unused dependencies\n' : ''}
+            ${parseInt(complexityIssues) > 0 ? '5. **Reduce complexity** - Refactor high-complexity functions into smaller units\n' : ''}
+            
+            ---
+            
+            ## 🤖 AI-Powered Analysis
+            
+            ${(() => {
+              const aiRecommendations = `${{ needs.ai-analysis.outputs.ai_recommendations || '' }}`;
+              if (aiRecommendations && aiRecommendations !== '' && aiRecommendations !== 'null') {
+                return aiRecommendations;
+              }
+              return '_AI analysis not available. Set OPENAI_API_KEY secret to enable AI-powered insights._';
+            })()}
+            
+            ---
+            
+            *Generated by Autonomous Audit Workflow (AI-Enhanced) • [View Artifacts](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})*`;
+            
+            core.setOutput('report', report);
+            core.setOutput('health_score', healthScore);
+            
+            // Post as job summary
+            await core.summary
+              .addRaw(report)
+              .write();
+            
+            return report;
+
+      - name: Create issue with findings
+        if: inputs.create_issue == true || github.event_name == 'schedule'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const now = new Date().toISOString().split('T')[0];
+            const healthScore = '${{ steps.report.outputs.health_score }}';
+            
+            // Check for existing open audit issues
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'audit-report',
+              per_page: 1
+            });
+            
+            const title = `📊 Autonomous Audit Report - ${now} (Health Score: ${healthScore}/100)`;
+            const body = `${{ steps.report.outputs.report }}`;
+            
+            if (issues.length > 0) {
+              // Update existing issue
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issues[0].number,
+                title: title,
+                body: body
+              });
+              console.log(`Updated existing audit issue #${issues[0].number}`);
+            } else {
+              // Create new issue
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['audit-report', 'automated', 'swarm-generated']
+              });
+              console.log('Created new audit issue');
+            }

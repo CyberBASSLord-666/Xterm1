@@ -1,7 +1,8 @@
 # ============================================================================
 # GitHub Labels Setup Workflow
 # ============================================================================
-# Purpose: Ensures all required labels exist for Dependabot and other automation
+# Purpose: Ensures all required labels exist for Dependabot, Swarm automation,
+#          and other workflow automation
 # Trigger: Manual workflow dispatch or on push to main (runs once to setup)
 # ============================================================================
 
@@ -29,6 +30,7 @@ jobs:
         with:
           script: |
             const labels = [
+              // Dependabot & Dependency Management
               {
                 name: 'automated',
                 color: '0366d6',
@@ -53,6 +55,45 @@ jobs:
                 name: 'npm',
                 color: 'cb3837',
                 description: 'NPM package updates'
+              },
+              
+              // Agentic Swarm Autonomous Labels
+              {
+                name: 'swarm-auto-fix-attempted',
+                color: 'fbca04',
+                description: 'Swarm has attempted autonomous fixes on this PR'
+              },
+              {
+                name: 'swarm-auto-fix-in-progress',
+                color: '1d76db',
+                description: 'Swarm autonomous fix is currently running'
+              },
+              {
+                name: 'swarm-auto-fix-complete',
+                color: '0e8a16',
+                description: 'Swarm autonomous fix process has completed'
+              },
+              {
+                name: 'needs-manual-fix',
+                color: 'd93f0b',
+                description: 'Issues remain that require manual intervention'
+              },
+              
+              // Issue Type Labels
+              {
+                name: 'lint-issues',
+                color: 'fef2c0',
+                description: 'Code has lint/formatting issues'
+              },
+              {
+                name: 'security-issues',
+                color: 'b60205',
+                description: 'Code has security vulnerabilities'
+              },
+              {
+                name: 'test-failures',
+                color: 'e11d21',
+                description: 'Tests are failing'
               }
             ];
 

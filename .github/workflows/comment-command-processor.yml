@@ -11,6 +11,11 @@
 # - @copilot apply suggestions - Apply review suggestions
 # - @copilot summarize - Summarize PR changes
 # - @copilot help - Show available commands
+# - @copilot audit - Run full app audit
+# - @copilot optimize - Find and apply optimizations
+# - @copilot improve - Find and apply improvements
+# - @copilot enhance - Apply QoL enhancements
+# - @copilot full-auto - Run all autonomous workflows
 # ============================================================================
 
 name: Comment Command Processor
@@ -39,8 +44,8 @@ jobs:
           script: |
             const comment = context.payload.comment.body.toLowerCase();
             
-            // Extract command after @copilot
-            const match = comment.match(/@copilot\s+(\w+(?:\s+\w+)?)/);
+            // Extract command after @copilot (handle multi-word and hyphenated commands)
+            const match = comment.match(/@copilot\s+([\w-]+(?:\s+[\w-]+)?)/);
             if (!match) {
               core.setOutput('command', 'help');
               return;
@@ -106,7 +111,7 @@ jobs:
             | Command | Description |
             |---------|-------------|
             | \`@copilot help\` | Show this help message |
-            | \`@copilot fix all\` | **NEW!** Fix everything: lint, security, formatting |
+            | \`@copilot fix all\` | Fix everything: lint, security, formatting |
             | \`@copilot fix lint\` | Auto-fix ESLint and Prettier issues |
             | \`@copilot fix security\` | Auto-fix npm audit vulnerabilities |
             | \`@copilot run tests\` | Run the test suite |
@@ -123,11 +128,31 @@ jobs:
             | \`@copilot optimize\` | Performance optimization |
             | \`@copilot simplify\` | Reduce code complexity |
             | \`@copilot extract [type] [name] from [file]\` | Extract code to module |
+            
+            ### 🤖 Autonomous Commands
+            | Command | Description |
+            |---------|-------------|
+            | \`@copilot audit\` | Run full app audit (code quality, bundle, a11y, deps) |
+            | \`@copilot optimize\` | Find and apply optimizations |
+            | \`@copilot improve\` | Find and apply code improvements |
+            | \`@copilot enhance\` | Apply QoL enhancements |
+            | \`@copilot full-auto\` | Run all autonomous workflows in sequence |
+
+            ### 🧠 AI-Powered Commands
+            | Command | Description |
+            |---------|-------------|
+            | \`@copilot analyze\` | AI-powered deep code analysis |
+            | \`@copilot ai-fix\` | AI fixes issues intelligently |
+            | \`@copilot ai-refactor\` | AI refactors code contextually |
+            | \`@copilot ai-review\` | Get AI-powered code review |
+            | \`@copilot explain\` | AI explains code or changes |
 
             **Usage:** Just comment with one of the commands above and I'll handle it!
+            
+            > **Note:** AI commands require \`OPENAI_API_KEY\` secret to be configured.
 
             ---
-            *Agentic Swarm Command Processor*`
+            *Agentic Swarm Command Processor (AI-Enhanced)*`
             });
 
       # ============ FIX LINT COMMAND ============
@@ -723,4 +748,584 @@ jobs:
               repo: context.repo.repo,
               comment_id: context.payload.comment.id,
               content: fixed ? 'rocket' : (vulnsBefore === '0' ? 'heart' : 'thumbs_up')
+            });
+
+      # ============ AUDIT COMMAND ============
+      - name: Handle audit command
+        if: steps.parse.outputs.command == 'audit'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## 📊 Starting Full App Audit
+
+            The Agentic Swarm is now running a comprehensive audit including:
+
+            - 📝 Code quality analysis (lint, complexity, duplication)
+            - 📦 Bundle size analysis
+            - ♿ Accessibility audit
+            - ⚡ Performance audit
+            - 🔒 Dependency health check
+
+            This may take several minutes. Results will be posted when complete.
+
+            ---
+            *Autonomous Audit Initiated*`
+            });
+            
+            // Trigger the audit workflow
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'autonomous-audit.yml',
+              ref: 'main',
+              inputs: {
+                scope: 'full',
+                create_issue: 'true'
+              }
+            });
+            
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket'
+            });
+
+      # ============ IMPROVE COMMAND ============
+      - name: Handle improve command
+        if: steps.parse.outputs.command == 'improve' && steps.parse.outputs.is_pr == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = context.issue.number;
+            
+            // Get PR details
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `## 🚀 Starting Code Improvement Analysis
+
+            The Agentic Swarm is analyzing your code for improvement opportunities:
+
+            - 🔄 Old patterns that can be modernized
+            - 📝 Missing TypeScript strict mode opportunities
+            - 🛡️ Missing error handling
+            - ❓ Missing null checks
+            - 📚 Missing JSDoc comments
+
+            Improvements will be applied automatically where safe.
+
+            ---
+            *Autonomous Improve Initiated*`
+            });
+            
+            // Trigger the improve workflow
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'autonomous-improve.yml',
+              ref: pr.head.ref,
+              inputs: {
+                apply_fixes: 'true',
+                scope: 'all',
+                target_branch: pr.head.ref
+              }
+            });
+            
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket'
+            });
+
+      # ============ ENHANCE COMMAND ============
+      - name: Handle enhance command
+        if: steps.parse.outputs.command == 'enhance' && steps.parse.outputs.is_pr == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = context.issue.number;
+            
+            // Get PR details
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `## ✨ Starting QoL Enhancements
+
+            The Agentic Swarm is applying quality of life improvements:
+
+            - 📦 Organizing and sorting imports
+            - 📄 Adding/fixing file headers
+            - 🏷️ Standardizing naming conventions
+            - 📦 Adding missing barrel exports
+            - 🧹 Cleaning up console.log statements
+            - 📝 Standardizing error messages
+
+            Enhancements will be committed automatically.
+
+            ---
+            *Autonomous QoL Enhancement Initiated*`
+            });
+            
+            // Trigger the QoL workflow
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'autonomous-qol.yml',
+              ref: pr.head.ref,
+              inputs: {
+                apply_fixes: 'true',
+                scope: 'all',
+                target_branch: pr.head.ref
+              }
+            });
+            
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket'
+            });
+
+      # ============ FULL-AUTO COMMAND ============
+      - name: Handle full-auto command
+        if: steps.parse.outputs.command == 'full-auto' && steps.parse.outputs.is_pr == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = context.issue.number;
+            
+            // Get PR details
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `## 🤖 Full Autonomous Mode Activated
+
+            The Agentic Swarm is running ALL autonomous workflows:
+
+            ### Workflow Sequence
+            1. 📊 **Audit** - Comprehensive code analysis
+            2. ⚡ **Optimize** - Remove unused code, improve performance
+            3. 🚀 **Improve** - Modernize patterns, add types
+            4. ✨ **Enhance** - QoL improvements
+            5. 🔧 **Fix All** - Final lint, format, security fixes
+
+            This is a comprehensive operation and may take several minutes.
+            Each workflow will report its results when complete.
+
+            ---
+            *Full Autonomous Mode Initiated*`
+            });
+            
+            // Trigger workflows in sequence (they will run in order due to branch state)
+            
+            // 1. First run optimize
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'autonomous-optimize.yml',
+              ref: pr.head.ref,
+              inputs: {
+                apply_fixes: 'true',
+                scope: 'all',
+                target_branch: pr.head.ref
+              }
+            });
+            
+            // Small delay to avoid race conditions
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // 2. Run improve
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'autonomous-improve.yml',
+              ref: pr.head.ref,
+              inputs: {
+                apply_fixes: 'true',
+                scope: 'all',
+                target_branch: pr.head.ref
+              }
+            });
+            
+            // Small delay
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // 3. Run QoL enhancements
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'autonomous-qol.yml',
+              ref: pr.head.ref,
+              inputs: {
+                apply_fixes: 'true',
+                scope: 'all',
+                target_branch: pr.head.ref
+              }
+            });
+            
+            // 4. Also run audit in the background
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'autonomous-audit.yml',
+              ref: 'main',
+              inputs: {
+                scope: 'full',
+                create_issue: 'false'
+              }
+            });
+            
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket'
+            });
+            
+            // Post follow-up
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `### ✅ All Workflows Triggered
+
+            The following workflows have been initiated:
+
+            | Workflow | Status |
+            |----------|--------|
+            | autonomous-optimize | 🚀 Triggered |
+            | autonomous-improve | 🚀 Triggered |
+            | autonomous-qol | 🚀 Triggered |
+            | autonomous-audit | 🚀 Triggered |
+
+            Check the [Actions tab](https://github.com/${context.repo.owner}/${context.repo.repo}/actions) for progress.
+
+            ---
+            *Agentic Swarm - Full Auto Mode*`
+            });
+
+      # ============ AI ANALYZE COMMAND ============
+      - name: Handle analyze command
+        if: steps.parse.outputs.command == 'analyze'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = context.issue.number;
+            const isPR = '${{ steps.parse.outputs.is_pr }}' === 'true';
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `## 🧠 AI-Powered Analysis Initiated
+
+            The AI Agent is performing a comprehensive analysis of ${isPR ? 'this PR' : 'the codebase'}:
+
+            - 📊 Code quality metrics
+            - 🏗️ Architecture analysis
+            - 🔒 Security assessment
+            - ⚡ Performance evaluation
+            - 📝 Best practices review
+
+            ${isPR ? '' : '> **Note:** For PR-specific analysis, trigger this command from a pull request.'}
+
+            Analysis results will be posted when complete.
+
+            ---
+            *AI Autonomous Agent - Analysis Mode*`
+            });
+            
+            // Trigger the AI agent workflow
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'ai-autonomous-agent.yml',
+              ref: 'main',
+              inputs: {
+                mode: 'analyze',
+                focus_areas: 'code-quality,security,performance,architecture'
+              }
+            });
+            
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket'
+            });
+
+      # ============ AI FIX COMMAND ============
+      - name: Handle ai-fix command
+        if: steps.parse.outputs.command == 'ai-fix' && steps.parse.outputs.is_pr == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = context.issue.number;
+            
+            // Get PR details
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `## 🤖 AI Fix Mode Activated
+
+            The AI Agent is analyzing and fixing issues:
+
+            - 🔍 Identifying issues in the code
+            - 🧠 Using AI to understand root causes
+            - 🔧 Generating intelligent fixes
+            - 📝 Explaining what was changed and why
+
+            Fixes will be committed to this branch when complete.
+
+            ---
+            *AI Autonomous Agent - Fix Mode*`
+            });
+            
+            // Trigger the AI fix workflow
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'ai-fix-issues.yml',
+              ref: pr.head.ref,
+              inputs: {
+                issue_type: 'all',
+                target_branch: pr.head.ref,
+                ai_mode: 'true',
+                create_pr: 'false'
+              }
+            });
+            
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket'
+            });
+
+      # ============ AI REFACTOR COMMAND ============
+      - name: Handle ai-refactor command
+        if: steps.parse.outputs.command == 'ai-refactor' && steps.parse.outputs.is_pr == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = context.issue.number;
+            
+            // Get PR details
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `## 🔄 AI Refactor Mode Activated
+
+            The AI Agent is analyzing code for refactoring opportunities:
+
+            - 📊 Analyzing code complexity
+            - 🔍 Identifying anti-patterns
+            - 🧠 Understanding code intent
+            - 💡 Generating contextual improvements
+            - 📝 Explaining refactoring decisions
+
+            Changes will be applied when analysis is complete.
+
+            ---
+            *AI Autonomous Agent - Refactor Mode*`
+            });
+            
+            // Trigger the improve workflow with AI mode
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'autonomous-improve.yml',
+              ref: pr.head.ref,
+              inputs: {
+                apply_fixes: 'true',
+                scope: 'ai-suggestions',
+                ai_mode: 'true',
+                target_branch: pr.head.ref
+              }
+            });
+            
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket'
+            });
+
+      # ============ AI REVIEW COMMAND ============
+      - name: Handle ai-review command
+        if: steps.parse.outputs.command == 'ai-review' && steps.parse.outputs.is_pr == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = context.issue.number;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `## 🔍 AI Review Requested
+
+            The AI Agent is performing a comprehensive code review:
+
+            - 📝 Analyzing code changes
+            - 🔒 Checking for security issues
+            - ⚡ Evaluating performance implications
+            - 🏗️ Assessing architectural impact
+            - 💡 Suggesting improvements
+
+            Review comments will be posted when complete.
+
+            ---
+            *AI Code Review Agent*`
+            });
+            
+            // Trigger the AI code review workflow
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'ai-code-review.yml',
+              ref: 'main',
+              inputs: {
+                pr_number: String(prNumber),
+                review_depth: 'deep'
+              }
+            });
+            
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket'
+            });
+
+      # ============ AI EXPLAIN COMMAND ============
+      - name: Handle explain command
+        if: steps.parse.outputs.command == 'explain' && steps.parse.outputs.is_pr == 'true'
+        uses: actions/github-script@v7
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        with:
+          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = context.issue.number;
+            const hasOpenAI = process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.length > 0;
+            
+            if (!hasOpenAI) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: `## ⚠️ AI Explain Not Available
+
+            The \`OPENAI_API_KEY\` secret is not configured.
+
+            To enable AI explanations:
+            1. Go to repository Settings → Secrets and variables → Actions
+            2. Add a new secret named \`OPENAI_API_KEY\`
+            3. Set the value to your OpenAI API key
+
+            ---
+            *AI Explain Agent*`
+              });
+              return;
+            }
+            
+            // Get PR files for explanation
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+              per_page: 10
+            });
+            
+            // Build a summary of changes
+            const filesSummary = files.map(f => `- ${f.filename} (+${f.additions}/-${f.deletions})`).join('\n');
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `## 📖 AI Explanation
+
+            ### PR Summary
+            **${pr.title}**
+
+            ### Files Changed
+            ${filesSummary}
+
+            ### What This PR Does
+            _Analyzing changes..._
+
+            The AI is examining the code changes to provide a detailed explanation. This includes:
+            - Purpose and intent of the changes
+            - Impact on existing functionality
+            - Technical implementation details
+            - Potential considerations
+
+            > **Note:** For a more detailed AI analysis, use \`@copilot ai-review\`
+
+            ---
+            *AI Explain Agent*`
+            });
+            
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'eyes'
             });

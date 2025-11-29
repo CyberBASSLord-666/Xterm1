@@ -1,0 +1,389 @@
+# ============================================================================
+# AI-Powered Code Review Workflow for PolliWall (Xterm1)
+# ============================================================================
+# This workflow leverages AI capabilities to provide intelligent code reviews:
+# - Uses GitHub Copilot for PRs via @copilot mentions
+# - Optionally integrates with OpenAI API for deeper analysis
+# - Provides context-aware suggestions, not just rule-based checks
+# - Understands intent and suggests better implementations
+#
+# Prerequisites:
+# - GitHub Copilot for PRs enabled on the repository
+# - (Optional) OPENAI_API_KEY secret for enhanced AI capabilities
+#
+# Trigger: Pull request events
+# ============================================================================
+
+name: AI Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to review'
+        required: true
+        type: number
+      review_depth:
+        description: 'Review depth'
+        required: false
+        type: choice
+        options:
+          - standard
+          - deep
+          - security-focused
+        default: 'standard'
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ============ AI CODE REVIEW ============
+  ai-review:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get PR details
+        id: pr_details
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request?.number || '${{ inputs.pr_number }}';
+            
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: parseInt(prNumber)
+            });
+            
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: parseInt(prNumber),
+              per_page: 100
+            });
+            
+            // Get the diff for analysis
+            const { data: diff } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: parseInt(prNumber),
+              mediaType: {
+                format: 'diff'
+              }
+            });
+            
+            // Categorize changed files
+            const categories = {
+              source: files.filter(f => f.filename.match(/\.(ts|tsx|js|jsx)$/) && !f.filename.includes('.spec.')),
+              tests: files.filter(f => f.filename.includes('.spec.') || f.filename.includes('.test.')),
+              styles: files.filter(f => f.filename.match(/\.(css|scss|less)$/)),
+              config: files.filter(f => f.filename.match(/\.(json|yml|yaml)$|\.config\./)),
+              docs: files.filter(f => f.filename.match(/\.(md|txt|rst)$/))
+            };
+            
+            core.setOutput('pr_number', prNumber);
+            core.setOutput('pr_title', pr.title);
+            core.setOutput('pr_body', pr.body || '');
+            core.setOutput('files_count', files.length);
+            core.setOutput('source_files', categories.source.length);
+            core.setOutput('additions', pr.additions);
+            core.setOutput('deletions', pr.deletions);
+            core.setOutput('has_source_changes', categories.source.length > 0);
+            
+            return {
+              pr,
+              files,
+              categories,
+              diff: typeof diff === 'string' ? diff : ''
+            };
+
+      - name: Setup Node.js
+        if: steps.pr_details.outputs.has_source_changes == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        if: steps.pr_details.outputs.has_source_changes == 'true'
+        run: npm ci
+
+      - name: Run static analysis
+        if: steps.pr_details.outputs.has_source_changes == 'true'
+        id: static_analysis
+        run: |
+          echo "🔍 Running static analysis..."
+          
+          # Run ESLint and capture issues
+          set +e
+          npx eslint "src/**/*.ts" --format json > eslint-report.json 2>&1
+          ESLINT_EXIT=$?
+          set -e
+          
+          LINT_ERRORS=$(cat eslint-report.json | jq '[.[] | .errorCount] | add // 0' 2>/dev/null || echo "0")
+          LINT_WARNINGS=$(cat eslint-report.json | jq '[.[] | .warningCount] | add // 0' 2>/dev/null || echo "0")
+          
+          echo "lint_errors=$LINT_ERRORS" >> $GITHUB_OUTPUT
+          echo "lint_warnings=$LINT_WARNINGS" >> $GITHUB_OUTPUT
+          
+          # Run TypeScript type checking
+          set +e
+          npx tsc --noEmit 2>&1 | head -50 > tsc-output.txt
+          TSC_EXIT=$?
+          set -e
+          
+          TYPE_ERRORS=$(grep -c "error TS" tsc-output.txt 2>/dev/null || echo "0")
+          echo "type_errors=$TYPE_ERRORS" >> $GITHUB_OUTPUT
+          
+          # Detect code complexity
+          npx eslint "src/**/*.ts" --rule '{"complexity": ["error", 10]}' --format json > complexity.json 2>&1 || true
+          COMPLEX_FUNCTIONS=$(cat complexity.json | jq '[.[] | .messages[] | select(.ruleId == "complexity")] | length' 2>/dev/null || echo "0")
+          echo "complex_functions=$COMPLEX_FUNCTIONS" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: AI-Powered Analysis (OpenAI)
+        if: steps.pr_details.outputs.has_source_changes == 'true' && env.OPENAI_API_KEY != ''
+        id: openai_analysis
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          echo "🤖 Running AI-powered analysis with OpenAI..."
+          
+          # Create a summary of changes for the AI
+          cat > /tmp/changes_summary.txt << 'CHANGES_EOF'
+          PR Title: ${{ steps.pr_details.outputs.pr_title }}
+          Files Changed: ${{ steps.pr_details.outputs.files_count }}
+          Additions: +${{ steps.pr_details.outputs.additions }}
+          Deletions: -${{ steps.pr_details.outputs.deletions }}
+          Lint Errors: ${{ steps.static_analysis.outputs.lint_errors }}
+          Type Errors: ${{ steps.static_analysis.outputs.type_errors }}
+          Complex Functions: ${{ steps.static_analysis.outputs.complex_functions }}
+          CHANGES_EOF
+          
+          # Get the changed files content (limited)
+          git diff origin/${{ github.base_ref }}..HEAD --unified=3 -- '*.ts' '*.tsx' | head -500 > /tmp/diff_content.txt
+          
+          # Build the prompt
+          PROMPT=$(cat << 'PROMPT_EOF'
+          You are an expert code reviewer for a TypeScript/React application. Review the following code changes and provide:
+          
+          1. **Summary**: A brief summary of what the changes do
+          2. **Quality Assessment**: Rate the code quality (1-10) and explain why
+          3. **Potential Issues**: List any bugs, security issues, or anti-patterns
+          4. **Suggestions**: Provide specific, actionable improvement suggestions
+          5. **Best Practices**: Note any violations of TypeScript/React best practices
+          
+          Keep your response concise and actionable. Use markdown formatting.
+          PROMPT_EOF
+          )
+          
+          # Call OpenAI API
+          RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $OPENAI_API_KEY" \
+            -d @- << EOF
+          {
+            "model": "gpt-4o-mini",
+            "messages": [
+              {"role": "system", "content": "$PROMPT"},
+              {"role": "user", "content": "$(cat /tmp/changes_summary.txt)\n\nCode Diff:\n$(head -c 3000 /tmp/diff_content.txt | sed 's/"/\\"/g' | tr '\n' ' ')"}
+            ],
+            "max_tokens": 1000,
+            "temperature": 0.3
+          }
+          EOF
+          )
+          
+          # Extract the response
+          AI_REVIEW=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "AI analysis unavailable"' 2>/dev/null || echo "AI analysis unavailable")
+          
+          # Save to file for later use (escape for GitHub Actions)
+          echo "$AI_REVIEW" > /tmp/ai_review.md
+          echo "ai_available=true" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Generate AI Review Comment
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const prNumber = parseInt('${{ steps.pr_details.outputs.pr_number }}');
+            
+            // Static analysis results
+            const lintErrors = '${{ steps.static_analysis.outputs.lint_errors }}' || '0';
+            const lintWarnings = '${{ steps.static_analysis.outputs.lint_warnings }}' || '0';
+            const typeErrors = '${{ steps.static_analysis.outputs.type_errors }}' || '0';
+            const complexFunctions = '${{ steps.static_analysis.outputs.complex_functions }}' || '0';
+            
+            // PR info
+            const filesCount = '${{ steps.pr_details.outputs.files_count }}';
+            const additions = '${{ steps.pr_details.outputs.additions }}';
+            const deletions = '${{ steps.pr_details.outputs.deletions }}';
+            const hasSourceChanges = '${{ steps.pr_details.outputs.has_source_changes }}' === 'true';
+            
+            // Check for existing AI review comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber
+            });
+            
+            const existingReview = comments.find(c => 
+              c.user.login === 'github-actions[bot]' && 
+              c.body.includes('AI Code Review')
+            );
+            
+            // Build the review comment
+            let reviewBody = `## 🤖 AI Code Review
+
+            ### 📊 PR Statistics
+            | Metric | Value |
+            |--------|-------|
+            | Files Changed | ${filesCount} |
+            | Lines Added | +${additions} |
+            | Lines Removed | -${deletions} |
+
+            `;
+            
+            if (hasSourceChanges) {
+              // Quality score calculation
+              let qualityScore = 100;
+              qualityScore -= Math.min(parseInt(lintErrors) * 5, 30);
+              qualityScore -= Math.min(parseInt(typeErrors) * 5, 30);
+              qualityScore -= Math.min(parseInt(complexFunctions) * 3, 15);
+              qualityScore -= Math.min(parseInt(lintWarnings), 10);
+              qualityScore = Math.max(0, qualityScore);
+              
+              const getScoreEmoji = (score) => {
+                if (score >= 90) return '🟢';
+                if (score >= 70) return '🟡';
+                if (score >= 50) return '🟠';
+                return '🔴';
+              };
+              
+              reviewBody += `### 📈 Code Quality Score: ${getScoreEmoji(qualityScore)} ${qualityScore}/100
+
+            | Check | Count | Status |
+            |-------|-------|--------|
+            | Lint Errors | ${lintErrors} | ${parseInt(lintErrors) === 0 ? '✅' : '❌'} |
+            | Lint Warnings | ${lintWarnings} | ${parseInt(lintWarnings) < 5 ? '✅' : '⚠️'} |
+            | Type Errors | ${typeErrors} | ${parseInt(typeErrors) === 0 ? '✅' : '❌'} |
+            | Complex Functions | ${complexFunctions} | ${parseInt(complexFunctions) === 0 ? '✅' : '⚠️'} |
+
+            `;
+              
+              // Add AI analysis if available
+              try {
+                if (fs.existsSync('/tmp/ai_review.md')) {
+                  const aiReview = fs.readFileSync('/tmp/ai_review.md', 'utf8');
+                  if (aiReview && aiReview !== 'AI analysis unavailable') {
+                    reviewBody += `### 🧠 AI Analysis
+
+            ${aiReview}
+
+            `;
+                  }
+                }
+              } catch (e) {
+                console.log('AI review not available');
+              }
+              
+              // Add recommendations based on issues found
+              const recommendations = [];
+              
+              if (parseInt(lintErrors) > 0) {
+                recommendations.push('🔧 Run `@copilot fix lint` to auto-fix lint errors');
+              }
+              if (parseInt(typeErrors) > 0) {
+                recommendations.push('📝 Fix TypeScript type errors before merging');
+              }
+              if (parseInt(complexFunctions) > 0) {
+                recommendations.push('🔄 Consider refactoring complex functions (cyclomatic complexity > 10)');
+              }
+              if (parseInt(lintWarnings) > 5) {
+                recommendations.push('⚠️ Address lint warnings to improve code quality');
+              }
+              
+              if (recommendations.length > 0) {
+                reviewBody += `### 💡 Recommendations
+
+            ${recommendations.map(r => `- ${r}`).join('\n')}
+
+            `;
+              } else {
+                reviewBody += `### ✨ Great Job!
+
+            No major issues detected. The code looks good!
+
+            `;
+              }
+            } else {
+              reviewBody += `### ℹ️ Non-Source Changes
+
+            This PR only contains non-source file changes (documentation, configuration, etc.).
+            No code quality analysis was performed.
+
+            `;
+            }
+            
+            reviewBody += `---
+            *Powered by AI Code Review • [Request deeper analysis](${context.payload.pull_request?.html_url}#issuecomment-new) with \`@copilot ai-review\`*`;
+            
+            // Update or create comment
+            if (existingReview) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingReview.id,
+                body: reviewBody
+              });
+              console.log('Updated existing AI review comment');
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: reviewBody
+              });
+              console.log('Created new AI review comment');
+            }
+
+      - name: Request Copilot Review
+        if: github.event_name == 'pull_request' && github.event.action == 'opened'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            // Add a comment to trigger Copilot review
+            // This leverages GitHub Copilot for PRs if enabled on the repo
+            const prNumber = context.payload.pull_request.number;
+            
+            // Check if Copilot is available by looking for copilot in assignable users
+            // Note: This is a best-effort approach as Copilot availability varies
+            
+            console.log(`PR #${prNumber} created - Copilot will automatically review if enabled`);
+            
+            // Optionally add @copilot mention to trigger review
+            // Uncomment the following if you want explicit Copilot triggers:
+            /*
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: '@copilot Please review this pull request and provide feedback on code quality, potential issues, and improvement suggestions.'
+            });
+            */

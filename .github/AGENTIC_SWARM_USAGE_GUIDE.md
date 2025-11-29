@@ -1,20 +1,21 @@
 # How to Use the Agentic Swarm
 
 > **Quick Start Guide for Developers, Maintainers, and Operators**  
-> **Last Updated**: 2025-11-25
+> **Last Updated**: 2025-11-29
 
 ---
 
 ## Table of Contents
 
 1. [What is the Agentic Swarm?](#what-is-the-agentic-swarm)
-2. [For Developers](#for-developers)
-3. [For Maintainers](#for-maintainers)
-4. [For Operations](#for-operations)
-5. [Inter-Agent Communication](#inter-agent-communication)
-6. [Understanding Agent Interactions](#understanding-agent-interactions)
-7. [Customizing Agent Behavior](#customizing-agent-behavior)
-8. [Troubleshooting](#troubleshooting)
+2. [Autonomous Mode (NEW)](#autonomous-mode-new)
+3. [For Developers](#for-developers)
+4. [For Maintainers](#for-maintainers)
+5. [For Operations](#for-operations)
+6. [Inter-Agent Communication](#inter-agent-communication)
+7. [Understanding Agent Interactions](#understanding-agent-interactions)
+8. [Customizing Agent Behavior](#customizing-agent-behavior)
+9. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -32,6 +33,7 @@ The Agentic Swarm is a collection of **25 specialized automation agents** that w
 - ✅ Generate documentation
 - ✅ **Refactor code and apply suggestions**
 - ✅ **Delegate tasks to each other automatically**
+- ✅ **AUTONOMOUS MODE: Self-fix detected issues without human intervention**
 
 **The swarm runs automatically** - you don't need to configure anything to get started!
 
@@ -43,6 +45,124 @@ Agents in this swarm can **call upon each other** for specialized tasks. This me
 - Any agent can delegate documentation updates to the technical writer
 
 This creates a truly collaborative swarm where agents work together intelligently.
+
+---
+
+## Autonomous Mode (NEW)
+
+### What is Autonomous Mode?
+
+The Agentic Swarm now operates in **fully autonomous mode**, meaning it can:
+
+1. **Detect issues** - Lint errors, security vulnerabilities, test failures
+2. **Automatically trigger fixes** - Comments `@copilot fix all` (or specific commands) on the PR
+3. **Apply fixes** - The fix workflow runs and commits changes
+4. **Escalate when needed** - If fixes can't be applied, it comments with specific guidance for manual intervention
+
+### How It Works
+
+```
+You open/update a PR
+        │
+        ├→ [Swarm Coordinator] analyzes the PR
+        │
+        ├→ [Stage 1: Detect Issues]
+        │   ├─ Lint check runs
+        │   ├─ Security scan runs
+        │   └─ Tests run
+        │
+        ├→ [Stage 2: Evaluate Results]
+        │   ├─ Issues detected?
+        │   │   ├─ YES → Continue to Stage 3
+        │   │   └─ NO → ✅ All checks passed!
+        │   │
+        │   └─ Auto-fix already attempted?
+        │       ├─ YES → Skip (prevent infinite loops)
+        │       └─ NO → Continue to Stage 3
+        │
+        ├→ [Stage 3: Autonomous Fix Trigger]
+        │   ├─ Multiple issues? → Comment: `@copilot fix all`
+        │   ├─ Lint only? → Comment: `@copilot fix lint`
+        │   └─ Security only? → Comment: `@copilot fix security`
+        │
+        ├→ [Stage 4: Fix Workflow Runs]
+        │   ├─ ESLint with --fix
+        │   ├─ Prettier formatting
+        │   ├─ npm audit fix
+        │   └─ Commit & push fixes
+        │
+        └→ [Stage 5: Escalation (if needed)]
+            ├─ Issues remain after fix?
+            │   ├─ YES → Post escalation comment with guidance
+            │   └─ NO → ✅ All issues fixed!
+            │
+            └─ Add labels for tracking
+```
+
+### Labels Used by Autonomous Mode
+
+| Label | Description |
+|-------|-------------|
+| `swarm-auto-fix-attempted` | Swarm has attempted autonomous fixes on this PR |
+| `swarm-auto-fix-in-progress` | Swarm autonomous fix is currently running |
+| `swarm-auto-fix-complete` | Swarm autonomous fix process has completed |
+| `needs-manual-fix` | Issues remain that require manual intervention |
+
+### Preventing Infinite Loops
+
+The swarm uses multiple safeguards to prevent infinite fix loops:
+
+1. **Commit detection** - If the last commit was made by `github-actions[bot]` with a "🤖" or "Auto-fix" message, autonomous triggers are skipped
+2. **Label tracking** - Once `swarm-auto-fix-attempted` is added, no further autonomous triggers occur
+3. **Bot actor check** - Won't run on dependabot PRs
+
+### What Gets Fixed Automatically
+
+| Issue Type | Auto-Fixable? | How |
+|------------|---------------|-----|
+| ESLint errors | ✅ Many | `eslint --fix` |
+| Prettier formatting | ✅ All | `prettier --write` |
+| npm vulnerabilities | ✅ Some | `npm audit fix` |
+| Type errors | ❌ No | Manual intervention |
+| Test failures | ❌ No | Manual intervention |
+| Complex refactoring | ❌ No | Manual intervention |
+
+### Escalation Messages
+
+When issues can't be auto-fixed, you'll receive a detailed escalation comment:
+
+```markdown
+## 🚨 Manual Intervention Required
+
+The Agentic Swarm has completed its automated fixes, but some issues remain...
+
+### Remaining Issues
+
+#### 📝 ESLint Issues (3 errors, 5 warnings)
+**Suggested Actions:**
+1. Run `npm run lint` locally to see detailed error messages
+2. Common unfixable issues include:
+   - Type errors that require code restructuring
+   - Import/export issues
+   - Complex refactoring requirements
+...
+
+#### 🔒 Security Vulnerabilities (2 remaining)
+**Suggested Actions:**
+1. Run `npm audit` locally to see detailed vulnerability information
+2. Try `npm audit fix --force` (may introduce breaking changes)
+...
+```
+
+### Disabling Autonomous Mode
+
+To disable autonomous fixes for a specific PR, add this label before the first push:
+
+```
+swarm-auto-fix-attempted
+```
+
+This tells the swarm that an auto-fix was already attempted, preventing any autonomous triggers.
 
 ---
 
