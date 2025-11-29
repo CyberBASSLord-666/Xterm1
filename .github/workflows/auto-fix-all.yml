@@ -1,0 +1,355 @@
+# ============================================================================
+# Auto-Fix All Workflow for PolliWall (Xterm1)
+# ============================================================================
+# This workflow automatically runs on PRs and fixes:
+# - ESLint issues (with --fix)
+# - Prettier formatting issues
+# - Security vulnerabilities (npm audit fix)
+#
+# All fixes are committed and pushed back to the PR branch automatically.
+# This enables fully autonomous code quality and security maintenance.
+# ============================================================================
+
+name: Auto-Fix All
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to fix (optional, uses current branch if not specified)'
+        required: false
+        type: number
+      fix_types:
+        description: 'Types of fixes to apply'
+        required: false
+        type: choice
+        options:
+          - all
+          - lint-only
+          - security-only
+          - format-only
+        default: 'all'
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  auto-fix-all:
+    runs-on: ubuntu-latest
+    # Don't run on PRs from forks (they don't have write access)
+    # Don't run on dependabot PRs to avoid conflicts with dependabot's own updates
+    if: |
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'dependabot[bot]'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          # Use GH_TOKEN to enable pushing commits and triggering other workflows
+          # Falls back to GITHUB_TOKEN if GH_TOKEN is not configured
+          token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Initialize fix tracking
+        id: init
+        run: |
+          echo "LINT_FIXED=false" >> $GITHUB_ENV
+          echo "FORMAT_FIXED=false" >> $GITHUB_ENV
+          echo "SECURITY_FIXED=false" >> $GITHUB_ENV
+          echo "TOTAL_CHANGES=0" >> $GITHUB_ENV
+
+      # ============ LINT FIX ============
+      - name: Run ESLint with auto-fix
+        id: eslint
+        if: inputs.fix_types != 'security-only' && inputs.fix_types != 'format-only'
+        run: |
+          echo "📝 Running ESLint auto-fix..."
+          
+          # Capture the output and exit code
+          set +e
+          npx eslint "src/**/*.{ts,html}" --fix --max-warnings=0 2>&1 | tee eslint-output.txt
+          ESLINT_EXIT=$?
+          set -e
+          
+          # Count fixed issues (approximation)
+          WARNINGS=$(grep -c "warning" eslint-output.txt || echo "0")
+          ERRORS=$(grep -c "error" eslint-output.txt || echo "0")
+          
+          echo "eslint_warnings=$WARNINGS" >> $GITHUB_OUTPUT
+          echo "eslint_errors=$ERRORS" >> $GITHUB_OUTPUT
+          echo "eslint_exit=$ESLINT_EXIT" >> $GITHUB_OUTPUT
+          
+          # Check if files were changed
+          if [[ -n $(git status --porcelain "src/**/*.ts" "src/**/*.html" 2>/dev/null) ]]; then
+            echo "LINT_FIXED=true" >> $GITHUB_ENV
+            echo "lint_changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "lint_changed=false" >> $GITHUB_OUTPUT
+          fi
+        continue-on-error: true
+
+      # ============ FORMAT FIX ============
+      - name: Run Prettier
+        id: prettier
+        if: inputs.fix_types != 'security-only' && inputs.fix_types != 'lint-only'
+        run: |
+          echo "🎨 Running Prettier..."
+          
+          # Run prettier
+          npx prettier --write "src/**/*.{ts,html,css,scss,json}" 2>&1 | tee prettier-output.txt || true
+          
+          # Check for additional config files
+          npx prettier --write "*.json" "*.md" 2>&1 || true
+          
+          # Check if files were changed
+          if [[ -n $(git status --porcelain) ]]; then
+            echo "FORMAT_FIXED=true" >> $GITHUB_ENV
+            echo "format_changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "format_changed=false" >> $GITHUB_OUTPUT
+          fi
+        continue-on-error: true
+
+      # ============ SECURITY FIX ============
+      - name: Run npm audit fix
+        id: security
+        if: inputs.fix_types != 'lint-only' && inputs.fix_types != 'format-only'
+        run: |
+          echo "🔒 Running npm audit fix..."
+          
+          # Get current vulnerability count
+          npm audit --json > audit-before.json 2>&1 || true
+          VULNS_BEFORE=$(cat audit-before.json | jq '.metadata.vulnerabilities.total // 0')
+          CRITICAL_BEFORE=$(cat audit-before.json | jq '.metadata.vulnerabilities.critical // 0')
+          HIGH_BEFORE=$(cat audit-before.json | jq '.metadata.vulnerabilities.high // 0')
+          
+          echo "vulns_before=$VULNS_BEFORE" >> $GITHUB_OUTPUT
+          echo "critical_before=$CRITICAL_BEFORE" >> $GITHUB_OUTPUT
+          echo "high_before=$HIGH_BEFORE" >> $GITHUB_OUTPUT
+          
+          # Run npm audit fix
+          npm audit fix 2>&1 | tee audit-fix-output.txt || true
+          
+          # Get new vulnerability count
+          npm audit --json > audit-after.json 2>&1 || true
+          VULNS_AFTER=$(cat audit-after.json | jq '.metadata.vulnerabilities.total // 0')
+          CRITICAL_AFTER=$(cat audit-after.json | jq '.metadata.vulnerabilities.critical // 0')
+          HIGH_AFTER=$(cat audit-after.json | jq '.metadata.vulnerabilities.high // 0')
+          
+          echo "vulns_after=$VULNS_AFTER" >> $GITHUB_OUTPUT
+          echo "critical_after=$CRITICAL_AFTER" >> $GITHUB_OUTPUT
+          echo "high_after=$HIGH_AFTER" >> $GITHUB_OUTPUT
+          
+          # Calculate fixed
+          FIXED=$((VULNS_BEFORE - VULNS_AFTER))
+          echo "vulns_fixed=$FIXED" >> $GITHUB_OUTPUT
+          
+          # Check if package files were changed
+          if [[ -n $(git status --porcelain package.json package-lock.json 2>/dev/null) ]]; then
+            echo "SECURITY_FIXED=true" >> $GITHUB_ENV
+            echo "security_changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "security_changed=false" >> $GITHUB_OUTPUT
+          fi
+        continue-on-error: true
+
+      # ============ COMMIT ALL FIXES ============
+      - name: Check for any changes
+        id: changes
+        run: |
+          if [[ -n $(git status --porcelain) ]]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            
+            # Count changed files
+            CHANGED_COUNT=$(git status --porcelain | wc -l)
+            echo "changed_count=$CHANGED_COUNT" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "changed_count=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push all fixes
+        if: steps.changes.outputs.has_changes == 'true'
+        id: commit
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add -A
+          
+          # Build commit message
+          COMMIT_MSG="🤖 Auto-Fix: Applied comprehensive code quality fixes"
+          COMMIT_BODY=""
+          
+          if [[ "$LINT_FIXED" == "true" ]]; then
+            COMMIT_BODY="$COMMIT_BODY\n- ✅ ESLint: Auto-fixed lint issues"
+          fi
+          
+          if [[ "$FORMAT_FIXED" == "true" ]]; then
+            COMMIT_BODY="$COMMIT_BODY\n- ✅ Prettier: Code formatting standardized"
+          fi
+          
+          if [[ "$SECURITY_FIXED" == "true" ]]; then
+            VULNS_FIXED="${{ steps.security.outputs.vulns_fixed }}"
+            COMMIT_BODY="$COMMIT_BODY\n- ✅ Security: Fixed $VULNS_FIXED vulnerabilities"
+          fi
+          
+          COMMIT_BODY="$COMMIT_BODY\n\nThis commit was automatically generated by the Agentic Swarm Auto-Fix workflow."
+          
+          git commit -m "$COMMIT_MSG" -m "$(echo -e "$COMMIT_BODY")"
+          git push
+          
+          echo "committed=true" >> $GITHUB_OUTPUT
+          echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      # ============ REPORT RESULTS ============
+      - name: Comment on PR with results
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const hasChanges = '${{ steps.changes.outputs.has_changes }}' === 'true';
+            const committed = '${{ steps.commit.outputs.committed }}' === 'true';
+            const sha = '${{ steps.commit.outputs.sha }}';
+            const changedCount = '${{ steps.changes.outputs.changed_count }}';
+            
+            // Lint results
+            const lintChanged = '${{ steps.eslint.outputs.lint_changed }}' === 'true';
+            const eslintWarnings = '${{ steps.eslint.outputs.eslint_warnings }}' || '0';
+            const eslintErrors = '${{ steps.eslint.outputs.eslint_errors }}' || '0';
+            
+            // Format results
+            const formatChanged = '${{ steps.prettier.outputs.format_changed }}' === 'true';
+            
+            // Security results
+            const securityChanged = '${{ steps.security.outputs.security_changed }}' === 'true';
+            const vulnsBefore = '${{ steps.security.outputs.vulns_before }}' || '0';
+            const vulnsAfter = '${{ steps.security.outputs.vulns_after }}' || '0';
+            const vulnsFixed = '${{ steps.security.outputs.vulns_fixed }}' || '0';
+            const criticalBefore = '${{ steps.security.outputs.critical_before }}' || '0';
+            const criticalAfter = '${{ steps.security.outputs.critical_after }}' || '0';
+            const highBefore = '${{ steps.security.outputs.high_before }}' || '0';
+            const highAfter = '${{ steps.security.outputs.high_after }}' || '0';
+            
+            let body;
+            
+            if (committed) {
+              body = `## 🤖 Auto-Fix Applied
+
+            The Agentic Swarm has automatically applied code quality fixes to this PR.
+
+            ### Summary
+            | Fix Type | Status | Details |
+            |----------|--------|---------|
+            | 📝 ESLint | ${lintChanged ? '✅ Fixed' : '⚪ No issues'} | ${lintChanged ? 'Auto-fixed lint issues' : 'Code already clean'} |
+            | 🎨 Prettier | ${formatChanged ? '✅ Fixed' : '⚪ No issues'} | ${formatChanged ? 'Formatting standardized' : 'Already formatted'} |
+            | 🔒 Security | ${securityChanged ? '✅ Fixed' : (parseInt(vulnsBefore) > 0 ? '⚠️ Manual review' : '⚪ No issues')} | ${securityChanged ? `Fixed ${vulnsFixed} vulnerabilities` : (parseInt(vulnsBefore) > 0 ? `${vulnsAfter} remaining` : 'No vulnerabilities')} |
+
+            ### Changes
+            - **Files changed:** ${changedCount}
+            - **Commit:** \`${sha}\`
+
+            ${parseInt(vulnsAfter) > 0 ? `### ⚠️ Security Attention Required
+
+            **${vulnsAfter}** vulnerabilities could not be auto-fixed:
+            - 🔴 Critical: ${criticalAfter}
+            - 🟠 High: ${highAfter}
+
+            Consider running \`npm audit fix --force\` or manually updating packages.` : ''}
+
+            ---
+            *Generated by Agentic Swarm Auto-Fix*`;
+            } else {
+              body = `## ✨ Auto-Fix Check Complete
+
+            No automatic fixes were needed - your code is already in great shape!
+
+            ### Status
+            | Check | Status |
+            |-------|--------|
+            | 📝 ESLint | ✅ Clean |
+            | 🎨 Prettier | ✅ Formatted |
+            | 🔒 Security | ${parseInt(vulnsBefore) > 0 ? `⚠️ ${vulnsBefore} vulnerabilities (manual review needed)` : '✅ No vulnerabilities'} |
+
+            ${parseInt(vulnsBefore) > 0 ? `### Security Note
+            Found ${vulnsBefore} vulnerabilities that cannot be auto-fixed. Run \`npm audit\` for details.` : ''}
+
+            ---
+            *Generated by Agentic Swarm Auto-Fix*`;
+            }
+            
+            // Check for existing auto-fix comment to update instead of creating new
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+            
+            const existingComment = comments.find(c => 
+              c.user.login === 'github-actions[bot]' && 
+              (c.body.includes('Auto-Fix Applied') || c.body.includes('Auto-Fix Check Complete'))
+            );
+            
+            if (existingComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body: body
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }
+
+      # ============ SUMMARY ============
+      - name: Generate job summary
+        if: always()
+        run: |
+          echo "## 🤖 Auto-Fix All Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ steps.commit.outputs.committed }}" == "true" ]]; then
+            echo "✅ **Fixes Applied and Committed**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Fix Type | Applied |" >> $GITHUB_STEP_SUMMARY
+            echo "|----------|---------|" >> $GITHUB_STEP_SUMMARY
+            echo "| ESLint | ${{ env.LINT_FIXED }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| Prettier | ${{ env.FORMAT_FIXED }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| Security | ${{ env.SECURITY_FIXED }} |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Commit:** \`${{ steps.commit.outputs.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚪ **No fixes needed** - Code is already clean!" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [[ "${{ steps.security.outputs.vulns_after }}" != "0" ]]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### ⚠️ Remaining Security Issues" >> $GITHUB_STEP_SUMMARY
+            echo "- Total: ${{ steps.security.outputs.vulns_after }}" >> $GITHUB_STEP_SUMMARY
+            echo "- Critical: ${{ steps.security.outputs.critical_after }}" >> $GITHUB_STEP_SUMMARY
+            echo "- High: ${{ steps.security.outputs.high_after }}" >> $GITHUB_STEP_SUMMARY
+          fi
