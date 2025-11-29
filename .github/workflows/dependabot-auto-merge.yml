@@ -36,7 +36,9 @@ jobs:
         id: metadata
         uses: dependabot/fetch-metadata@v2
         with:
-          github-token: "${{ secrets.GITHUB_TOKEN }}"
+          # Use GH_TOKEN to enable triggering other workflows on auto-merge
+          # Falls back to GITHUB_TOKEN if GH_TOKEN is not configured
+          github-token: "${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}"
 
       - name: Auto-approve Dependabot PR
         # Auto-approve patch and minor updates
@@ -47,7 +49,8 @@ jobs:
           gh pr review --approve "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Use GH_TOKEN to enable approve/merge operations that trigger other workflows
+          GH_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Enable auto-merge for Dependabot PR
         # Enable auto-merge for patch and minor updates
@@ -58,7 +61,8 @@ jobs:
           gh pr merge --auto --squash "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Use GH_TOKEN to enable merge operations that trigger other workflows
+          GH_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Comment on major update PR
         # Add comment for major updates that need manual review
@@ -77,4 +81,5 @@ jobs:
           Please review the changelog and breaking changes before approving and merging."
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Use GH_TOKEN for comment operations
+          GH_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
