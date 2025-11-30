@@ -42,3 +42,7 @@ test-results
 *.spec.js.map
 /coverage
 .angular/
+
+# Temporary build/audit files
+audit-*.json
+*-output.txt
