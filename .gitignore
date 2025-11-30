@@ -45,4 +45,7 @@ test-results
 
 # Temporary build/audit files
 audit-*.json
-*-output.txt
+audit-output.txt
+eslint-output.txt
+prettier-output.txt
+tsc-output.txt

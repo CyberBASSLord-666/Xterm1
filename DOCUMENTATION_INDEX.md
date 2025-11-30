@@ -1,7 +1,7 @@
 # PolliWall Documentation Index
 
 > **Complete guide to all PolliWall documentation**  
-> Last Updated: November 30, 2025 - Documentation Consolidated ✅
+> Last Updated: November 30, 2024 - Documentation Consolidated ✅
 
 ---
 
