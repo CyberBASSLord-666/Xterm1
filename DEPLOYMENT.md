@@ -676,7 +676,7 @@ sudo systemctl reload nginx
 
 **Issue**: `npm ci` fails
 ```bash
-# Solution: Use legacy peer deps
+# Solution: Reinstall dependencies cleanly
 npm ci
 ```
 
