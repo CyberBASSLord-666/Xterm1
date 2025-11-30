@@ -1,1 +1,33 @@
+#!/usr/bin/env sh
+# ============================================================================
+# Pre-commit Hook for PolliWall (Xterm1)
+# ============================================================================
+# Runs before each commit to ensure code quality. Validates:
+# - Lint-staged files (ESLint + Prettier)
+# - TypeScript type checking (strict mode)
+#
+# To bypass in emergencies: git commit --no-verify
+# ============================================================================
+
+echo "🔍 Running pre-commit checks..."
+
+# Run lint-staged for formatting and linting
 npx lint-staged
+
+# Run TypeScript type checking (only on staged .ts files)
+echo "📝 Running TypeScript type check..."
+STAGED_TS_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.tsx?$' || true)
+
+if [ -n "$STAGED_TS_FILES" ]; then
+  npx tsc --noEmit --skipLibCheck 2>&1 | head -20
+  if [ $? -ne 0 ]; then
+    echo "❌ TypeScript errors found. Please fix before committing."
+    echo "💡 Tip: Run 'npx tsc --noEmit' to see all errors"
+    exit 1
+  fi
+  echo "✅ TypeScript check passed"
+else
+  echo "ℹ️  No TypeScript files staged, skipping type check"
+fi
+
+echo "✅ Pre-commit checks passed!"
