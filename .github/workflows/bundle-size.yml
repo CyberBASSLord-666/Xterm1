@@ -10,6 +10,12 @@
 # - Checks against a 1000KB budget threshold
 # - Comments on PRs with size reports
 #
+# Enterprise Features:
+# - Path-based filtering to skip irrelevant PRs
+# - npm caching for faster builds
+# - Comprehensive step summaries
+# - Concurrency controls
+#
 # Trigger: Pull requests to main or develop branches
 # ============================================================================
 
@@ -18,6 +24,13 @@ name: Bundle Size Check
 on:
   pull_request:
     branches: [main, develop]
+    # Only run when source or build configuration changes
+    paths:
+      - 'src/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'angular.json'
+      - 'tsconfig.json'
 
 # Security: Explicit permissions following least privilege principle
 permissions:

@@ -9,6 +9,12 @@
 # - Auto-formats code with Prettier
 # - Commits and pushes fixes automatically
 # - Only runs on non-main branches to avoid direct commits to protected branches
+#
+# Enterprise Features:
+# - npm caching for faster builds
+# - Path-based filtering for relevant files only
+# - Comprehensive step summaries
+# - Concurrency controls
 # ============================================================================
 
 name: Auto-Fix Lint Issues
@@ -22,6 +28,7 @@ on:
       - 'src/**/*.css'
       - 'src/**/*.scss'
       - '*.json'
+      - '!package-lock.json'
 
 permissions:
   contents: write
@@ -30,7 +37,7 @@ permissions:
 # Concurrency: Prevent multiple auto-fix runs from running simultaneously per PR
 concurrency:
   group: auto-fix-lint-${{ github.event.pull_request.number }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   # ============================================================================

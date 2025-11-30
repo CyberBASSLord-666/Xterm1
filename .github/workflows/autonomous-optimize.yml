@@ -183,7 +183,7 @@ jobs:
           name: optimization-analysis
           path: |
             unused-imports.json
-          retention-days: 7
+          retention-days: 30
           if-no-files-found: ignore
 
   # ============ APPLY SAFE OPTIMIZATIONS ============

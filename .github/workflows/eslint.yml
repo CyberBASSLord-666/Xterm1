@@ -9,6 +9,11 @@
 # - Integration with GitHub Security scanning
 # - Weekly scheduled scans
 #
+# Enterprise Features:
+# - Path-based filtering to skip irrelevant runs
+# - npm caching for faster builds
+# - Comprehensive timeout settings
+#
 # Note: This is separate from the CI lint job to provide SARIF-specific output
 # for GitHub's security events integration.
 # ============================================================================
@@ -18,8 +23,18 @@ name: ESLint
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.html'
+      - '.eslintrc.json'
+      - 'package.json'
   pull_request:
     branches: [ "main" ]
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.html'
+      - '.eslintrc.json'
+      - 'package.json'
   schedule:
     - cron: '40 15 * * 1'
 
