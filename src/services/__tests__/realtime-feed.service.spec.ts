@@ -378,4 +378,69 @@ describe('RealtimeFeedService', () => {
       internalState.lastVisibilityState = previousVisibility;
     }
   });
+
+  it('initializes monitoringSuspendedForVisibility to true when document is hidden at construction time', () => {
+    // Arrange: Set document visibility to 'hidden' before creating a new service instance
+    const originalDescriptor = Object.getOwnPropertyDescriptor(document, 'visibilityState');
+
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => 'hidden' as DocumentVisibilityState,
+    });
+
+    try {
+      // Shutdown the existing service to clean up any state
+      service.shutdown();
+
+      // Reset TestBed and create a fresh service instance while document is hidden
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          RealtimeFeedService,
+          { provide: LoggerService, useClass: StubLoggerService },
+          {
+            provide: EVENT_SOURCE_FACTORY,
+            useFactory: () => (url: string) => {
+              const source = new MockEventSource(url);
+              const type = url.includes('image') ? 'image' : 'text';
+              sources.set(type, source);
+              return source as unknown as EventSource;
+            },
+          },
+        ],
+      });
+
+      const hiddenService = TestBed.inject(RealtimeFeedService);
+
+      // Access internal states to verify monitoringSuspendedForVisibility
+      const internalStates = (
+        hiddenService as unknown as {
+          states: { image: { monitoringSuspendedForVisibility: boolean } };
+        }
+      ).states;
+
+      // Assert: The flag should be initialized to true because document was hidden at creation
+      expect(internalStates.image.monitoringSuspendedForVisibility).toBe(true);
+
+      // Start the feed and verify monitoring remains suspended
+      hiddenService.start('image', { reset: true });
+      const source = sources.get('image');
+      expect(source).toBeDefined();
+      source?.emitOpen();
+
+      // Advance time significantly - stall should not be detected because monitoring is suspended
+      jest.advanceTimersByTime(60000);
+
+      expect(hiddenService.diagnosticsSignal('image')().stalled).toBe(false);
+
+      // Clean up
+      hiddenService.shutdown();
+    } finally {
+      if (originalDescriptor) {
+        Object.defineProperty(document, 'visibilityState', originalDescriptor);
+      } else {
+        delete (document as { visibilityState?: string }).visibilityState;
+      }
+    }
+  });
 });
