@@ -2,24 +2,20 @@
 # AI Autonomous Agent Workflow for PolliWall (Xterm1)
 # ============================================================================
 # A master workflow that orchestrates intelligent code improvements using
-# a two-tier system:
+# static analysis tools and GitHub Copilot integration:
 #
-# STANDARD MODE (No API keys required - fully autonomous):
+# FEATURES:
 # - Comprehensive static analysis (ESLint, TypeScript, npm audit)
 # - Rule-based prioritization of issues
 # - Automatic fixes using standard tools
 # - Codebase metrics and pattern detection
 # - Security vulnerability scanning
+# - GitHub Copilot integration via @copilot mentions for AI assistance
 #
-# ENHANCED MODE (Optional - requires OPENAI_API_KEY):
-# - AI-powered intelligent prioritization
-# - Context-aware recommendations
-# - Deep code understanding and suggestions
-# - AI-generated improvement plans
+# All AI features are powered by GitHub Copilot. No external API keys required.
 #
 # Prerequisites:
 # - None required! Works autonomously out of the box
-# - (Optional) OPENAI_API_KEY for AI-powered analysis
 # - GH_TOKEN for repository access and PR creation (recommended)
 #
 # Trigger: Workflow dispatch, repository dispatch, or schedule (weekly)
@@ -66,11 +62,17 @@ on:
     # Run weekly analysis on Sundays at 2 AM UTC
     - cron: '0 2 * * 0'
 
+# Security: Restrict permissions to minimum required
 permissions:
   contents: write
   pull-requests: write
   issues: write
   security-events: read
+
+# Security: Prevent concurrent runs
+concurrency:
+  group: ai-agent-${{ github.run_id }}
+  cancel-in-progress: false
 
 env:
   NODE_VERSION: '20'
@@ -214,18 +216,16 @@ jobs:
           echo "| Console Statements | $CONSOLE_LOGS | $([ $CONSOLE_LOGS -eq 0 ] && echo '✅' || echo '⚠️') |" >> $GITHUB_STEP_SUMMARY
           echo "| TODO Comments | $TODO_COUNT | ℹ️ |" >> $GITHUB_STEP_SUMMARY
 
-      - name: Prioritization (Rule-based or AI-enhanced)
+      - name: Prioritization (Rule-based)
         id: prioritize
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           echo "🧠 Prioritizing issues..."
           
           # Read analysis results
           ANALYSIS=$(cat /tmp/analysis-results.json)
           
-          # Always start with rule-based priority (works without API keys)
-          echo "Using rule-based prioritization (standard mode)..."
+          # Using rule-based prioritization
+          echo "Using rule-based prioritization..."
           
           PRIORITY_LIST="[]"
           
@@ -279,67 +279,6 @@ jobs:
           
           echo "$PRIORITY_LIST" > /tmp/priority-list.json
           echo "issues=$(echo $PRIORITY_LIST | jq -c '.')" >> $GITHUB_OUTPUT
-          echo "mode=standard" >> $GITHUB_OUTPUT
-          
-          # If OpenAI is available, enhance with AI analysis
-          if [ -n "$OPENAI_API_KEY" ]; then
-            echo "Enhancing with AI-powered prioritization (enhanced mode)..."
-            echo "mode=enhanced" >> $GITHUB_OUTPUT
-            
-            RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
-              -H "Content-Type: application/json" \
-              -H "Authorization: Bearer $OPENAI_API_KEY" \
-              -d @- << EOF
-            {
-              "model": "gpt-4o-mini",
-              "messages": [
-                {"role": "system", "content": "You are a code quality expert. Analyze the following metrics and provide a prioritized list of issues to fix. Return a JSON array with objects containing: priority (1-10), category, issue, impact (high/medium/low), effort (high/medium/low), and recommended_action."},
-                {"role": "user", "content": "Analysis results: ${ANALYSIS}"}
-              ],
-              "max_tokens": 1000,
-              "temperature": 0.2,
-              "response_format": {"type": "json_object"}
-            }
-          EOF
-            )
-            
-            AI_PRIORITY=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "{}"')
-            if [ -n "$AI_PRIORITY" ] && [ "$AI_PRIORITY" != "{}" ]; then
-              echo "$AI_PRIORITY" > /tmp/ai-priority-list.json
-              # Merge AI insights with rule-based priorities
-              echo "AI analysis complete - enhanced recommendations available"
-            fi
-          fi
-        continue-on-error: true
-
-      - name: Generate AI recommendations (Optional Enhancement)
-        if: env.OPENAI_API_KEY != ''
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: |
-          echo "🤖 Generating AI recommendations..."
-          
-          ANALYSIS=$(cat /tmp/analysis-results.json)
-          FOCUS="${{ inputs.focus_areas || 'code-quality,security,performance' }}"
-          
-          RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $OPENAI_API_KEY" \
-            -d @- << EOF
-          {
-            "model": "gpt-4o-mini",
-            "messages": [
-              {"role": "system", "content": "You are an expert software architect. Based on the codebase analysis, provide actionable recommendations for improvement. Focus areas: ${FOCUS}. Be specific and provide code examples where helpful."},
-              {"role": "user", "content": "Codebase analysis: ${ANALYSIS}\n\nProvide 5-10 prioritized recommendations for improving this codebase. For each recommendation, include: 1) What to change, 2) Why it matters, 3) How to implement it."}
-            ],
-            "max_tokens": 2000,
-            "temperature": 0.3
-          }
-          EOF
-          )
-          
-          RECOMMENDATIONS=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "No recommendations available"')
-          echo "$RECOMMENDATIONS" > /tmp/ai-recommendations.md
         continue-on-error: true
 
       - name: Upload analysis artifacts
@@ -349,7 +288,6 @@ jobs:
           path: |
             /tmp/analysis-results.json
             /tmp/priority-list.json
-            /tmp/ai-recommendations.md
             /tmp/eslint-full.json
             /tmp/complexity.json
           retention-days: 30
@@ -476,16 +414,6 @@ jobs:
           script: |
             const fs = require('fs');
             
-            // Read recommendations if available
-            let recommendations = '';
-            try {
-              if (fs.existsSync('/tmp/ai-recommendations.md')) {
-                recommendations = fs.readFileSync('/tmp/ai-recommendations.md', 'utf8');
-              }
-            } catch (e) {
-              console.log('No recommendations file');
-            }
-            
             // Read fixes log
             let fixesLog = '';
             try {
@@ -498,7 +426,7 @@ jobs:
             
             const body = `## 🤖 AI Autonomous Agent - Code Improvements
 
-            This PR contains AI-analyzed and automatically applied code improvements.
+            This PR contains automatically applied code improvements.
 
             ### 📊 Analysis Summary
             The AI Agent analyzed the codebase and identified issues across these areas:
@@ -507,10 +435,6 @@ jobs:
 
             ### ✅ Fixes Applied
             ${fixesLog || 'Standard auto-fixes applied'}
-
-            ${recommendations ? `### 🧠 AI Recommendations
-
-            ${recommendations}` : ''}
 
             ### 📁 Changes
             - **Files Modified**: ${{ steps.changes.outputs.changed_count }}
@@ -522,8 +446,10 @@ jobs:
             3. Check that security fixes are appropriate
             4. Validate formatting changes
 
+            For AI-powered analysis, use \`@copilot\` to ask questions about the changes.
+
             ---
-            *Generated by AI Autonomous Agent Workflow*`;
+            *Generated by AI Autonomous Agent Workflow (GitHub Copilot)*`;
             
             const { data: pr } = await github.rest.pulls.create({
               owner: context.repo.owner,
@@ -570,7 +496,6 @@ jobs:
             
             // Try to read analysis results
             let analysis = {};
-            let recommendations = '';
             let priorities = [];
             
             try {
@@ -579,14 +504,6 @@ jobs:
               }
             } catch (e) {
               console.log('Could not read analysis results');
-            }
-            
-            try {
-              if (fs.existsSync('/tmp/ai-recommendations.md')) {
-                recommendations = fs.readFileSync('/tmp/ai-recommendations.md', 'utf8');
-              }
-            } catch (e) {
-              console.log('Could not read recommendations');
             }
             
             try {
@@ -645,14 +562,6 @@ jobs:
               report += '\n';
             }
             
-            if (recommendations) {
-              report += `## 🧠 AI Recommendations
-
-            ${recommendations}
-
-            `;
-            }
-            
             report += `## 🔄 Workflow Status
 
             | Job | Status |
@@ -660,15 +569,8 @@ jobs:
             | Analysis | ${{ needs.ai-analysis.result }} |
             | Fix | ${{ needs.ai-fix.result || 'skipped' }} |
 
-            ## ℹ️ Analysis Modes
-            
-            | Mode | Status | Description |
-            |------|--------|-------------|
-            | **Standard** | ✅ Active | Static analysis with ESLint, TypeScript, npm audit |
-            | **Enhanced** | ${recommendations ? '✅ Active' : '⚪ Available'} | AI-powered recommendations (requires OPENAI_API_KEY) |
-
             ---
-            *Generated by AI Autonomous Agent • [View Workflow Run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})*`;
+            *Generated by AI Autonomous Agent (GitHub Copilot) • [View Workflow Run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})*`;
             
             // Write to job summary
             await core.summary

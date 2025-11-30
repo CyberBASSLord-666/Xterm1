@@ -4,15 +4,10 @@
 # This workflow processes commands from PR/issue comments and executes
 # appropriate actions. It's the interface for human-to-swarm communication.
 #
-# All commands work WITHOUT any API keys (Standard Mode):
+# All commands work using static analysis tools and GitHub Copilot:
 # - Uses static analysis tools (ESLint, TypeScript, npm audit)
 # - Rule-based analysis and fixes
 # - GitHub Copilot integration via @copilot mentions
-#
-# Enhanced Mode (Optional - with OPENAI_API_KEY):
-# - AI-powered deep analysis
-# - Context-aware suggestions
-# - Intelligent recommendations
 #
 # Supported Commands:
 # - @copilot fix lint - Auto-fix lint issues
@@ -26,8 +21,8 @@
 # - @copilot improve - Find and apply improvements
 # - @copilot enhance - Apply QoL enhancements
 # - @copilot full-auto - Run all autonomous workflows
-# - @copilot analyze - Deep code analysis (standard + optional AI)
-# - @copilot ai-review - Code review (standard + optional AI)
+# - @copilot analyze - Deep code analysis
+# - @copilot ai-review - Code review
 # ============================================================================
 
 name: Comment Command Processor
@@ -36,17 +31,31 @@ on:
   issue_comment:
     types: [created]
 
+# Security: Restrict permissions to minimum required
+# Note: actions:write is needed only for workflow_dispatch triggers
 permissions:
   contents: write
   pull-requests: write
   issues: write
   actions: write
 
+# Security: Prevent concurrent runs on the same PR to avoid race conditions
+concurrency:
+  group: comment-processor-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
 jobs:
   process-command:
     runs-on: ubuntu-latest
-    # Only process comments that mention @copilot
-    if: contains(github.event.comment.body, '@copilot')
+    # Security: Only process comments from repository collaborators
+    # This prevents untrusted users from triggering workflow actions
+    if: |
+      contains(github.event.comment.body, '@copilot') &&
+      (
+        github.event.comment.author_association == 'OWNER' ||
+        github.event.comment.author_association == 'MEMBER' ||
+        github.event.comment.author_association == 'COLLABORATOR'
+      )
     
     steps:
       - name: Parse command
@@ -54,7 +63,13 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const comment = context.payload.comment.body.toLowerCase();
+            // Security: Sanitize comment body to prevent injection
+            const rawComment = context.payload.comment.body || '';
+            // Remove potentially dangerous characters and limit length
+            const comment = rawComment
+              .toLowerCase()
+              .replace(/[<>'"`;$\\]/g, '')
+              .substring(0, 500);
             
             // Extract command after @copilot (handle multi-word and hyphenated commands)
             const match = comment.match(/@copilot\s+([\w-]+(?:\s+[\w-]+)?)/);
@@ -90,10 +105,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.issue.pull_request.head.ref || github.head_ref }}
-          # Use GH_TOKEN to enable pushing commits and triggering other workflows
+          # Security: Use GH_TOKEN with fallback to GITHUB_TOKEN
+          # GH_TOKEN enables pushing commits and triggering other workflows
           # Falls back to GITHUB_TOKEN if GH_TOKEN is not configured
           token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
           fetch-depth: 0
+          # Security: Persist credentials only when necessary
+          persist-credentials: true
 
       - name: Setup Node.js
         if: steps.parse.outputs.is_pr == 'true'
@@ -120,7 +138,7 @@ jobs:
 
             All commands work **out of the box** without any API keys!
 
-            ### 🔧 Standard Commands (No API keys required)
+            ### 🔧 Standard Commands
             | Command | Description |
             |---------|-------------|
             | \`@copilot help\` | Show this help message |
@@ -133,7 +151,7 @@ jobs:
             | \`@copilot summarize\` | Generate a summary of PR changes |
             | \`@copilot status\` | Show swarm status for this PR |
             
-            ### 🔄 Refactoring Commands (No API keys required)
+            ### 🔄 Refactoring Commands
             | Command | Description |
             |---------|-------------|
             | \`@copilot refactor\` | General code refactoring |
@@ -142,7 +160,7 @@ jobs:
             | \`@copilot simplify\` | Reduce code complexity |
             | \`@copilot extract [type] [name] from [file]\` | Extract code to module |
             
-            ### 🤖 Autonomous Commands (No API keys required)
+            ### 🤖 Autonomous Commands
             | Command | Description |
             |---------|-------------|
             | \`@copilot audit\` | Run full app audit (code quality, bundle, a11y, deps) |
@@ -151,23 +169,18 @@ jobs:
             | \`@copilot enhance\` | Apply QoL enhancements |
             | \`@copilot full-auto\` | Run all autonomous workflows in sequence |
 
-            ### 🧠 Analysis Commands (Standard + Optional AI Enhancement)
-            These commands use static analysis by default. Add \`OPENAI_API_KEY\` for enhanced AI analysis.
-            
+            ### 🧠 Analysis Commands
             | Command | Description |
             |---------|-------------|
-            | \`@copilot analyze\` | Deep code analysis (static + optional AI) |
-            | \`@copilot ai-fix\` | Fix issues intelligently (standard tools + optional AI) |
-            | \`@copilot ai-refactor\` | Refactor code (standard + optional AI context) |
-            | \`@copilot ai-review\` | Code review (static analysis + optional AI) |
-            | \`@copilot explain\` | Explain code or changes (requires OPENAI_API_KEY) |
+            | \`@copilot analyze\` | Deep code analysis |
+            | \`@copilot ai-fix\` | Fix issues intelligently |
+            | \`@copilot ai-refactor\` | Refactor code |
+            | \`@copilot ai-review\` | Code review |
+            | \`@copilot explain\` | Explain code or changes |
 
             **Usage:** Just comment with one of the commands above and I'll handle it!
             
-            ---
-            ### ℹ️ Two-Tier System
-            - **Standard Mode** ✅: Works immediately with ESLint, TypeScript, npm audit
-            - **Enhanced Mode** ⚡: Add \`OPENAI_API_KEY\` secret for deeper AI analysis
+            All AI features are powered by GitHub Copilot.
 
             ---
             *Agentic Swarm Command Processor*`
@@ -177,6 +190,9 @@ jobs:
       - name: Handle fix lint command
         if: steps.parse.outputs.command == 'fix lint' && steps.parse.outputs.is_pr == 'true'
         id: fix_lint
+        env:
+          # Security: Pass username through environment variable
+          REQUESTER: ${{ github.event.comment.user.login }}
         run: |
           npx eslint "src/**/*.{ts,html}" --fix || true
           npx prettier --write "src/**/*.{ts,html,css,scss,json}" || true
@@ -185,7 +201,9 @@ jobs:
             git config --local user.email "github-actions[bot]@users.noreply.github.com"
             git config --local user.name "github-actions[bot]"
             git add -A
-            git commit -m "🤖 Fix: Applied lint and formatting corrections per @${{ github.event.comment.user.login }} request"
+            # Security: Sanitize username for commit message
+            SAFE_USER=$(echo "$REQUESTER" | tr -cd '[:alnum:]-_' | head -c 39)
+            git commit -m "🤖 Fix: Applied lint and formatting corrections per @${SAFE_USER} request"
             git push
             echo "fixed=true" >> $GITHUB_OUTPUT
           else
@@ -513,6 +531,9 @@ jobs:
       - name: Handle fix all command
         if: steps.parse.outputs.command == 'fix all' && steps.parse.outputs.is_pr == 'true'
         id: fix_all
+        env:
+          # Security: Pass username through environment variable
+          REQUESTER: ${{ github.event.comment.user.login }}
         run: |
           echo "🔧 Starting comprehensive fix: lint, security, and formatting..."
           
@@ -561,7 +582,9 @@ jobs:
             git config --local user.email "github-actions[bot]@users.noreply.github.com"
             git config --local user.name "github-actions[bot]"
             git add -A
-            git commit -m "🤖 Fix All: Applied comprehensive fixes per @${{ github.event.comment.user.login }} request
+            # Security: Sanitize username for commit message
+            SAFE_USER=$(echo "$REQUESTER" | tr -cd '[:alnum:]-_' | head -c 39)
+            git commit -m "🤖 Fix All: Applied comprehensive fixes per @${SAFE_USER} request
 
           Fixes applied:
           - ESLint auto-fix
@@ -646,6 +669,9 @@ jobs:
       - name: Handle fix security command
         if: steps.parse.outputs.command == 'fix security' && steps.parse.outputs.is_pr == 'true'
         id: fix_security
+        env:
+          # Security: Pass username through environment variable
+          REQUESTER: ${{ github.event.comment.user.login }}
         run: |
           echo "🔒 Starting security vulnerability auto-fix..."
           
@@ -677,7 +703,9 @@ jobs:
             git config --local user.email "github-actions[bot]@users.noreply.github.com"
             git config --local user.name "github-actions[bot]"
             git add package.json package-lock.json
-            git commit -m "🔒 Security: Auto-fix vulnerabilities per @${{ github.event.comment.user.login }} request
+            # Security: Sanitize username for commit message
+            SAFE_USER=$(echo "$REQUESTER" | tr -cd '[:alnum:]-_' | head -c 39)
+            git commit -m "🔒 Security: Auto-fix vulnerabilities per @${SAFE_USER} request
 
           Before: $VULNS_BEFORE vulnerabilities ($CRITICAL_BEFORE critical, $HIGH_BEFORE high)
           After: $VULNS_AFTER vulnerabilities ($CRITICAL_AFTER critical, $HIGH_AFTER high)
@@ -1062,7 +1090,6 @@ jobs:
           script: |
             const prNumber = context.issue.number;
             const isPR = '${{ steps.parse.outputs.is_pr }}' === 'true';
-            const hasOpenAI = '${{ secrets.OPENAI_API_KEY }}' !== '';
             
             await github.rest.issues.createComment({
               owner: context.repo.owner,
@@ -1072,24 +1099,19 @@ jobs:
 
             The AI Agent is performing a comprehensive analysis of ${isPR ? 'this PR' : 'the codebase'}:
 
-            ### Standard Analysis (Active)
+            ### Analysis Features
             - 📊 Code quality metrics (ESLint, TypeScript)
             - 🔒 Security assessment (npm audit)
             - ⚡ Complexity analysis
             - 📝 Code pattern detection
-
-            ${hasOpenAI ? `### Enhanced AI Analysis (Active)
-            - 🤖 AI-powered prioritization
-            - 💡 Intelligent recommendations
-            - 🏗️ Architecture insights` : `### Enhanced AI Analysis (Available)
-            > Add \`OPENAI_API_KEY\` secret for AI-powered recommendations`}
+            - 🤖 GitHub Copilot integration for AI insights
 
             ${isPR ? '' : '> **Note:** For PR-specific analysis, trigger this command from a pull request.'}
 
             Analysis results will be posted when complete.
 
             ---
-            *AI Autonomous Agent - Analysis Mode*`
+            *AI Autonomous Agent - Analysis Mode (GitHub Copilot)*`
             });
             
             // Trigger the AI agent workflow
@@ -1119,7 +1141,6 @@ jobs:
           github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
             const prNumber = context.issue.number;
-            const hasOpenAI = '${{ secrets.OPENAI_API_KEY }}' !== '';
             
             // Get PR details
             const { data: pr } = await github.rest.pulls.get({
@@ -1136,21 +1157,16 @@ jobs:
 
             The AI Agent is analyzing and fixing issues:
 
-            ### Standard Fixes (Active)
+            ### Fixes Applied
             - 🔧 ESLint auto-fix
             - 🎨 Prettier formatting
             - 🔒 npm audit security fixes
-
-            ${hasOpenAI ? `### AI-Enhanced Analysis (Active)
-            - 🧠 Deep understanding of root causes
-            - 💡 Intelligent fix suggestions
-            - 📝 Explanations of changes` : `### AI-Enhanced Analysis (Available)
-            > Add \`OPENAI_API_KEY\` secret for deeper AI analysis`}
+            - 🤖 GitHub Copilot integration for AI insights
 
             Fixes will be committed to this branch when complete.
 
             ---
-            *AI Fix Agent - Standard + ${hasOpenAI ? 'Enhanced' : 'Standard'} Mode*`
+            *AI Fix Agent (GitHub Copilot)*`
             });
             
             // Trigger the AI fix workflow
@@ -1182,7 +1198,6 @@ jobs:
           github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
             const prNumber = context.issue.number;
-            const hasOpenAI = '${{ secrets.OPENAI_API_KEY }}' !== '';
             
             // Get PR details
             const { data: pr } = await github.rest.pulls.get({
@@ -1199,25 +1214,20 @@ jobs:
 
             The agent is analyzing code for refactoring opportunities:
 
-            ### Standard Refactoring (Active)
+            ### Refactoring Features
             - 📊 Complexity analysis
             - 🔍 Anti-pattern detection
             - 🛠️ ESLint rule-based improvements
             - 🎨 Code formatting
-
-            ${hasOpenAI ? `### AI-Enhanced Refactoring (Active)
-            - 🧠 Context-aware improvements
-            - 💡 Intelligent restructuring
-            - 📝 Detailed explanations` : `### AI-Enhanced Refactoring (Available)
-            > Add \`OPENAI_API_KEY\` secret for AI-powered refactoring suggestions`}
+            - 🤖 GitHub Copilot integration for AI insights
 
             Changes will be applied when analysis is complete.
 
             ---
-            *Refactor Agent - Standard + ${hasOpenAI ? 'Enhanced' : 'Standard'} Mode*`
+            *Refactor Agent (GitHub Copilot)*`
             });
             
-            // Trigger the improve workflow with AI mode
+            // Trigger the improve workflow
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -1225,8 +1235,7 @@ jobs:
               ref: pr.head.ref,
               inputs: {
                 apply_fixes: 'true',
-                scope: 'ai-suggestions',
-                ai_mode: 'true',
+                scope: 'all',
                 target_branch: pr.head.ref
               }
             });
@@ -1246,7 +1255,6 @@ jobs:
           github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
             const prNumber = context.issue.number;
-            const hasOpenAI = '${{ secrets.OPENAI_API_KEY }}' !== '';
             
             await github.rest.issues.createComment({
               owner: context.repo.owner,
@@ -1256,22 +1264,17 @@ jobs:
 
             Performing a comprehensive code review:
 
-            ### Standard Review (Active)
+            ### Review Features
             - 📝 Static analysis (ESLint, TypeScript)
             - 🔒 Security vulnerability check
             - ⚡ Complexity analysis
             - 📊 Code quality scoring
-
-            ${hasOpenAI ? `### AI-Enhanced Review (Active)
-            - 🧠 Context-aware analysis
-            - 💡 Intelligent suggestions
-            - 🏗️ Architecture insights` : `### AI-Enhanced Review (Available)
-            > Add \`OPENAI_API_KEY\` secret for deeper AI analysis`}
+            - 🤖 GitHub Copilot integration for AI insights
 
             Review comments will be posted when complete.
 
             ---
-            *Code Review Agent - Standard + ${hasOpenAI ? 'Enhanced' : 'Standard'} Mode*`
+            *Code Review Agent (GitHub Copilot)*`
             });
             
             // Trigger the AI code review workflow
@@ -1293,17 +1296,14 @@ jobs:
               content: 'rocket'
             });
 
-      # ============ AI EXPLAIN COMMAND ============
+      # ============ EXPLAIN COMMAND ============
       - name: Handle explain command
         if: steps.parse.outputs.command == 'explain' && steps.parse.outputs.is_pr == 'true'
         uses: actions/github-script@v7
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         with:
           github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
             const prNumber = context.issue.number;
-            const hasOpenAI = process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.length > 0;
             
             // Get PR files for explanation
             const { data: pr } = await github.rest.pulls.get({
@@ -1378,24 +1378,15 @@ jobs:
             | Lines Removed | -${pr.deletions} | ${pr.deletions > 200 ? '📊 Significant' : '✅ Normal'} |
             | Test Changes | ${categories.tests.length} | ${categories.tests.length > 0 ? '✅ Includes tests' : '⚠️ No test changes'} |
 
-            ${hasOpenAI ? `### 🧠 AI Analysis
-            _AI-enhanced explanation is available and processing..._
-            
-            For detailed AI analysis, the OPENAI_API_KEY is configured and active.` : `### ℹ️ Enhanced Explanation Available
-            > Add \`OPENAI_API_KEY\` secret for AI-powered detailed explanations
-            
-            The analysis above uses static file analysis. AI can provide:
-            - Intent understanding
-            - Architectural impact assessment
-            - Detailed code change explanations`}
+            For more detailed AI-powered explanations, use \`@copilot\` to ask questions about specific changes.
 
             ---
-            *Explain Agent - ${hasOpenAI ? 'Enhanced' : 'Standard'} Mode*`
+            *Explain Agent (GitHub Copilot)*`
             });
             
             await github.rest.reactions.createForIssueComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               comment_id: context.payload.comment.id,
-              content: hasOpenAI ? 'rocket' : 'eyes'
+              content: 'rocket'
             });

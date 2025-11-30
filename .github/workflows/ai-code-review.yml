@@ -1,23 +1,19 @@
 # ============================================================================
 # AI-Powered Code Review Workflow for PolliWall (Xterm1)
 # ============================================================================
-# This workflow provides intelligent code reviews using a two-tier system:
+# This workflow provides intelligent code reviews using GitHub Copilot:
 #
-# STANDARD MODE (No API keys required):
+# FEATURES:
 # - Comprehensive static analysis with ESLint and TypeScript
 # - Code quality scoring based on lint errors, type errors, complexity
 # - Automatic recommendations based on detected issues
-# - GitHub Copilot integration via @copilot mentions
+# - GitHub Copilot integration via @copilot mentions for AI analysis
 #
-# ENHANCED MODE (Optional - requires OPENAI_API_KEY):
-# - Deep AI-powered analysis of code changes
-# - Context-aware suggestions beyond rule-based checks
-# - Intent understanding and implementation recommendations
+# All AI features are powered by GitHub Copilot. No external API keys required.
 #
 # Prerequisites:
 # - None required! Works out of the box with static analysis
-# - (Optional) GitHub Copilot for PRs enabled for @copilot mentions
-# - (Optional) OPENAI_API_KEY secret for enhanced AI analysis
+# - GitHub Copilot for PRs enabled for @copilot mentions
 #
 # Trigger: Pull request events
 # ============================================================================
@@ -43,10 +39,16 @@ on:
           - security-focused
         default: 'standard'
 
+# Security: Restrict permissions to minimum required for code review
 permissions:
   contents: read
   pull-requests: write
   issues: write
+
+# Security: Prevent concurrent runs on the same PR
+concurrency:
+  group: ai-review-${{ github.event.pull_request.number || inputs.pr_number }}
+  cancel-in-progress: true
 
 env:
   NODE_VERSION: '20'
@@ -162,67 +164,6 @@ jobs:
           echo "complex_functions=$COMPLEX_FUNCTIONS" >> $GITHUB_OUTPUT
         continue-on-error: true
 
-      - name: AI-Powered Analysis (OpenAI - Optional Enhancement)
-        if: steps.pr_details.outputs.has_source_changes == 'true' && env.OPENAI_API_KEY != ''
-        id: openai_analysis
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: |
-          echo "🤖 Running AI-powered analysis with OpenAI..."
-          
-          # Create a summary of changes for the AI
-          cat > /tmp/changes_summary.txt << 'CHANGES_EOF'
-          PR Title: ${{ steps.pr_details.outputs.pr_title }}
-          Files Changed: ${{ steps.pr_details.outputs.files_count }}
-          Additions: +${{ steps.pr_details.outputs.additions }}
-          Deletions: -${{ steps.pr_details.outputs.deletions }}
-          Lint Errors: ${{ steps.static_analysis.outputs.lint_errors }}
-          Type Errors: ${{ steps.static_analysis.outputs.type_errors }}
-          Complex Functions: ${{ steps.static_analysis.outputs.complex_functions }}
-          CHANGES_EOF
-          
-          # Get the changed files content (limited)
-          git diff origin/${{ github.base_ref }}..HEAD --unified=3 -- '*.ts' '*.tsx' | head -500 > /tmp/diff_content.txt
-          
-          # Build the prompt
-          PROMPT=$(cat << 'PROMPT_EOF'
-          You are an expert code reviewer for a TypeScript/React application. Review the following code changes and provide:
-          
-          1. **Summary**: A brief summary of what the changes do
-          2. **Quality Assessment**: Rate the code quality (1-10) and explain why
-          3. **Potential Issues**: List any bugs, security issues, or anti-patterns
-          4. **Suggestions**: Provide specific, actionable improvement suggestions
-          5. **Best Practices**: Note any violations of TypeScript/React best practices
-          
-          Keep your response concise and actionable. Use markdown formatting.
-          PROMPT_EOF
-          )
-          
-          # Call OpenAI API
-          RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $OPENAI_API_KEY" \
-            -d @- << EOF
-          {
-            "model": "gpt-4o-mini",
-            "messages": [
-              {"role": "system", "content": "$PROMPT"},
-              {"role": "user", "content": "$(cat /tmp/changes_summary.txt)\n\nCode Diff:\n$(head -c 3000 /tmp/diff_content.txt | sed 's/"/\\"/g' | tr '\n' ' ')"}
-            ],
-            "max_tokens": 1000,
-            "temperature": 0.3
-          }
-          EOF
-          )
-          
-          # Extract the response
-          AI_REVIEW=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "AI analysis unavailable"' 2>/dev/null || echo "AI analysis unavailable")
-          
-          # Save to file for later use (escape for GitHub Actions)
-          echo "$AI_REVIEW" > /tmp/ai_review.md
-          echo "ai_available=true" >> $GITHUB_OUTPUT
-        continue-on-error: true
-
       - name: Generate AI Review Comment
         uses: actions/github-script@v7
         with:
@@ -294,22 +235,6 @@ jobs:
 
             `;
               
-              // Add AI analysis if available
-              try {
-                if (fs.existsSync('/tmp/ai_review.md')) {
-                  const aiReview = fs.readFileSync('/tmp/ai_review.md', 'utf8');
-                  if (aiReview && aiReview !== 'AI analysis unavailable') {
-                    reviewBody += `### 🧠 AI Analysis
-
-            ${aiReview}
-
-            `;
-                  }
-                }
-              } catch (e) {
-                console.log('AI review not available');
-              }
-              
               // Add recommendations based on issues found
               const recommendations = [];
               
@@ -350,11 +275,7 @@ jobs:
             
             reviewBody += `---
             
-            ### ℹ️ Review Modes
-            - **Standard Mode**: Static analysis (ESLint, TypeScript, complexity) ✅ Active
-            - **Enhanced Mode**: Deep AI analysis ${fs.existsSync('/tmp/ai_review.md') ? '✅ Active' : '⚪ Available with OPENAI_API_KEY'}
-            
-            *Powered by AI Code Review • [Request deeper analysis](${context.payload.pull_request?.html_url}#issuecomment-new) with \`@copilot ai-review\`*`;
+            *Powered by AI Code Review (GitHub Copilot) • [Request deeper analysis](${context.payload.pull_request?.html_url}#issuecomment-new) with \`@copilot\`*`;
             
             // Update or create comment
             if (existingReview) {

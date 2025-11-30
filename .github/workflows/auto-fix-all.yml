@@ -37,10 +37,16 @@ on:
           - format-only
         default: 'all'
 
+# Security: Restrict permissions to minimum required
 permissions:
   contents: write
   pull-requests: write
   issues: write
+
+# Security: Prevent concurrent runs on the same PR
+concurrency:
+  group: auto-fix-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: false
 
 env:
   NODE_VERSION: '20'

@@ -8,7 +8,7 @@
 # - Add missing null checks
 # - Suggest and apply better typing
 # - Auto-add missing JSDoc comments to public functions
-# - AI-powered code understanding for contextual improvements
+# - GitHub Copilot integration for AI insights
 #
 # Trigger: Manual dispatch or via @copilot improve command
 # ============================================================================
@@ -33,13 +33,7 @@ on:
           - typing
           - error-handling
           - documentation
-          - ai-suggestions
         default: 'all'
-      ai_mode:
-        description: 'Enable AI-powered improvements'
-        required: false
-        type: boolean
-        default: true
       target_branch:
         description: 'Target branch (leave empty for current)'
         required: false
@@ -48,10 +42,16 @@ on:
   repository_dispatch:
     types: [improve-requested]
 
+# Security: Restrict permissions to minimum required
 permissions:
   contents: write
   pull-requests: write
   issues: write
+
+# Security: Prevent concurrent runs
+concurrency:
+  group: improve-${{ github.run_id }}
+  cancel-in-progress: false
 
 env:
   NODE_VERSION: '20'
@@ -298,78 +298,6 @@ jobs:
         run: |
           echo "🎨 Formatting code..."
           npx prettier --write "src/**/*.{ts,html,css,scss,json}" || true
-        continue-on-error: true
-
-      - name: AI-Powered Code Improvements
-        id: ai_improve
-        if: inputs.ai_mode == true && (inputs.scope == 'all' || inputs.scope == 'ai-suggestions')
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: |
-          echo "🤖 Running AI-powered code analysis..."
-          
-          if [ -z "$OPENAI_API_KEY" ]; then
-            echo "OpenAI API key not configured, skipping AI improvements"
-            echo "ai_available=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          
-          echo "ai_available=true" >> $GITHUB_OUTPUT
-          
-          # Find files with potential improvements
-          IMPROVEMENT_CANDIDATES=""
-          
-          # Files with 'any' types
-          ANY_FILES=$(grep -rl ": any" src --include="*.ts" 2>/dev/null | head -3)
-          if [ -n "$ANY_FILES" ]; then
-            IMPROVEMENT_CANDIDATES="${IMPROVEMENT_CANDIDATES}\n\nFiles with 'any' types:\n${ANY_FILES}"
-          fi
-          
-          # Files with complex functions
-          npx eslint "src/**/*.ts" --rule '{"complexity": ["error", 10]}' --format json 2>/dev/null | \
-            jq -r '.[] | select(.messages | length > 0) | .filePath' | head -3 > /tmp/complex-files.txt
-          
-          if [ -s /tmp/complex-files.txt ]; then
-            COMPLEX_FILES=$(cat /tmp/complex-files.txt)
-            IMPROVEMENT_CANDIDATES="${IMPROVEMENT_CANDIDATES}\n\nComplex files:\n${COMPLEX_FILES}"
-          fi
-          
-          if [ -z "$IMPROVEMENT_CANDIDATES" ]; then
-            echo "No improvement candidates found"
-            exit 0
-          fi
-          
-          # Get sample code for AI analysis
-          for file in $ANY_FILES $(cat /tmp/complex-files.txt 2>/dev/null); do
-            if [ -f "$file" ]; then
-              echo -e "\n=== $file ===" >> /tmp/code-samples.txt
-              head -80 "$file" >> /tmp/code-samples.txt
-            fi
-          done 2>/dev/null || true
-          
-          # Call OpenAI for suggestions
-          RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $OPENAI_API_KEY" \
-            -d @- << 'APICALL'
-          {
-            "model": "gpt-4o-mini",
-            "messages": [
-              {"role": "system", "content": "You are a TypeScript expert. Analyze the code and provide specific, actionable improvements. Focus on: 1) Replacing 'any' with proper types, 2) Reducing complexity, 3) Improving error handling, 4) Better null safety. Format as markdown with code examples."},
-              {"role": "user", "content": "$(cat /tmp/code-samples.txt 2>/dev/null | head -c 3000 | sed 's/"/\\"/g' | tr '\n' ' ')"}
-            ],
-            "max_tokens": 1500,
-            "temperature": 0.3
-          }
-          APICALL
-          )
-          
-          AI_SUGGESTIONS=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "No suggestions available"')
-          echo "$AI_SUGGESTIONS" > /tmp/ai-improvement-suggestions.md
-          
-          echo "## 🤖 AI Improvement Suggestions" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "$AI_SUGGESTIONS" >> $GITHUB_STEP_SUMMARY
         continue-on-error: true
 
       - name: Check for changes

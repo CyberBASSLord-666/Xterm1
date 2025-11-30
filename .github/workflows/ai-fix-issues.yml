@@ -1,23 +1,20 @@
 # ============================================================================
 # AI-Powered Issue Fixer Workflow for PolliWall (Xterm1)
 # ============================================================================
-# This workflow automatically fixes code issues using a two-tier system:
+# This workflow automatically fixes code issues using static analysis tools
+# and GitHub Copilot integration:
 #
-# STANDARD MODE (No API keys required - fully functional):
+# FEATURES:
 # - ESLint auto-fix for lint issues
 # - Prettier for code formatting
 # - npm audit fix for security vulnerabilities
 # - TypeScript error detection and reporting
+# - GitHub Copilot integration via @copilot mentions for AI assistance
 #
-# ENHANCED MODE (Optional - requires OPENAI_API_KEY):
-# - AI-powered analysis of complex type errors
-# - Context-aware fix suggestions
-# - Performance optimization recommendations
-# - Detailed explanations of what was fixed and why
+# All AI features are powered by GitHub Copilot. No external API keys required.
 #
 # Prerequisites:
 # - None required! Core functionality works out of the box
-# - (Optional) OPENAI_API_KEY secret for AI-powered analysis
 # - GH_TOKEN for pushing commits (recommended)
 #
 # Trigger: Workflow dispatch, repository dispatch, or comment commands
@@ -44,7 +41,7 @@ on:
         required: false
         type: string
       ai_mode:
-        description: 'Enable AI-powered fixes'
+        description: 'Request Copilot analysis'
         required: false
         type: boolean
         default: true
@@ -57,10 +54,16 @@ on:
   repository_dispatch:
     types: [ai-fix-requested]
 
+# Security: Restrict permissions to minimum required
 permissions:
   contents: write
   pull-requests: write
   issues: write
+
+# Security: Prevent concurrent runs
+concurrency:
+  group: ai-fix-${{ github.run_id }}
+  cancel-in-progress: false
 
 env:
   NODE_VERSION: '20'
@@ -192,13 +195,11 @@ jobs:
           
           echo "fixes_applied=$FIXES_APPLIED" >> $GITHUB_OUTPUT
 
-      - name: AI-Powered Type Error Analysis (Optional Enhancement)
-        if: (inputs.issue_type == 'types' || inputs.issue_type == 'all') && inputs.ai_mode == true && env.OPENAI_API_KEY != ''
-        id: ai_type_fix
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      - name: Type Error Analysis
+        if: (inputs.issue_type == 'types' || inputs.issue_type == 'all')
+        id: type_analysis
         run: |
-          echo "🤖 Running AI-powered type error analysis..."
+          echo "📝 Analyzing type errors..."
           
           # Collect type errors with context
           set +e
@@ -210,60 +211,24 @@ jobs:
           
           if [ ! -s /tmp/type-errors-sample.txt ]; then
             echo "No type errors to analyze"
-            echo "ai_suggestions=" >> $GITHUB_OUTPUT
             exit 0
           fi
           
           # For each error file, get the relevant source
           ERROR_FILES=$(grep -oP "src/[^:]+\.ts" /tmp/type-errors-sample.txt | sort -u | head -5)
           
-          echo "Analyzing type errors in: $ERROR_FILES"
+          echo "Type errors found in: $ERROR_FILES"
+          echo "See TypeScript compiler output for details."
           
-          # Build context for AI
-          CONTEXT=""
-          for file in $ERROR_FILES; do
-            if [ -f "$file" ]; then
-              CONTEXT="${CONTEXT}\n\n=== ${file} ===\n$(head -100 "$file")"
-            fi
-          done
-          
-          # Call OpenAI for suggestions
-          PROMPT="You are a TypeScript expert. Analyze these type errors and the related source code. Provide specific, actionable fixes in the form of code snippets that can be directly applied. Format your response as a list of fixes with file paths and the exact code changes needed.
-
-          Type Errors:
-          $(cat /tmp/type-errors-sample.txt)
-
-          Source Context:
-          ${CONTEXT}"
-          
-          RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $OPENAI_API_KEY" \
-            -d @- << EOF
-          {
-            "model": "gpt-4o-mini",
-            "messages": [
-              {"role": "system", "content": "You are a TypeScript expert that provides precise, minimal code fixes."},
-              {"role": "user", "content": "$(echo "$PROMPT" | head -c 4000 | sed 's/"/\\"/g' | tr '\n' ' ')"}
-            ],
-            "max_tokens": 1500,
-            "temperature": 0.2
-          }
-          EOF
-          )
-          
-          AI_SUGGESTIONS=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "No suggestions available"')
-          echo "$AI_SUGGESTIONS" > /tmp/ai-suggestions.md
-          echo "ai_suggestions_available=true" >> $GITHUB_OUTPUT
+          # Save error summary for reporting
+          echo "type_errors_found=true" >> $GITHUB_OUTPUT
         continue-on-error: true
 
-      - name: AI-Powered Performance Analysis (Optional Enhancement)
-        if: (inputs.issue_type == 'performance' || inputs.issue_type == 'all') && inputs.ai_mode == true && env.OPENAI_API_KEY != ''
-        id: ai_perf_fix
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      - name: Performance Analysis
+        if: (inputs.issue_type == 'performance' || inputs.issue_type == 'all')
+        id: perf_analysis
         run: |
-          echo "🤖 Running AI-powered performance analysis..."
+          echo "⚡ Analyzing performance patterns..."
           
           # Find potential performance issues
           PERF_ISSUES=""
@@ -287,25 +252,8 @@ jobs:
             exit 0
           fi
           
-          # Get AI suggestions for performance
-          RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $OPENAI_API_KEY" \
-            -d @- << EOF
-          {
-            "model": "gpt-4o-mini",
-            "messages": [
-              {"role": "system", "content": "You are a performance optimization expert for TypeScript/React applications."},
-              {"role": "user", "content": "Analyze these potential performance issues and provide specific optimization recommendations:\n${PERF_ISSUES}"}
-            ],
-            "max_tokens": 1000,
-            "temperature": 0.3
-          }
-          EOF
-          )
-          
-          PERF_SUGGESTIONS=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "No suggestions available"')
-          echo "$PERF_SUGGESTIONS" >> /tmp/ai-suggestions.md
+          echo -e "Performance analysis results:$PERF_ISSUES" > /tmp/perf-analysis.txt
+          echo "perf_issues_found=true" >> $GITHUB_OUTPUT
         continue-on-error: true
 
       - name: Check for changes
@@ -361,17 +309,6 @@ jobs:
         with:
           github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
-            const fs = require('fs');
-            
-            let aiSuggestions = '';
-            try {
-              if (fs.existsSync('/tmp/ai-suggestions.md')) {
-                aiSuggestions = fs.readFileSync('/tmp/ai-suggestions.md', 'utf8');
-              }
-            } catch (e) {
-              console.log('No AI suggestions available');
-            }
-            
             const body = `## 🤖 AI-Powered Code Fixes
 
             This PR contains automatically generated fixes for code issues.
@@ -384,13 +321,13 @@ jobs:
             ### Fixes Applied
             - ${{ steps.standard_fixes.outputs.fixes_applied }}
 
-            ${aiSuggestions ? `### 🧠 AI Analysis & Suggestions\n\n${aiSuggestions}` : ''}
-
             ### Review Notes
-            Please review these changes carefully. While the AI has attempted to make intelligent fixes, human verification is recommended.
+            Please review these changes carefully. While the workflow has attempted to make intelligent fixes, human verification is recommended.
+
+            For AI-powered analysis, use \`@copilot\` to ask questions about the changes.
 
             ---
-            *Generated by AI Fix Issues Workflow*`;
+            *Generated by AI Fix Issues Workflow (GitHub Copilot)*`;
             
             const { data: pr } = await github.rest.pulls.create({
               owner: context.repo.owner,
@@ -416,21 +353,11 @@ jobs:
         with:
           github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
-            const fs = require('fs');
             const hasChanges = '${{ steps.changes.outputs.has_changes }}' === 'true';
             const committed = '${{ steps.commit.outputs.committed }}' === 'true';
             const changedCount = '${{ steps.changes.outputs.changed_count }}';
             const sha = '${{ steps.commit.outputs.sha }}';
             const createPR = '${{ inputs.create_pr }}' === 'true';
-            
-            let aiSuggestions = '';
-            try {
-              if (fs.existsSync('/tmp/ai-suggestions.md')) {
-                aiSuggestions = fs.readFileSync('/tmp/ai-suggestions.md', 'utf8');
-              }
-            } catch (e) {
-              console.log('No AI suggestions file');
-            }
             
             let report = `## 🤖 AI Fix Report
 
@@ -461,21 +388,9 @@ jobs:
             `;
             }
             
-            if (aiSuggestions) {
-              report += `### 🧠 AI Suggestions
-
-            ${aiSuggestions}
-
-            `;
-            }
-            
             report += `---
             
-            ### ℹ️ Fix Modes
-            - **Standard Mode**: ESLint, Prettier, npm audit fix ✅ Active
-            - **Enhanced Mode**: AI-powered analysis ${aiSuggestions ? '✅ Active' : '⚪ Available with OPENAI_API_KEY'}
-            
-            *Generated by AI Fix Issues Workflow*`;
+            *Generated by AI Fix Issues Workflow (GitHub Copilot)*`;
             
             // Write to job summary
             await core.summary

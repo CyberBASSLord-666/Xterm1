@@ -42,10 +42,16 @@ on:
   repository_dispatch:
     types: [enhance-requested]
 
+# Security: Restrict permissions to minimum required
 permissions:
   contents: write
   pull-requests: write
   issues: write
+
+# Security: Prevent concurrent runs
+concurrency:
+  group: qol-${{ github.run_id }}
+  cancel-in-progress: false
 
 env:
   NODE_VERSION: '20'

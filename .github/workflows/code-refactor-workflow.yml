@@ -22,10 +22,16 @@ on:
   pull_request_review_comment:
     types: [created]
 
+# Security: Restrict permissions to minimum required
 permissions:
   contents: write
   pull-requests: write
   issues: write
+
+# Security: Prevent concurrent runs on the same PR
+concurrency:
+  group: refactor-${{ github.event.issue.number || github.event.pull_request.number }}
+  cancel-in-progress: false
 
 env:
   NODE_VERSION: '20'
@@ -36,10 +42,16 @@ jobs:
   # ============================================================================
   apply-suggestions:
     runs-on: ubuntu-latest
+    # Security: Only allow trusted users to apply suggestions
     if: |
       github.event_name == 'issue_comment' && 
       github.event.issue.pull_request &&
-      contains(github.event.comment.body, '@copilot apply suggestions')
+      contains(github.event.comment.body, '@copilot apply suggestions') &&
+      (
+        github.event.comment.author_association == 'OWNER' ||
+        github.event.comment.author_association == 'MEMBER' ||
+        github.event.comment.author_association == 'COLLABORATOR'
+      )
     
     steps:
       - name: Get PR details
@@ -191,12 +203,17 @@ jobs:
       - name: Commit changes
         if: steps.suggestions.outputs.count != '0'
         id: commit
+        env:
+          # Security: Pass username through environment variable
+          REQUESTER: ${{ github.event.comment.user.login }}
         run: |
           if [[ -n $(git status --porcelain) ]]; then
             git config --local user.email "github-actions[bot]@users.noreply.github.com"
             git config --local user.name "github-actions[bot]"
             git add -A
-            git commit -m "🔧 Refactor: Applied review suggestions per @${{ github.event.comment.user.login }} request"
+            # Security: Sanitize username for commit message
+            SAFE_USER=$(echo "$REQUESTER" | tr -cd '[:alnum:]-_' | head -c 39)
+            git commit -m "🔧 Refactor: Applied review suggestions per @${SAFE_USER} request"
             git push
             echo "committed=true" >> $GITHUB_OUTPUT
           else
@@ -251,9 +268,15 @@ The review suggestions have been applied and committed. Please review the change
   # ============================================================================
   refactor-code:
     runs-on: ubuntu-latest
+    # Security: Only allow trusted users to trigger refactoring
     if: |
       github.event_name == 'issue_comment' && 
       github.event.issue.pull_request &&
+      (
+        github.event.comment.author_association == 'OWNER' ||
+        github.event.comment.author_association == 'MEMBER' ||
+        github.event.comment.author_association == 'COLLABORATOR'
+      ) &&
       (
         contains(github.event.comment.body, '@copilot refactor') ||
         contains(github.event.comment.body, '@copilot modernize') ||
@@ -267,17 +290,29 @@ The review suggestions have been applied and committed. Please review the change
         uses: actions/github-script@v7
         with:
           script: |
-            const comment = context.payload.comment.body;
+            // Security: Sanitize comment to prevent injection
+            const rawComment = context.payload.comment.body || '';
+            const comment = rawComment
+              .replace(/[<>'"`;$\\]/g, '')
+              .substring(0, 500);
             
             // Extract the command type
             let commandType = 'refactor';
-            if (comment.includes('@copilot modernize')) commandType = 'modernize';
-            else if (comment.includes('@copilot optimize')) commandType = 'optimize';
-            else if (comment.includes('@copilot simplify')) commandType = 'simplify';
+            if (comment.toLowerCase().includes('@copilot modernize')) commandType = 'modernize';
+            else if (comment.toLowerCase().includes('@copilot optimize')) commandType = 'optimize';
+            else if (comment.toLowerCase().includes('@copilot simplify')) commandType = 'simplify';
             
             // Extract target (file path or pattern) if provided
+            // Security: Validate target is a valid file path pattern
             const targetMatch = comment.match(/@copilot\s+(?:refactor|modernize|optimize|simplify)\s+(.+)/i);
-            const target = targetMatch ? targetMatch[1].trim() : 'all';
+            let target = 'all';
+            if (targetMatch) {
+              const rawTarget = targetMatch[1].trim();
+              // Security: Only allow safe file path patterns
+              if (/^[a-zA-Z0-9_\-./]+$/.test(rawTarget) && !rawTarget.includes('..')) {
+                target = rawTarget;
+              }
+            }
             
             core.setOutput('command', commandType);
             core.setOutput('target', target);
@@ -441,14 +476,21 @@ I'll analyze the code and apply appropriate refactoring. This may take a few min
 
       - name: Commit changes
         id: commit
+        env:
+          # Security: Pass values through environment variables
+          REQUESTER: ${{ github.event.comment.user.login }}
+          CMD: ${{ steps.parse.outputs.command }}
+          TGT: ${{ steps.parse.outputs.target }}
         run: |
           if [[ -n $(git status --porcelain) ]]; then
             git config --local user.email "github-actions[bot]@users.noreply.github.com"
             git config --local user.name "github-actions[bot]"
             git add -A
             
-            COMMAND="${{ steps.parse.outputs.command }}"
-            TARGET="${{ steps.parse.outputs.target }}"
+            COMMAND="$CMD"
+            TARGET="$TGT"
+            # Security: Sanitize username for commit message
+            SAFE_USER=$(echo "$REQUESTER" | tr -cd '[:alnum:]-_' | head -c 39)
             
             case $COMMAND in
               modernize)
@@ -461,7 +503,7 @@ I'll analyze the code and apply appropriate refactoring. This may take a few min
                 git commit -m "✨ Simplify: Reduced complexity and improved readability"
                 ;;
               *)
-                git commit -m "🔧 Refactor: Code improvements per @${{ github.event.comment.user.login }} request"
+                git commit -m "🔧 Refactor: Code improvements per @${SAFE_USER} request"
                 ;;
             esac
             
@@ -543,10 +585,16 @@ The code is already in good shape! No refactoring changes were necessary.
   # ============================================================================
   extract-code:
     runs-on: ubuntu-latest
+    # Security: Only allow trusted users to extract code
     if: |
       github.event_name == 'issue_comment' && 
       github.event.issue.pull_request &&
-      contains(github.event.comment.body, '@copilot extract')
+      contains(github.event.comment.body, '@copilot extract') &&
+      (
+        github.event.comment.author_association == 'OWNER' ||
+        github.event.comment.author_association == 'MEMBER' ||
+        github.event.comment.author_association == 'COLLABORATOR'
+      )
     
     steps:
       - name: Parse extract command
@@ -554,15 +602,42 @@ The code is already in good shape! No refactoring changes were necessary.
         uses: actions/github-script@v7
         with:
           script: |
-            const comment = context.payload.comment.body;
+            // Security: Sanitize comment to prevent injection
+            const rawComment = context.payload.comment.body || '';
+            const comment = rawComment
+              .replace(/[<>'"`;$\\]/g, '')
+              .substring(0, 500);
             
             // Parse: @copilot extract [type] [name] from [source]
-            const extractMatch = comment.match(/@copilot\s+extract\s+(\w+)\s+(\w+)\s+from\s+(.+)/i);
+            const extractMatch = comment.match(/@copilot\s+extract\s+(\w+)\s+(\w+)\s+from\s+([a-zA-Z0-9_\-.\/]+)/i);
             
             if (extractMatch) {
-              core.setOutput('type', extractMatch[1]); // function, class, interface
-              core.setOutput('name', extractMatch[2]); // target name
-              core.setOutput('source', extractMatch[3].trim()); // source file
+              const type = extractMatch[1];
+              const name = extractMatch[2];
+              const source = extractMatch[3].trim();
+              
+              // Security: Validate inputs
+              const validTypes = ['function', 'class', 'interface', 'type'];
+              if (!validTypes.includes(type.toLowerCase())) {
+                core.setOutput('valid', 'false');
+                return;
+              }
+              
+              // Security: Validate name is alphanumeric
+              if (!/^\w+$/.test(name)) {
+                core.setOutput('valid', 'false');
+                return;
+              }
+              
+              // Security: Validate source path (no path traversal)
+              if (source.includes('..') || !/^[a-zA-Z0-9_\-.\/]+$/.test(source)) {
+                core.setOutput('valid', 'false');
+                return;
+              }
+              
+              core.setOutput('type', type);
+              core.setOutput('name', name);
+              core.setOutput('source', source);
               core.setOutput('valid', 'true');
             } else {
               core.setOutput('valid', 'false');

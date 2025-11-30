@@ -51,11 +51,17 @@ on:
           - low
         default: 'normal'
 
+# Security: Restrict permissions to minimum required
 permissions:
   contents: write
   pull-requests: write
   issues: write
   actions: write
+
+# Security: Prevent concurrent runs to avoid race conditions
+concurrency:
+  group: inter-agent-${{ github.event.issue.number || github.run_id }}
+  cancel-in-progress: false
 
 env:
   NODE_VERSION: '20'
@@ -66,8 +72,14 @@ jobs:
   # ============================================================================
   parse-command:
     runs-on: ubuntu-latest
+    # Security: Only allow trusted users to trigger inter-agent commands
     if: |
       github.event_name == 'issue_comment' && 
+      (
+        github.event.comment.author_association == 'OWNER' ||
+        github.event.comment.author_association == 'MEMBER' ||
+        github.event.comment.author_association == 'COLLABORATOR'
+      ) &&
       (
         contains(github.event.comment.body, '@copilot delegate') ||
         contains(github.event.comment.body, '@copilot consult') ||
@@ -87,7 +99,11 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const comment = context.payload.comment.body;
+            // Security: Sanitize comment to prevent injection
+            const rawComment = context.payload.comment.body || '';
+            const comment = rawComment
+              .replace(/[<>'"`;$\\]/g, '')
+              .substring(0, 1000);
             const isPR = !!context.payload.issue.pull_request;
             core.setOutput('is_pr', isPR);
             
@@ -239,10 +255,12 @@ The swarm is coordinating agents to handle your request.`
         uses: actions/checkout@v4
         with:
           ref: ${{ steps.pr.outputs.head_ref }}
-          # Use GH_TOKEN to enable pushing commits and triggering other workflows
+          # Security: Use GH_TOKEN to enable pushing commits and triggering other workflows
           # Falls back to GITHUB_TOKEN if GH_TOKEN is not configured
           token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
           fetch-depth: 0
+          # Security: Persist credentials for git push operations
+          persist-credentials: true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -259,8 +277,11 @@ The swarm is coordinating agents to handle your request.`
         with:
           script: |
             const fs = require('fs');
-            const targetAgents = JSON.parse('${{ needs.parse-command.outputs.target_agents }}');
-            const task = '${{ needs.parse-command.outputs.task }}';
+            // Security: Safely parse JSON from outputs
+            const targetAgents = JSON.parse('${{ needs.parse-command.outputs.target_agents }}' || '[]');
+            // Security: Sanitize task input
+            const rawTask = '${{ needs.parse-command.outputs.task }}' || '';
+            const task = rawTask.replace(/[<>'"`;$\\]/g, '').substring(0, 200);
             const agent = targetAgents[0];
             
             // Load agent registry
@@ -311,10 +332,14 @@ The swarm is coordinating agents to handle your request.`
 
       - name: Run delegated action
         id: action
+        env:
+          # Security: Pass task through environment variable to prevent command injection
+          RAW_TASK: ${{ needs.parse-command.outputs.task }}
         run: |
-          TASK="${{ needs.parse-command.outputs.task }}"
+          # Security: Sanitize task input - only allow alphanumeric and common safe characters
+          TASK=$(echo "$RAW_TASK" | tr -cd '[:alnum:][:space:]-_')
           
-          # Execute based on task keywords
+          # Execute based on task keywords (safe operations only)
           if [[ "$TASK" == *"lint"* ]] || [[ "$TASK" == *"format"* ]]; then
             npm run lint -- --fix || true
             npx prettier --write "src/**/*.{ts,html,css,scss,json}" || true
@@ -331,12 +356,19 @@ The swarm is coordinating agents to handle your request.`
 
       - name: Commit any changes
         id: commit
+        env:
+          # Security: Pass values through environment variables
+          TASK_DESC: ${{ needs.parse-command.outputs.task }}
+          TARGET_AGENTS: ${{ needs.parse-command.outputs.target_agents }}
         run: |
           if [[ -n $(git status --porcelain) ]]; then
             git config --local user.email "github-actions[bot]@users.noreply.github.com"
             git config --local user.name "github-actions[bot]"
             git add -A
-            git commit -m "🤖 Delegated task: ${{ needs.parse-command.outputs.task }} (via ${{ needs.parse-command.outputs.target_agents }})"
+            # Security: Sanitize task description for commit message
+            SAFE_TASK=$(echo "$TASK_DESC" | tr -cd '[:alnum:][:space:]-_' | head -c 100)
+            SAFE_AGENTS=$(echo "$TARGET_AGENTS" | tr -cd '[:alnum:][:space:]-_,\[\]"' | head -c 100)
+            git commit -m "🤖 Delegated task: ${SAFE_TASK} (via ${SAFE_AGENTS})"
             git push
             echo "committed=true" >> $GITHUB_OUTPUT
             echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
@@ -348,8 +380,11 @@ The swarm is coordinating agents to handle your request.`
         uses: actions/github-script@v7
         with:
           script: |
-            const targetAgents = JSON.parse('${{ needs.parse-command.outputs.target_agents }}');
-            const task = '${{ needs.parse-command.outputs.task }}';
+            // Security: Safely parse JSON from outputs
+            const targetAgents = JSON.parse('${{ needs.parse-command.outputs.target_agents }}' || '[]');
+            // Security: Sanitize task for display
+            const rawTask = '${{ needs.parse-command.outputs.task }}' || '';
+            const task = rawTask.replace(/[<>'"`;$\\]/g, '').substring(0, 200);
             const committed = '${{ steps.commit.outputs.committed }}' === 'true';
             const sha = '${{ steps.commit.outputs.sha }}';
             const action = '${{ steps.action.outputs.action }}';
