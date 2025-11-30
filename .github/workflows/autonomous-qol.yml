@@ -66,6 +66,7 @@ jobs:
   # ============ ANALYZE QOL OPPORTUNITIES ============
   analyze:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     outputs:
       unsorted_imports: ${{ steps.imports.outputs.count }}
       missing_headers: ${{ steps.headers.outputs.count }}
@@ -219,8 +220,9 @@ jobs:
   # ============ APPLY QOL ENHANCEMENTS ============
   enhance:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: analyze
-    if: inputs.apply_fixes != false
+    if: inputs.apply_fixes != false && needs.analyze.result == 'success'
 
     steps:
       - name: Checkout code

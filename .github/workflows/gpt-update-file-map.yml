@@ -1,3 +1,12 @@
+# ============================================================================
+# GPT File Map Generator Workflow for PolliWall (Xterm1)
+# ============================================================================
+# This workflow automatically generates and updates the gpt/file-map.json file
+# which provides a structured index of the repository for AI assistants.
+#
+# Trigger: Push to main branch or manual workflow dispatch
+# ============================================================================
+
 name: GPT – Update File Map
 
 on:

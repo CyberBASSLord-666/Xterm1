@@ -56,6 +56,7 @@ env:
 jobs:
   auto-fix-all:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     # Don't run on PRs from forks (they don't have write access)
     # Don't run on dependabot PRs to avoid conflicts with dependabot's own updates
     # Don't run if this commit is from an auto-fix to prevent loops
@@ -123,7 +124,6 @@ jobs:
           echo "LINT_FIXED=false" >> $GITHUB_ENV
           echo "FORMAT_FIXED=false" >> $GITHUB_ENV
           echo "SECURITY_FIXED=false" >> $GITHUB_ENV
-          echo "TOTAL_CHANGES=0" >> $GITHUB_ENV
           echo "LINT_REMAINING_ERRORS=0" >> $GITHUB_ENV
           echo "LINT_REMAINING_WARNINGS=0" >> $GITHUB_ENV
 

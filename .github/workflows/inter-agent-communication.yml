@@ -72,6 +72,7 @@ jobs:
   # ============================================================================
   parse-command:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     # Security: Only allow trusted users to trigger inter-agent commands
     if: |
       github.event_name == 'issue_comment' && 
@@ -235,6 +236,7 @@ The swarm is coordinating agents to handle your request.`
   delegate-task:
     needs: parse-command
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     if: needs.parse-command.outputs.command_type == 'delegate' && needs.parse-command.outputs.is_pr == 'true'
     
     steps:
@@ -433,6 +435,7 @@ ${details}
   parallel-execution:
     needs: parse-command
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     if: needs.parse-command.outputs.command_type == 'parallel' && needs.parse-command.outputs.is_pr == 'true'
     
     steps:
@@ -595,6 +598,7 @@ ${resultRows}
   chain-execution:
     needs: parse-command
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     if: needs.parse-command.outputs.command_type == 'chain' && needs.parse-command.outputs.is_pr == 'true'
     
     steps:
@@ -732,6 +736,7 @@ ${committed ? \`✅ Changes committed (\\\`\${sha}\\\`)\` : '⚪ No changes need
   swarm-execution:
     needs: parse-command
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     if: needs.parse-command.outputs.command_type == 'swarm'
     
     steps:
@@ -849,6 +854,7 @@ To execute this plan, use one of these commands:
   # ============================================================================
   programmatic-invoke:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     if: github.event_name == 'workflow_dispatch'
     
     steps:

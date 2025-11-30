@@ -57,6 +57,7 @@ jobs:
   # ============ AI CODE REVIEW ============
   ai-review:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     if: github.event.pull_request.draft == false
 
     steps:
@@ -296,28 +297,7 @@ jobs:
               console.log('Created new AI review comment');
             }
 
-      - name: Request Copilot Review
+      - name: Log Copilot Review Status
         if: github.event_name == 'pull_request' && github.event.action == 'opened'
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
-          script: |
-            // Add a comment to trigger Copilot review
-            // This leverages GitHub Copilot for PRs if enabled on the repo
-            const prNumber = context.payload.pull_request.number;
-            
-            // Check if Copilot is available by looking for copilot in assignable users
-            // Note: This is a best-effort approach as Copilot availability varies
-            
-            console.log(`PR #${prNumber} created - Copilot will automatically review if enabled`);
-            
-            // Optionally add @copilot mention to trigger review
-            // Uncomment the following if you want explicit Copilot triggers:
-            /*
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: prNumber,
-              body: '@copilot Please review this pull request and provide feedback on code quality, potential issues, and improvement suggestions.'
-            });
-            */
+        run: |
+          echo "PR #${{ github.event.pull_request.number }} created - Copilot will automatically review if enabled on the repository"

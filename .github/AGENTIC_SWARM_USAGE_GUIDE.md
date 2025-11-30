@@ -21,7 +21,7 @@
 
 ## What is the Agentic Swarm?
 
-The Agentic Swarm is a collection of **25 specialized automation agents** that work together to manage every aspect of this Angular 20 + TypeScript repository's lifecycle. Think of it as having a team of expert robots that:
+The Agentic Swarm is a collection of **26 specialized automation agents** that work together to manage every aspect of this Angular 20 + TypeScript repository's lifecycle. Think of it as having a team of expert robots that:
 
 - ✅ Automatically review your code
 - ✅ Run tests and check coverage

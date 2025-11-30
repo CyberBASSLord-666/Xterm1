@@ -1,3 +1,22 @@
+# ============================================================================
+# Core CI Workflow for PolliWall (Xterm1)
+# ============================================================================
+# This is the main continuous integration pipeline that runs on every push
+# and pull request to ensure code quality and correctness.
+#
+# Jobs:
+# - lint: ESLint validation for TypeScript and HTML files
+# - test: Jest unit tests with coverage reporting
+# - build: Production and development builds (matrix strategy)
+# - e2e: Playwright end-to-end tests
+# - lighthouse: Performance auditing with Lighthouse CI
+#
+# This workflow is part of the Agentic Swarm system and coordinates with:
+# - swarm-coordinator.yml for orchestration
+# - auto-fix-all.yml for automatic fixes
+# - security.yml for security scanning
+# ============================================================================
+
 name: CI
 
 on:
@@ -5,6 +24,12 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+
+# Security: Explicit permissions following least privilege principle
+permissions:
+  contents: read
+  pull-requests: read
+  checks: write
 
 jobs:
   lint:

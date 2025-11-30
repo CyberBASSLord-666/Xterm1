@@ -61,6 +61,7 @@ jobs:
   # ============ CODE QUALITY ANALYSIS ============
   code-quality:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     if: inputs.scope == 'full' || inputs.scope == 'code-quality' || github.event_name == 'schedule' || github.event_name == 'repository_dispatch'
     outputs:
       complexity_issues: ${{ steps.complexity.outputs.issues }}
@@ -182,6 +183,7 @@ jobs:
   # ============ BUNDLE SIZE ANALYSIS ============
   bundle-analysis:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     if: inputs.scope == 'full' || inputs.scope == 'bundle-size' || github.event_name == 'schedule' || github.event_name == 'repository_dispatch'
     outputs:
       main_bundle_kb: ${{ steps.analyze.outputs.main_kb }}
@@ -296,6 +298,7 @@ jobs:
   # ============ ACCESSIBILITY AUDIT ============
   accessibility:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     if: inputs.scope == 'full' || inputs.scope == 'accessibility' || github.event_name == 'schedule' || github.event_name == 'repository_dispatch'
     outputs:
       violations: ${{ steps.a11y.outputs.violations }}
@@ -370,6 +373,7 @@ jobs:
   # ============ PERFORMANCE AUDIT ============
   performance:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     if: inputs.scope == 'full' || inputs.scope == 'performance' || github.event_name == 'schedule' || github.event_name == 'repository_dispatch'
     outputs:
       performance_score: ${{ steps.lighthouse.outputs.performance }}
@@ -434,6 +438,7 @@ jobs:
   # ============ DEPENDENCY HEALTH CHECK ============
   dependency-health:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     if: inputs.scope == 'full' || inputs.scope == 'dependencies' || github.event_name == 'schedule' || github.event_name == 'repository_dispatch'
     outputs:
       outdated_count: ${{ steps.outdated.outputs.count }}
@@ -536,6 +541,7 @@ jobs:
   # ============ CODEBASE STRUCTURE ANALYSIS ============
   codebase-analysis:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     if: inputs.scope == 'full' || github.event_name == 'schedule' || github.event_name == 'repository_dispatch'
     outputs:
       ts_files: ${{ steps.structure.outputs.ts_files }}
@@ -607,8 +613,9 @@ jobs:
   # ============ GENERATE COMPREHENSIVE REPORT ============
   generate-report:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: [code-quality, bundle-analysis, accessibility, performance, dependency-health, codebase-analysis]
-    if: always()
+    if: always() && !cancelled()
 
     steps:
       - name: Checkout code

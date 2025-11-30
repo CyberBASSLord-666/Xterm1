@@ -1,3 +1,19 @@
+# ============================================================================
+# GitHub Pages Deployment Workflow for PolliWall (Xterm1)
+# ============================================================================
+# This workflow builds and deploys the Angular application to GitHub Pages.
+#
+# Trigger: Push to main branch or manual workflow dispatch
+#
+# Jobs:
+# - build: Builds the production application with GitHub Pages base href
+# - deploy: Deploys to GitHub Pages using the official actions
+#
+# This workflow is part of the Agentic Swarm system and coordinates with:
+# - ci.yml for pre-deployment validation
+# - release-orchestration-manager agent for release coordination
+# ============================================================================
+
 name: Deploy to GitHub Pages
 
 on:

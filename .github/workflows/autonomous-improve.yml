@@ -60,6 +60,7 @@ jobs:
   # ============ ANALYZE IMPROVEMENT OPPORTUNITIES ============
   analyze:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     outputs:
       modernize_opportunities: ${{ steps.modernize.outputs.count }}
       typing_issues: ${{ steps.typing.outputs.count }}
@@ -231,8 +232,9 @@ jobs:
   # ============ APPLY IMPROVEMENTS ============
   improve:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: analyze
-    if: inputs.apply_fixes != false
+    if: inputs.apply_fixes != false && needs.analyze.result == 'success'
 
     steps:
       - name: Checkout code

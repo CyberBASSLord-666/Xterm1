@@ -81,6 +81,7 @@ jobs:
   # ============ COMPREHENSIVE AI ANALYSIS ============
   ai-analysis:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     outputs:
       analysis_complete: ${{ steps.analyze.outputs.complete }}
       priority_issues: ${{ steps.prioritize.outputs.issues }}
@@ -134,8 +135,6 @@ jobs:
         id: analyze
         run: |
           echo "🔍 Running comprehensive analysis..."
-          
-          ISSUES=()
           
           # 1. ESLint analysis
           echo "Running ESLint..."
@@ -296,6 +295,7 @@ jobs:
   # ============ APPLY AI FIXES ============
   ai-fix:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: ai-analysis
     if: (inputs.mode == 'fix' || inputs.mode == 'full') && needs.ai-analysis.outputs.analysis_complete == 'true'
 
@@ -476,8 +476,9 @@ jobs:
   # ============ GENERATE REPORT ============
   report:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: [ai-analysis, ai-fix]
-    if: always()
+    if: always() && needs.ai-analysis.result != 'cancelled'
 
     steps:
       - name: Download analysis artifacts

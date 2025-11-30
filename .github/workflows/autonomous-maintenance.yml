@@ -55,6 +55,7 @@ jobs:
   # ============ SETUP ============
   setup:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       branch_name: ${{ steps.branch.outputs.name }}
       timestamp: ${{ steps.timestamp.outputs.value }}
@@ -73,6 +74,7 @@ jobs:
   # ============ AUDIT PHASE ============
   audit:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: setup
     if: inputs.scope == 'full' || inputs.scope == 'audit-only' || github.event_name == 'schedule'
     outputs:
@@ -146,8 +148,9 @@ jobs:
   # ============ MAINTENANCE PHASE ============
   maintenance:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: [setup, audit]
-    if: inputs.dry_run != true
+    if: inputs.dry_run != true && needs.audit.result == 'success'
     outputs:
       changes_made: ${{ steps.summary.outputs.changes_made }}
       files_changed: ${{ steps.summary.outputs.files_changed }}
@@ -451,8 +454,9 @@ jobs:
   # ============ REPORT ============
   report:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: [setup, audit, maintenance]
-    if: always()
+    if: always() && !cancelled()
 
     steps:
       - name: Generate final report

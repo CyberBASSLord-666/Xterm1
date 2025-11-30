@@ -61,6 +61,7 @@ jobs:
   # ============ CONTEXT ANALYSIS ============
   analyze-context:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     outputs:
       needs_lint: ${{ steps.analyze.outputs.needs_lint }}
       needs_tests: ${{ steps.analyze.outputs.needs_tests }}
@@ -183,6 +184,7 @@ jobs:
       needs.analyze-context.outputs.needs_lint == 'true' &&
       needs.analyze-context.outputs.is_auto_fix_commit != 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     outputs:
       lint_status: ${{ steps.lint.outputs.status }}
       has_errors: ${{ steps.lint.outputs.has_errors }}
@@ -228,6 +230,14 @@ jobs:
           else
             echo "status=failure" >> $GITHUB_OUTPUT
           fi
+          
+          # Add step summary
+          echo "## 📝 Lint Results" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Errors | $ERRORS |" >> $GITHUB_STEP_SUMMARY
+          echo "| Warnings | $WARNINGS |" >> $GITHUB_STEP_SUMMARY
+          echo "| Exit Code | $ESLINT_EXIT |" >> $GITHUB_STEP_SUMMARY
 
       - name: Run Prettier
         run: npx prettier --write "src/**/*.{ts,html,css,scss,json}" || true
@@ -256,8 +266,10 @@ jobs:
     if: |
       always() && 
       needs.analyze-context.outputs.needs_tests == 'true' &&
-      needs.analyze-context.outputs.is_auto_fix_commit != 'true'
+      needs.analyze-context.outputs.is_auto_fix_commit != 'true' &&
+      (needs.lint-fix.result == 'success' || needs.lint-fix.result == 'skipped')
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     outputs:
       test_status: ${{ steps.test.outputs.status }}
       tests_passed: ${{ steps.test.outputs.passed }}
@@ -298,6 +310,14 @@ jobs:
           else
             echo "status=failure" >> $GITHUB_OUTPUT
           fi
+          
+          # Add step summary
+          echo "## 🧪 Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Passed | $PASSED |" >> $GITHUB_STEP_SUMMARY
+          echo "| Failed | $FAILED |" >> $GITHUB_STEP_SUMMARY
+          echo "| Exit Code | $TEST_EXIT |" >> $GITHUB_STEP_SUMMARY
         continue-on-error: true
 
       - name: Report test results
@@ -346,6 +366,7 @@ jobs:
       (needs.analyze-context.outputs.needs_security == 'true' || needs.analyze-context.outputs.is_critical == 'true') &&
       needs.analyze-context.outputs.is_auto_fix_commit != 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     outputs:
       vulnerability_count: ${{ steps.audit.outputs.vulnerabilities }}
       remaining_count: ${{ steps.security_fix.outputs.remaining }}
@@ -382,6 +403,14 @@ jobs:
           echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
           echo "high=$HIGH" >> $GITHUB_OUTPUT
           echo "fixable=$FIXABLE" >> $GITHUB_OUTPUT
+          
+          # Add step summary
+          echo "## 🔒 Security Audit Results" >> $GITHUB_STEP_SUMMARY
+          echo "| Severity | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Critical | $CRITICAL |" >> $GITHUB_STEP_SUMMARY
+          echo "| High | $HIGH |" >> $GITHUB_STEP_SUMMARY
+          echo "| Total | $VULNS |" >> $GITHUB_STEP_SUMMARY
         continue-on-error: true
 
       - name: Auto-fix security vulnerabilities
@@ -480,8 +509,9 @@ jobs:
   # ============ STATUS SUMMARY ============
   swarm-summary:
     needs: [analyze-context, lint-fix, run-tests, security-scan]
-    if: always()
+    if: always() && needs.analyze-context.result == 'success'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       has_issues: ${{ steps.summary.outputs.has_issues }}
       issue_types: ${{ steps.summary.outputs.issue_types }}
@@ -559,10 +589,12 @@ jobs:
     if: |
       always() &&
       github.event_name == 'pull_request' &&
+      needs.swarm-summary.result == 'success' &&
       needs.swarm-summary.outputs.has_issues == 'true' &&
       needs.analyze-context.outputs.auto_fix_attempted != 'true' &&
       needs.analyze-context.outputs.is_auto_fix_commit != 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     
     steps:
       - name: Add auto-fix-in-progress label

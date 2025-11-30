@@ -1,3 +1,18 @@
+# ============================================================================
+# Bundle Size Check Workflow for PolliWall (Xterm1)
+# ============================================================================
+# This workflow analyzes and reports bundle sizes on pull requests to help
+# maintain performance and prevent bundle bloat.
+#
+# Features:
+# - Analyzes production bundle sizes
+# - Reports main bundle and lazy chunks
+# - Checks against a 1000KB budget threshold
+# - Comments on PRs with size reports
+#
+# Trigger: Pull requests to main or develop branches
+# ============================================================================
+
 name: Bundle Size Check
 
 on:

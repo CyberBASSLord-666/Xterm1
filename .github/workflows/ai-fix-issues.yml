@@ -72,6 +72,7 @@ jobs:
   # ============ ANALYZE ISSUES ============
   analyze:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     outputs:
       lint_issues: ${{ steps.analyze.outputs.lint_issues }}
       type_issues: ${{ steps.analyze.outputs.type_issues }}
@@ -100,8 +101,6 @@ jobs:
         id: analyze
         run: |
           echo "🔍 Analyzing codebase for issues..."
-          
-          ISSUES=()
           
           # Lint issues
           set +e
@@ -145,6 +144,7 @@ jobs:
   # ============ AI-POWERED FIX ============
   ai-fix:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: analyze
     if: needs.analyze.outputs.has_issues == 'true'
 
@@ -400,6 +400,7 @@ jobs:
   # ============ NO ISSUES FOUND ============
   no-issues:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: analyze
     if: needs.analyze.outputs.has_issues == 'false'
 

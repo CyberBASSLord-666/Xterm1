@@ -1,3 +1,24 @@
+# ============================================================================
+# Security Scanning Workflow for PolliWall (Xterm1)
+# ============================================================================
+# This workflow performs comprehensive security analysis including:
+# - Dependency vulnerability scanning (npm audit)
+# - Code security analysis (CodeQL)
+# - Dependency review for pull requests
+#
+# Schedule: Weekly on Sundays at midnight UTC
+#
+# Jobs:
+# - dependency-review: GitHub dependency review for PRs
+# - npm-audit: npm vulnerability scanning
+# - codeql: GitHub CodeQL security analysis
+#
+# This workflow is part of the Agentic Swarm system and coordinates with:
+# - security-guardian agent for vulnerability management
+# - auto-fix-all.yml for automatic security fixes
+# - swarm-coordinator.yml for orchestration
+# ============================================================================
+
 name: Security
 
 on:

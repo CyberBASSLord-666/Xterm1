@@ -42,6 +42,7 @@ jobs:
   # ============================================================================
   apply-suggestions:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     # Security: Only allow trusted users to apply suggestions
     if: |
       github.event_name == 'issue_comment' && 
@@ -268,6 +269,7 @@ The review suggestions have been applied and committed. Please review the change
   # ============================================================================
   refactor-code:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     # Security: Only allow trusted users to trigger refactoring
     if: |
       github.event_name == 'issue_comment' && 
@@ -585,6 +587,7 @@ The code is already in good shape! No refactoring changes were necessary.
   # ============================================================================
   extract-code:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     # Security: Only allow trusted users to extract code
     if: |
       github.event_name == 'issue_comment' && 
