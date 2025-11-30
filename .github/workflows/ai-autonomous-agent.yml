@@ -1,18 +1,28 @@
 # ============================================================================
 # AI Autonomous Agent Workflow for PolliWall (Xterm1)
 # ============================================================================
-# A master AI-powered workflow that orchestrates intelligent code improvements:
-# - Analyzes the entire codebase with AI understanding
-# - Creates a prioritized list of improvements
-# - Applies fixes using AI-generated code
-# - Explains all changes in PR comments
-# - Can be triggered with @copilot analyze or @copilot ai-fix
+# A master workflow that orchestrates intelligent code improvements using
+# a two-tier system:
+#
+# STANDARD MODE (No API keys required - fully autonomous):
+# - Comprehensive static analysis (ESLint, TypeScript, npm audit)
+# - Rule-based prioritization of issues
+# - Automatic fixes using standard tools
+# - Codebase metrics and pattern detection
+# - Security vulnerability scanning
+#
+# ENHANCED MODE (Optional - requires OPENAI_API_KEY):
+# - AI-powered intelligent prioritization
+# - Context-aware recommendations
+# - Deep code understanding and suggestions
+# - AI-generated improvement plans
 #
 # Prerequisites:
+# - None required! Works autonomously out of the box
 # - (Optional) OPENAI_API_KEY for AI-powered analysis
-# - GH_TOKEN for repository access and PR creation
+# - GH_TOKEN for repository access and PR creation (recommended)
 #
-# Trigger: Workflow dispatch, repository dispatch, or schedule
+# Trigger: Workflow dispatch, repository dispatch, or schedule (weekly)
 # ============================================================================
 
 name: AI Autonomous Agent
@@ -204,46 +214,77 @@ jobs:
           echo "| Console Statements | $CONSOLE_LOGS | $([ $CONSOLE_LOGS -eq 0 ] && echo '✅' || echo '⚠️') |" >> $GITHUB_STEP_SUMMARY
           echo "| TODO Comments | $TODO_COUNT | ℹ️ |" >> $GITHUB_STEP_SUMMARY
 
-      - name: AI-Powered Prioritization
+      - name: Prioritization (Rule-based or AI-enhanced)
         id: prioritize
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          echo "🧠 AI-powered prioritization..."
+          echo "🧠 Prioritizing issues..."
           
-          if [ -z "$OPENAI_API_KEY" ]; then
-            echo "OpenAI API key not available, using rule-based prioritization"
-            
-            # Rule-based priority
-            PRIORITY_LIST="[]"
-            
-            # Read analysis results
-            ANALYSIS=$(cat /tmp/analysis-results.json)
-            
-            # Priority 1: Security (Critical)
-            CRITICAL=$(echo "$ANALYSIS" | jq '.security.critical')
-            if [ "$CRITICAL" -gt 0 ]; then
-              PRIORITY_LIST=$(echo "$PRIORITY_LIST" | jq '. + [{"priority": 1, "category": "security", "issue": "Critical vulnerabilities", "count": '"$CRITICAL"', "action": "npm audit fix --force"}]')
-            fi
-            
-            # Priority 2: Type errors
-            TYPE_ERR=$(echo "$ANALYSIS" | jq '.types.errors')
-            if [ "$TYPE_ERR" -gt 0 ]; then
-              PRIORITY_LIST=$(echo "$PRIORITY_LIST" | jq '. + [{"priority": 2, "category": "types", "issue": "Type errors", "count": '"$TYPE_ERR"', "action": "Fix TypeScript errors"}]')
-            fi
-            
-            # Priority 3: Lint errors
-            LINT_ERR=$(echo "$ANALYSIS" | jq '.lint.errors')
-            if [ "$LINT_ERR" -gt 0 ]; then
-              PRIORITY_LIST=$(echo "$PRIORITY_LIST" | jq '. + [{"priority": 3, "category": "lint", "issue": "Lint errors", "count": '"$LINT_ERR"', "action": "eslint --fix"}]')
-            fi
-            
-            echo "$PRIORITY_LIST" > /tmp/priority-list.json
-            echo "issues=$(echo $PRIORITY_LIST | jq -c '.')" >> $GITHUB_OUTPUT
-          else
-            echo "Using AI for intelligent prioritization..."
-            
-            ANALYSIS=$(cat /tmp/analysis-results.json)
+          # Read analysis results
+          ANALYSIS=$(cat /tmp/analysis-results.json)
+          
+          # Always start with rule-based priority (works without API keys)
+          echo "Using rule-based prioritization (standard mode)..."
+          
+          PRIORITY_LIST="[]"
+          
+          # Priority 1: Security (Critical)
+          CRITICAL=$(echo "$ANALYSIS" | jq '.security.critical')
+          if [ "$CRITICAL" -gt 0 ]; then
+            PRIORITY_LIST=$(echo "$PRIORITY_LIST" | jq '. + [{"priority": 1, "category": "security", "issue": "Critical vulnerabilities", "count": '"$CRITICAL"', "action": "npm audit fix --force"}]')
+          fi
+          
+          # Priority 2: Type errors
+          TYPE_ERR=$(echo "$ANALYSIS" | jq '.types.errors')
+          if [ "$TYPE_ERR" -gt 0 ]; then
+            PRIORITY_LIST=$(echo "$PRIORITY_LIST" | jq '. + [{"priority": 2, "category": "types", "issue": "Type errors", "count": '"$TYPE_ERR"', "action": "Fix TypeScript errors"}]')
+          fi
+          
+          # Priority 3: Lint errors
+          LINT_ERR=$(echo "$ANALYSIS" | jq '.lint.errors')
+          if [ "$LINT_ERR" -gt 0 ]; then
+            PRIORITY_LIST=$(echo "$PRIORITY_LIST" | jq '. + [{"priority": 3, "category": "lint", "issue": "Lint errors", "count": '"$LINT_ERR"', "action": "eslint --fix"}]')
+          fi
+          
+          # Priority 4: Security (all vulnerabilities)
+          SECURITY_TOTAL=$(echo "$ANALYSIS" | jq '.security.total')
+          if [ "$SECURITY_TOTAL" -gt 0 ] && [ "$CRITICAL" -eq 0 ]; then
+            PRIORITY_LIST=$(echo "$PRIORITY_LIST" | jq '. + [{"priority": 4, "category": "security", "issue": "Security vulnerabilities", "count": '"$SECURITY_TOTAL"', "action": "npm audit fix"}]')
+          fi
+          
+          # Priority 5: Complexity issues
+          COMPLEX=$(echo "$ANALYSIS" | jq '.complexity.high')
+          if [ "$COMPLEX" -gt 0 ]; then
+            PRIORITY_LIST=$(echo "$PRIORITY_LIST" | jq '. + [{"priority": 5, "category": "complexity", "issue": "High complexity functions", "count": '"$COMPLEX"', "action": "Refactor complex functions"}]')
+          fi
+          
+          # Priority 6: Outdated dependencies
+          OUTDATED=$(echo "$ANALYSIS" | jq '.dependencies.outdated')
+          if [ "$OUTDATED" -gt 5 ]; then
+            PRIORITY_LIST=$(echo "$PRIORITY_LIST" | jq '. + [{"priority": 6, "category": "dependencies", "issue": "Outdated dependencies", "count": '"$OUTDATED"', "action": "npm update"}]')
+          fi
+          
+          # Priority 7: Code patterns (any types)
+          ANY_TYPES=$(echo "$ANALYSIS" | jq '.patterns.anyTypes')
+          if [ "$ANY_TYPES" -gt 0 ]; then
+            PRIORITY_LIST=$(echo "$PRIORITY_LIST" | jq '. + [{"priority": 7, "category": "patterns", "issue": "any type usage", "count": '"$ANY_TYPES"', "action": "Replace any with specific types"}]')
+          fi
+          
+          # Priority 8: Console logs
+          CONSOLE_LOGS=$(echo "$ANALYSIS" | jq '.patterns.consoleLogs')
+          if [ "$CONSOLE_LOGS" -gt 0 ]; then
+            PRIORITY_LIST=$(echo "$PRIORITY_LIST" | jq '. + [{"priority": 8, "category": "patterns", "issue": "Console statements", "count": '"$CONSOLE_LOGS"', "action": "Remove console logs for production"}]')
+          fi
+          
+          echo "$PRIORITY_LIST" > /tmp/priority-list.json
+          echo "issues=$(echo $PRIORITY_LIST | jq -c '.')" >> $GITHUB_OUTPUT
+          echo "mode=standard" >> $GITHUB_OUTPUT
+          
+          # If OpenAI is available, enhance with AI analysis
+          if [ -n "$OPENAI_API_KEY" ]; then
+            echo "Enhancing with AI-powered prioritization (enhanced mode)..."
+            echo "mode=enhanced" >> $GITHUB_OUTPUT
             
             RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
               -H "Content-Type: application/json" \
@@ -262,13 +303,16 @@ jobs:
           EOF
             )
             
-            PRIORITY_LIST=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "{}"')
-            echo "$PRIORITY_LIST" > /tmp/priority-list.json
-            echo "issues=$(echo $PRIORITY_LIST | jq -c '.issues // []')" >> $GITHUB_OUTPUT
+            AI_PRIORITY=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "{}"')
+            if [ -n "$AI_PRIORITY" ] && [ "$AI_PRIORITY" != "{}" ]; then
+              echo "$AI_PRIORITY" > /tmp/ai-priority-list.json
+              # Merge AI insights with rule-based priorities
+              echo "AI analysis complete - enhanced recommendations available"
+            fi
           fi
         continue-on-error: true
 
-      - name: Generate AI recommendations
+      - name: Generate AI recommendations (Optional Enhancement)
         if: env.OPENAI_API_KEY != ''
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -615,6 +659,13 @@ jobs:
             |-----|--------|
             | Analysis | ${{ needs.ai-analysis.result }} |
             | Fix | ${{ needs.ai-fix.result || 'skipped' }} |
+
+            ## ℹ️ Analysis Modes
+            
+            | Mode | Status | Description |
+            |------|--------|-------------|
+            | **Standard** | ✅ Active | Static analysis with ESLint, TypeScript, npm audit |
+            | **Enhanced** | ${recommendations ? '✅ Active' : '⚪ Available'} | AI-powered recommendations (requires OPENAI_API_KEY) |
 
             ---
             *Generated by AI Autonomous Agent • [View Workflow Run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})*`;

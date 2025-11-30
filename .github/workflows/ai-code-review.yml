@@ -1,15 +1,23 @@
 # ============================================================================
 # AI-Powered Code Review Workflow for PolliWall (Xterm1)
 # ============================================================================
-# This workflow leverages AI capabilities to provide intelligent code reviews:
-# - Uses GitHub Copilot for PRs via @copilot mentions
-# - Optionally integrates with OpenAI API for deeper analysis
-# - Provides context-aware suggestions, not just rule-based checks
-# - Understands intent and suggests better implementations
+# This workflow provides intelligent code reviews using a two-tier system:
+#
+# STANDARD MODE (No API keys required):
+# - Comprehensive static analysis with ESLint and TypeScript
+# - Code quality scoring based on lint errors, type errors, complexity
+# - Automatic recommendations based on detected issues
+# - GitHub Copilot integration via @copilot mentions
+#
+# ENHANCED MODE (Optional - requires OPENAI_API_KEY):
+# - Deep AI-powered analysis of code changes
+# - Context-aware suggestions beyond rule-based checks
+# - Intent understanding and implementation recommendations
 #
 # Prerequisites:
-# - GitHub Copilot for PRs enabled on the repository
-# - (Optional) OPENAI_API_KEY secret for enhanced AI capabilities
+# - None required! Works out of the box with static analysis
+# - (Optional) GitHub Copilot for PRs enabled for @copilot mentions
+# - (Optional) OPENAI_API_KEY secret for enhanced AI analysis
 #
 # Trigger: Pull request events
 # ============================================================================
@@ -154,7 +162,7 @@ jobs:
           echo "complex_functions=$COMPLEX_FUNCTIONS" >> $GITHUB_OUTPUT
         continue-on-error: true
 
-      - name: AI-Powered Analysis (OpenAI)
+      - name: AI-Powered Analysis (OpenAI - Optional Enhancement)
         if: steps.pr_details.outputs.has_source_changes == 'true' && env.OPENAI_API_KEY != ''
         id: openai_analysis
         env:
@@ -341,6 +349,11 @@ jobs:
             }
             
             reviewBody += `---
+            
+            ### ℹ️ Review Modes
+            - **Standard Mode**: Static analysis (ESLint, TypeScript, complexity) ✅ Active
+            - **Enhanced Mode**: Deep AI analysis ${fs.existsSync('/tmp/ai_review.md') ? '✅ Active' : '⚪ Available with OPENAI_API_KEY'}
+            
             *Powered by AI Code Review • [Request deeper analysis](${context.payload.pull_request?.html_url}#issuecomment-new) with \`@copilot ai-review\`*`;
             
             // Update or create comment

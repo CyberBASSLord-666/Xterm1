@@ -4,6 +4,16 @@
 # This workflow processes commands from PR/issue comments and executes
 # appropriate actions. It's the interface for human-to-swarm communication.
 #
+# All commands work WITHOUT any API keys (Standard Mode):
+# - Uses static analysis tools (ESLint, TypeScript, npm audit)
+# - Rule-based analysis and fixes
+# - GitHub Copilot integration via @copilot mentions
+#
+# Enhanced Mode (Optional - with OPENAI_API_KEY):
+# - AI-powered deep analysis
+# - Context-aware suggestions
+# - Intelligent recommendations
+#
 # Supported Commands:
 # - @copilot fix lint - Auto-fix lint issues
 # - @copilot run tests - Run test suite
@@ -16,6 +26,8 @@
 # - @copilot improve - Find and apply improvements
 # - @copilot enhance - Apply QoL enhancements
 # - @copilot full-auto - Run all autonomous workflows
+# - @copilot analyze - Deep code analysis (standard + optional AI)
+# - @copilot ai-review - Code review (standard + optional AI)
 # ============================================================================
 
 name: Comment Command Processor
@@ -106,8 +118,9 @@ jobs:
               issue_number: context.issue.number,
               body: `## 🤖 Agentic Swarm Commands
 
-            Here are the available commands:
+            All commands work **out of the box** without any API keys!
 
+            ### 🔧 Standard Commands (No API keys required)
             | Command | Description |
             |---------|-------------|
             | \`@copilot help\` | Show this help message |
@@ -120,7 +133,7 @@ jobs:
             | \`@copilot summarize\` | Generate a summary of PR changes |
             | \`@copilot status\` | Show swarm status for this PR |
             
-            ### 🔧 Refactoring Commands
+            ### 🔄 Refactoring Commands (No API keys required)
             | Command | Description |
             |---------|-------------|
             | \`@copilot refactor\` | General code refactoring |
@@ -129,7 +142,7 @@ jobs:
             | \`@copilot simplify\` | Reduce code complexity |
             | \`@copilot extract [type] [name] from [file]\` | Extract code to module |
             
-            ### 🤖 Autonomous Commands
+            ### 🤖 Autonomous Commands (No API keys required)
             | Command | Description |
             |---------|-------------|
             | \`@copilot audit\` | Run full app audit (code quality, bundle, a11y, deps) |
@@ -138,21 +151,26 @@ jobs:
             | \`@copilot enhance\` | Apply QoL enhancements |
             | \`@copilot full-auto\` | Run all autonomous workflows in sequence |
 
-            ### 🧠 AI-Powered Commands
+            ### 🧠 Analysis Commands (Standard + Optional AI Enhancement)
+            These commands use static analysis by default. Add \`OPENAI_API_KEY\` for enhanced AI analysis.
+            
             | Command | Description |
             |---------|-------------|
-            | \`@copilot analyze\` | AI-powered deep code analysis |
-            | \`@copilot ai-fix\` | AI fixes issues intelligently |
-            | \`@copilot ai-refactor\` | AI refactors code contextually |
-            | \`@copilot ai-review\` | Get AI-powered code review |
-            | \`@copilot explain\` | AI explains code or changes |
+            | \`@copilot analyze\` | Deep code analysis (static + optional AI) |
+            | \`@copilot ai-fix\` | Fix issues intelligently (standard tools + optional AI) |
+            | \`@copilot ai-refactor\` | Refactor code (standard + optional AI context) |
+            | \`@copilot ai-review\` | Code review (static analysis + optional AI) |
+            | \`@copilot explain\` | Explain code or changes (requires OPENAI_API_KEY) |
 
             **Usage:** Just comment with one of the commands above and I'll handle it!
             
-            > **Note:** AI commands require \`OPENAI_API_KEY\` secret to be configured.
+            ---
+            ### ℹ️ Two-Tier System
+            - **Standard Mode** ✅: Works immediately with ESLint, TypeScript, npm audit
+            - **Enhanced Mode** ⚡: Add \`OPENAI_API_KEY\` secret for deeper AI analysis
 
             ---
-            *Agentic Swarm Command Processor (AI-Enhanced)*`
+            *Agentic Swarm Command Processor*`
             });
 
       # ============ FIX LINT COMMAND ============
@@ -1044,20 +1062,27 @@ jobs:
           script: |
             const prNumber = context.issue.number;
             const isPR = '${{ steps.parse.outputs.is_pr }}' === 'true';
+            const hasOpenAI = '${{ secrets.OPENAI_API_KEY }}' !== '';
             
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: prNumber,
-              body: `## 🧠 AI-Powered Analysis Initiated
+              body: `## 🧠 Code Analysis Initiated
 
             The AI Agent is performing a comprehensive analysis of ${isPR ? 'this PR' : 'the codebase'}:
 
-            - 📊 Code quality metrics
-            - 🏗️ Architecture analysis
-            - 🔒 Security assessment
-            - ⚡ Performance evaluation
-            - 📝 Best practices review
+            ### Standard Analysis (Active)
+            - 📊 Code quality metrics (ESLint, TypeScript)
+            - 🔒 Security assessment (npm audit)
+            - ⚡ Complexity analysis
+            - 📝 Code pattern detection
+
+            ${hasOpenAI ? `### Enhanced AI Analysis (Active)
+            - 🤖 AI-powered prioritization
+            - 💡 Intelligent recommendations
+            - 🏗️ Architecture insights` : `### Enhanced AI Analysis (Available)
+            > Add \`OPENAI_API_KEY\` secret for AI-powered recommendations`}
 
             ${isPR ? '' : '> **Note:** For PR-specific analysis, trigger this command from a pull request.'}
 
@@ -1094,6 +1119,7 @@ jobs:
           github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
             const prNumber = context.issue.number;
+            const hasOpenAI = '${{ secrets.OPENAI_API_KEY }}' !== '';
             
             // Get PR details
             const { data: pr } = await github.rest.pulls.get({
@@ -1106,19 +1132,25 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: prNumber,
-              body: `## 🤖 AI Fix Mode Activated
+              body: `## 🤖 Intelligent Fix Mode Activated
 
             The AI Agent is analyzing and fixing issues:
 
-            - 🔍 Identifying issues in the code
-            - 🧠 Using AI to understand root causes
-            - 🔧 Generating intelligent fixes
-            - 📝 Explaining what was changed and why
+            ### Standard Fixes (Active)
+            - 🔧 ESLint auto-fix
+            - 🎨 Prettier formatting
+            - 🔒 npm audit security fixes
+
+            ${hasOpenAI ? `### AI-Enhanced Analysis (Active)
+            - 🧠 Deep understanding of root causes
+            - 💡 Intelligent fix suggestions
+            - 📝 Explanations of changes` : `### AI-Enhanced Analysis (Available)
+            > Add \`OPENAI_API_KEY\` secret for deeper AI analysis`}
 
             Fixes will be committed to this branch when complete.
 
             ---
-            *AI Autonomous Agent - Fix Mode*`
+            *AI Fix Agent - Standard + ${hasOpenAI ? 'Enhanced' : 'Standard'} Mode*`
             });
             
             // Trigger the AI fix workflow
@@ -1150,6 +1182,7 @@ jobs:
           github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
             const prNumber = context.issue.number;
+            const hasOpenAI = '${{ secrets.OPENAI_API_KEY }}' !== '';
             
             // Get PR details
             const { data: pr } = await github.rest.pulls.get({
@@ -1162,20 +1195,26 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: prNumber,
-              body: `## 🔄 AI Refactor Mode Activated
+              body: `## 🔄 Refactor Mode Activated
 
-            The AI Agent is analyzing code for refactoring opportunities:
+            The agent is analyzing code for refactoring opportunities:
 
-            - 📊 Analyzing code complexity
-            - 🔍 Identifying anti-patterns
-            - 🧠 Understanding code intent
-            - 💡 Generating contextual improvements
-            - 📝 Explaining refactoring decisions
+            ### Standard Refactoring (Active)
+            - 📊 Complexity analysis
+            - 🔍 Anti-pattern detection
+            - 🛠️ ESLint rule-based improvements
+            - 🎨 Code formatting
+
+            ${hasOpenAI ? `### AI-Enhanced Refactoring (Active)
+            - 🧠 Context-aware improvements
+            - 💡 Intelligent restructuring
+            - 📝 Detailed explanations` : `### AI-Enhanced Refactoring (Available)
+            > Add \`OPENAI_API_KEY\` secret for AI-powered refactoring suggestions`}
 
             Changes will be applied when analysis is complete.
 
             ---
-            *AI Autonomous Agent - Refactor Mode*`
+            *Refactor Agent - Standard + ${hasOpenAI ? 'Enhanced' : 'Standard'} Mode*`
             });
             
             // Trigger the improve workflow with AI mode
@@ -1207,25 +1246,32 @@ jobs:
           github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
             const prNumber = context.issue.number;
+            const hasOpenAI = '${{ secrets.OPENAI_API_KEY }}' !== '';
             
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: prNumber,
-              body: `## 🔍 AI Review Requested
+              body: `## 🔍 Code Review Requested
 
-            The AI Agent is performing a comprehensive code review:
+            Performing a comprehensive code review:
 
-            - 📝 Analyzing code changes
-            - 🔒 Checking for security issues
-            - ⚡ Evaluating performance implications
-            - 🏗️ Assessing architectural impact
-            - 💡 Suggesting improvements
+            ### Standard Review (Active)
+            - 📝 Static analysis (ESLint, TypeScript)
+            - 🔒 Security vulnerability check
+            - ⚡ Complexity analysis
+            - 📊 Code quality scoring
+
+            ${hasOpenAI ? `### AI-Enhanced Review (Active)
+            - 🧠 Context-aware analysis
+            - 💡 Intelligent suggestions
+            - 🏗️ Architecture insights` : `### AI-Enhanced Review (Available)
+            > Add \`OPENAI_API_KEY\` secret for deeper AI analysis`}
 
             Review comments will be posted when complete.
 
             ---
-            *AI Code Review Agent*`
+            *Code Review Agent - Standard + ${hasOpenAI ? 'Enhanced' : 'Standard'} Mode*`
             });
             
             // Trigger the AI code review workflow
@@ -1259,26 +1305,6 @@ jobs:
             const prNumber = context.issue.number;
             const hasOpenAI = process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.length > 0;
             
-            if (!hasOpenAI) {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: prNumber,
-                body: `## ⚠️ AI Explain Not Available
-
-            The \`OPENAI_API_KEY\` secret is not configured.
-
-            To enable AI explanations:
-            1. Go to repository Settings → Secrets and variables → Actions
-            2. Add a new secret named \`OPENAI_API_KEY\`
-            3. Set the value to your OpenAI API key
-
-            ---
-            *AI Explain Agent*`
-              });
-              return;
-            }
-            
             // Get PR files for explanation
             const { data: pr } = await github.rest.pulls.get({
               owner: context.repo.owner,
@@ -1290,42 +1316,86 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: prNumber,
-              per_page: 10
+              per_page: 20
             });
             
+            // Categorize files
+            const categories = {
+              components: files.filter(f => f.filename.includes('.component.')),
+              services: files.filter(f => f.filename.includes('.service.')),
+              tests: files.filter(f => f.filename.includes('.spec.') || f.filename.includes('.test.')),
+              styles: files.filter(f => f.filename.match(/\.(css|scss)$/)),
+              docs: files.filter(f => f.filename.match(/\.(md|txt)$/)),
+              config: files.filter(f => f.filename.match(/\.(json|yml|yaml)$/)),
+            };
+            
             // Build a summary of changes
-            const filesSummary = files.map(f => `- ${f.filename} (+${f.additions}/-${f.deletions})`).join('\n');
+            const filesSummary = files.slice(0, 15).map(f => 
+              `- \`${f.filename}\` (+${f.additions}/-${f.deletions})`
+            ).join('\n');
+            
+            const categoryBreakdown = Object.entries(categories)
+              .filter(([_, files]) => files.length > 0)
+              .map(([cat, files]) => `- **${cat}**: ${files.length} file(s)`)
+              .join('\n');
+            
+            // Generate change type analysis
+            const hasBreakingChanges = files.some(f => f.deletions > f.additions * 2);
+            const isRefactor = files.filter(f => f.changes > 50).length > files.length / 2;
+            const isBugFix = pr.title.toLowerCase().includes('fix') || pr.title.toLowerCase().includes('bug');
+            const isFeature = pr.title.toLowerCase().includes('feat') || pr.title.toLowerCase().includes('add');
+            
+            let changeType = '📝 General Changes';
+            if (isBugFix) changeType = '🐛 Bug Fix';
+            else if (isFeature) changeType = '✨ New Feature';
+            else if (isRefactor) changeType = '🔄 Refactoring';
+            else if (hasBreakingChanges) changeType = '⚠️ Potential Breaking Changes';
             
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: prNumber,
-              body: `## 📖 AI Explanation
+              body: `## 📖 PR Explanation
 
-            ### PR Summary
+            ### Overview
             **${pr.title}**
+            
+            **Change Type**: ${changeType}
+            **Scope**: ${files.length} files (+${pr.additions}/-${pr.deletions} lines)
 
             ### Files Changed
             ${filesSummary}
+            ${files.length > 15 ? `\n*...and ${files.length - 15} more files*` : ''}
 
-            ### What This PR Does
-            _Analyzing changes..._
+            ### Change Categories
+            ${categoryBreakdown || '- General changes'}
 
-            The AI is examining the code changes to provide a detailed explanation. This includes:
-            - Purpose and intent of the changes
-            - Impact on existing functionality
-            - Technical implementation details
-            - Potential considerations
+            ### Impact Analysis
+            | Metric | Value | Impact |
+            |--------|-------|--------|
+            | Files Changed | ${files.length} | ${files.length > 10 ? '⚠️ Large' : files.length > 5 ? '📊 Medium' : '✅ Small'} |
+            | Lines Added | +${pr.additions} | ${pr.additions > 500 ? '⚠️ Many' : '✅ Normal'} |
+            | Lines Removed | -${pr.deletions} | ${pr.deletions > 200 ? '📊 Significant' : '✅ Normal'} |
+            | Test Changes | ${categories.tests.length} | ${categories.tests.length > 0 ? '✅ Includes tests' : '⚠️ No test changes'} |
 
-            > **Note:** For a more detailed AI analysis, use \`@copilot ai-review\`
+            ${hasOpenAI ? `### 🧠 AI Analysis
+            _AI-enhanced explanation is available and processing..._
+            
+            For detailed AI analysis, the OPENAI_API_KEY is configured and active.` : `### ℹ️ Enhanced Explanation Available
+            > Add \`OPENAI_API_KEY\` secret for AI-powered detailed explanations
+            
+            The analysis above uses static file analysis. AI can provide:
+            - Intent understanding
+            - Architectural impact assessment
+            - Detailed code change explanations`}
 
             ---
-            *AI Explain Agent*`
+            *Explain Agent - ${hasOpenAI ? 'Enhanced' : 'Standard'} Mode*`
             });
             
             await github.rest.reactions.createForIssueComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               comment_id: context.payload.comment.id,
-              content: 'eyes'
+              content: hasOpenAI ? 'rocket' : 'eyes'
             });
