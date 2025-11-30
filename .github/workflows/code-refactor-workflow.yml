@@ -160,7 +160,7 @@ jobs:
 
       - name: Setup Node.js
         if: steps.suggestions.outputs.count != '0'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
@@ -329,7 +329,7 @@ I'll analyze the code and apply appropriate refactoring. This may take a few min
             });
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
@@ -641,7 +641,7 @@ Note: This is a complex operation. For full extraction capabilities, consider us
 
       - name: Setup Node.js
         if: steps.parse.outputs.valid == 'true'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
