@@ -19,9 +19,28 @@ on:
   pull_request:
     branches: [main, develop]
 
+# Security: Explicit permissions following least privilege principle
+permissions:
+  contents: read
+  pull-requests: write
+
+# Concurrency: Prevent multiple bundle analyses from running simultaneously per PR
+concurrency:
+  group: bundle-size-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
+  # ============================================================================
+  # BUNDLE SIZE CHECK JOB
+  # ============================================================================
+  # Purpose: Analyzes production bundle sizes and reports on PR
+  # Timeout: 20 minutes (includes full production build)
+  # Budget: 1000KB total initial bundle size threshold
+  # Output: Comments on PR with size report and lazy chunk analysis
+  # ============================================================================
   check-bundle-size:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       

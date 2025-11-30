@@ -116,6 +116,18 @@ This document provides comprehensive quality metrics for the PolliWall (Xterm1) 
 
 **Status**: ✅ **GOOD** (Exceeds Minimum Target)
 
+**Enforced Thresholds** (`jest.config.ts`):
+```typescript
+coverageThreshold: {
+  global: {
+    branches: 46,   // Minimum required
+    functions: 41,  // Minimum required
+    lines: 49,      // Minimum required
+    statements: 49  // Minimum required
+  }
+}
+```
+
 **Overall Coverage** (Jest):
 ```
 Statements   : 55.12% (2847/5165)
@@ -142,15 +154,15 @@ Lines        : 55.76% (2738/4911)
 5. ImageUtilService: 82%
 
 **Target Coverage**:
-- Current: 55%
-- Minimum Target: 50% ✅
+- Current Thresholds (enforced): branches 46%, functions 41%, lines 49%, statements 49%
+- Current Actual: ~55% overall
 - Ideal Target: 70%
 - Industry Best: 80%
 
 **Improvement Plan**:
-- Phase 1: Increase component coverage to 60% (+15%)
-- Phase 2: Increase service coverage to 75% (+10%)
-- Phase 3: Achieve 70% overall coverage
+- Phase 1: Increase thresholds to 55/50/60/60 (Q1 2026)
+- Phase 2: Increase thresholds to 65/60/70/70 (Q2 2026)
+- Phase 3: Achieve 75/70/80/80 thresholds (Q3 2026)
 
 **Score**: 85/100 ✅ (Exceeds minimum, approaching ideal)
 
@@ -941,13 +953,37 @@ Lines        : 55.76% (2738/4911)
 ### 10.3 Regression Prevention
 
 **Quality Gates** (in CI/CD):
-- [ ] ESLint must pass (0 errors)
-- [ ] TypeScript must compile (strict mode)
-- [ ] Tests must pass (100% of existing tests)
-- [ ] Coverage must not decrease
-- [ ] Bundle size must not increase >5%
-- [ ] Lighthouse score must stay >90
-- [ ] Security scan must pass (0 critical/high)
+
+These quality gates are **enforced** and will fail the CI build if not met:
+
+| Gate | Threshold | Enforcement | Location |
+|------|-----------|-------------|----------|
+| ESLint | 0 errors | ❌ Blocks merge | `ci.yml` lint job |
+| TypeScript | 0 errors (strict) | ❌ Blocks merge | `ci.yml` build job |
+| Unit Tests | 100% pass | ❌ Blocks merge | `ci.yml` test job |
+| Branch Coverage | ≥46% | ❌ Blocks merge | `jest.config.ts` |
+| Function Coverage | ≥41% | ❌ Blocks merge | `jest.config.ts` |
+| Line Coverage | ≥49% | ❌ Blocks merge | `jest.config.ts` |
+| Statement Coverage | ≥49% | ❌ Blocks merge | `jest.config.ts` |
+
+**Advisory Quality Gates** (non-blocking):
+
+| Gate | Target | Status | Location |
+|------|--------|--------|----------|
+| E2E Tests | 100% pass | ⚠️ Advisory | `ci.yml` e2e job |
+| Lighthouse Performance | >90 | ⚠️ Advisory | `ci.yml` lighthouse job |
+| Lighthouse Accessibility | >90 | ⚠️ Advisory | `ci.yml` lighthouse job |
+| Bundle Size | <1000KB | ⚠️ Advisory | `bundle-size.yml` |
+| Security (Critical/High) | 0 | ⚠️ Advisory | `security.yml` |
+
+**Coverage Threshold Evolution Plan**:
+
+| Phase | Timeline | Branches | Functions | Lines | Statements |
+|-------|----------|----------|-----------|-------|------------|
+| Current | Now | 46% | 41% | 49% | 49% |
+| Phase 1 | Q1 2026 | 55% | 50% | 60% | 60% |
+| Phase 2 | Q2 2026 | 65% | 60% | 70% | 70% |
+| Phase 3 | Q3 2026 | 75% | 70% | 80% | 80% |
 
 ### 10.4 Continuous Improvement
 

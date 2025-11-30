@@ -39,7 +39,22 @@ on:
         required: false
         type: string
 
-# Security: Restrict permissions - only grant what's needed per job
+# =============================================================================
+# SECURITY: Permissions Configuration
+# =============================================================================
+# These permissions follow the principle of least privilege while enabling
+# the necessary operations for the swarm coordinator.
+#
+# - contents:write - Required for committing auto-fixes
+# - pull-requests:write - Required for PR comments and labels
+# - issues:write - Required for issue management
+# - actions:write - Required for triggering autonomous fix workflows
+# - security-events:read - Required for reading security scan results
+#
+# IMPORTANT: The autonomous-fix-trigger job posts comments that can trigger
+# the comment-command-processor workflow. This is an intentional design for
+# autonomous self-healing, but relies on the security controls in that workflow.
+# =============================================================================
 permissions:
   contents: write
   pull-requests: write

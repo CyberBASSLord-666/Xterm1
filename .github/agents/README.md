@@ -251,6 +251,6 @@ For issues with the Agentic Swarm:
 
 ---
 
-**Last Updated**: 2025-11-23  
-**Swarm Version**: 1.0.0  
+**Last Updated**: 2025-11-30  
+**Swarm Version**: 1.2.0  
 **Status**: ✅ Production Ready

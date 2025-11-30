@@ -23,9 +23,23 @@ permissions:
   contents: write
   pull-requests: write
 
+# Concurrency: Prevent multiple dependabot merges from running simultaneously
+concurrency:
+  group: dependabot-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
 jobs:
+  # ============================================================================
+  # DEPENDABOT AUTO-MERGE JOB
+  # ============================================================================
+  # Purpose: Automatically approves and merges Dependabot PRs for non-major updates
+  # Timeout: 10 minutes (approval and merge operations are quick)
+  # Security: Only runs for dependabot[bot] actor
+  # Policy: Auto-merges patch and minor updates; major updates require manual review
+  # ============================================================================
   dependabot:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     # Only run for Dependabot PRs
     if: github.actor == 'dependabot[bot]'
     steps:

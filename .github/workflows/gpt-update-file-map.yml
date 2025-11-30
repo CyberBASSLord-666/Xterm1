@@ -15,9 +15,27 @@ on:
       - main
   workflow_dispatch: {}
 
+# Security: Explicit permissions following least privilege principle
+permissions:
+  contents: write
+
+# Concurrency: Prevent multiple file map generations from running simultaneously
+concurrency:
+  group: gpt-file-map-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  # ============================================================================
+  # GENERATE FILE MAP JOB
+  # ============================================================================
+  # Purpose: Generates and updates the gpt/file-map.json for AI assistants
+  # Timeout: 10 minutes (file map generation is quick)
+  # Output: Commits updated file-map.json if changes are detected
+  # Script: Uses scripts/generate-file-map.mjs for generation logic
+  # ============================================================================
   generate-file-map:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout repository

@@ -31,8 +31,16 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # ============================================================================
+  # BUILD JOB
+  # ============================================================================
+  # Purpose: Creates production build optimized for GitHub Pages deployment
+  # Timeout: 15 minutes (production builds with optimization)
+  # Base Href: Configured for /Xterm1/ subpath on GitHub Pages
+  # ============================================================================
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -57,11 +65,20 @@ jobs:
         with:
           path: './dist/app'
 
+  # ============================================================================
+  # DEPLOY JOB
+  # ============================================================================
+  # Purpose: Deploys built artifacts to GitHub Pages environment
+  # Timeout: 10 minutes (deployment is typically quick)
+  # Dependencies: Requires build job to complete successfully
+  # Environment: Creates deployment to github-pages environment with URL output
+  # ============================================================================
   deploy:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: build
     steps:
       - name: Deploy to GitHub Pages

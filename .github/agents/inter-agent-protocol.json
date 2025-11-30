@@ -2,8 +2,8 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Xterm1 Swarm Inter-Agent Communication Protocol",
   "description": "Defines the protocol for agents to communicate with and delegate tasks to other agents in the swarm",
-  "version": "1.0.0",
-  "last_updated": "2025-11-25",
+  "version": "1.1.0",
+  "last_updated": "2025-11-30",
 
   "protocol": {
     "name": "Swarm Inter-Agent Communication Protocol (SIACP)",

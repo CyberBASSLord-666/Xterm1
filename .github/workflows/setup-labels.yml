@@ -16,10 +16,24 @@ on:
     paths:
       - '.github/workflows/setup-labels.yml'
 
+# Concurrency: Prevent multiple label setup runs from running simultaneously
+concurrency:
+  group: setup-labels
+  cancel-in-progress: true
+
 jobs:
+  # ============================================================================
+  # SETUP LABELS JOB
+  # ============================================================================
+  # Purpose: Creates or updates all required labels for automation workflows
+  # Timeout: 10 minutes (label operations are quick)
+  # Categories: Dependabot, Swarm Autonomous, Issue Types
+  # Output: Creates/updates labels with consistent colors and descriptions
+  # ============================================================================
   setup-labels:
     name: Create Required Labels
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       issues: write
       pull-requests: write

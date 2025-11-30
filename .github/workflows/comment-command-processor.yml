@@ -31,8 +31,20 @@ on:
   issue_comment:
     types: [created]
 
-# Security: Restrict permissions to minimum required
-# Note: actions:write is needed only for workflow_dispatch triggers
+# =============================================================================
+# SECURITY: Permissions follow the principle of least privilege
+# =============================================================================
+# IMPORTANT: This workflow is triggered by issue_comment events which can be
+# from untrusted users. The author_association check in the job condition
+# is CRITICAL for security - it ensures only OWNER, MEMBER, or COLLABORATOR
+# can execute commands. Never remove or weaken this check.
+#
+# Permissions granted:
+# - contents:write - Required for committing code fixes
+# - pull-requests:write - Required for commenting on PRs
+# - issues:write - Required for commenting on issues
+# - actions:write - Required for triggering other workflows
+# =============================================================================
 permissions:
   contents: write
   pull-requests: write
@@ -48,8 +60,18 @@ jobs:
   process-command:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    # Security: Only process comments from repository collaborators
-    # This prevents untrusted users from triggering workflow actions
+# =============================================================================
+# SECURITY: Author Association Check - CRITICAL SECURITY CONTROL
+# =============================================================================
+# This check is the PRIMARY security gate for this workflow. It ensures that
+# only trusted users can execute workflow commands. The check verifies:
+# - OWNER: Repository owner
+# - MEMBER: Organization member
+# - COLLABORATOR: User with collaborator access
+#
+# NEVER remove or weaken this check. Doing so would allow arbitrary code
+# execution from untrusted users via comment commands.
+# =============================================================================
     if: |
       contains(github.event.comment.body, '@copilot') &&
       (
@@ -64,15 +86,25 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            // Security: Sanitize comment body to prevent injection
+            // =================================================================
+            // SECURITY: Input Sanitization and Validation
+            // =================================================================
+            // This step performs critical security validation:
+            // 1. Sanitizes comment body to prevent command injection
+            // 2. Removes dangerous characters that could break shell commands
+            // 3. Limits input length to prevent DoS attacks
+            // 4. Uses a strict whitelist approach for command parsing
+            // =================================================================
             const rawComment = context.payload.comment.body || '';
-            // Remove potentially dangerous characters and limit length
+            // SECURITY: Remove potentially dangerous characters and limit length
+            // This prevents shell injection and other attack vectors
             const comment = rawComment
               .toLowerCase()
               .replace(/[<>'"`;$\\]/g, '')
               .substring(0, 500);
             
-            // Extract command after @copilot (handle multi-word and hyphenated commands)
+            // SECURITY: Extract command using strict whitelist regex
+            // Only allows alphanumeric characters and hyphens in commands
             const match = comment.match(/@copilot\s+([\w-]+(?:\s+[\w-]+)?)/);
             if (!match) {
               core.setOutput('command', 'help');

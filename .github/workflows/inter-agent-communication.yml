@@ -51,7 +51,15 @@ on:
           - low
         default: 'normal'
 
-# Security: Restrict permissions to minimum required
+# =============================================================================
+# SECURITY: Permissions follow the principle of least privilege
+# =============================================================================
+# This workflow handles inter-agent communication and task delegation.
+# It requires elevated permissions for code modification and workflow dispatch.
+#
+# CRITICAL: The author_association check in parse-command job is essential
+# for preventing untrusted users from triggering agent actions.
+# =============================================================================
 permissions:
   contents: write
   pull-requests: write
@@ -70,10 +78,26 @@ jobs:
   # ============================================================================
   # PARSE INTER-AGENT COMMAND
   # ============================================================================
+  # SECURITY: This job contains critical security controls
+  # - Author association check prevents untrusted command execution
+  # - Input sanitization prevents injection attacks
+  # - Strict command parsing with whitelist approach
+  # ============================================================================
   parse-command:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # Security: Only allow trusted users to trigger inter-agent commands
+    # ==========================================================================
+    # SECURITY: Author Association Check - CRITICAL SECURITY CONTROL
+    # ==========================================================================
+    # This check is the PRIMARY security gate for inter-agent commands.
+    # It ensures only trusted users can trigger agent actions:
+    # - OWNER: Repository owner
+    # - MEMBER: Organization member  
+    # - COLLABORATOR: User with collaborator access
+    #
+    # NEVER remove or weaken this check. Doing so would allow arbitrary
+    # code execution and workflow dispatch from untrusted users.
+    # ==========================================================================
     if: |
       github.event_name == 'issue_comment' && 
       (
@@ -100,7 +124,15 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            // Security: Sanitize comment to prevent injection
+            // =================================================================
+            // SECURITY: Input Sanitization and Validation
+            // =================================================================
+            // This step performs critical security validation:
+            // 1. Sanitizes comment to prevent command injection attacks
+            // 2. Removes shell metacharacters and script tags
+            // 3. Limits input length to prevent DoS attacks
+            // 4. Uses strict whitelist for agent name mapping
+            // =================================================================
             const rawComment = context.payload.comment.body || '';
             const comment = rawComment
               .replace(/[<>'"`;$\\]/g, '')

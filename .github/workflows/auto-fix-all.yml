@@ -57,9 +57,24 @@ jobs:
   auto-fix-all:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # Don't run on PRs from forks (they don't have write access)
-    # Don't run on dependabot PRs to avoid conflicts with dependabot's own updates
-    # Don't run if this commit is from an auto-fix to prevent loops
+    # ==========================================================================
+    # SECURITY: Fork and Bot Exclusion Controls
+    # ==========================================================================
+    # These conditions prevent potentially dangerous scenarios:
+    #
+    # 1. Fork PRs are excluded because:
+    #    - Forks don't have access to repository secrets
+    #    - Committing to fork branches could fail or expose issues
+    #    - Fork PR authors could potentially abuse auto-fix to inject code
+    #
+    # 2. Dependabot PRs are excluded because:
+    #    - Dependabot manages its own updates
+    #    - Auto-fix could conflict with dependabot's changes
+    #    - Prevents potential update loops
+    #
+    # 3. Auto-fix commits are excluded to prevent infinite loops where
+    #    an auto-fix triggers another auto-fix run
+    # ==========================================================================
     if: |
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.actor != 'dependabot[bot]'
