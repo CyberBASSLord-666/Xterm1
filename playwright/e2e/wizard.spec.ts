@@ -182,10 +182,10 @@ test.describe('Wallpaper Generation Wizard', () => {
 
     if ((await advancedToggle.count()) > 0) {
       await advancedToggle.click();
-      await page.waitForTimeout(500);
 
-      // Find model selector
+      // Find model selector and wait for it to be visible
       const modelSelect = page.locator('select, [role="listbox"]').first();
+      await expect(modelSelect).toBeVisible({ timeout: 5000 });
 
       if ((await modelSelect.count()) > 0) {
         // Get current value
@@ -214,9 +214,8 @@ test.describe('Wallpaper Generation Wizard', () => {
 
     // Try Ctrl+A to select all
     await page.keyboard.press('Control+A');
-    await page.waitForTimeout(100);
 
-    // Selection should work
+    // Selection should work - evaluate directly without waiting
     const selectedText = await page.evaluate(() => window.getSelection()?.toString());
     expect(selectedText).toBeTruthy();
   });
@@ -228,15 +227,16 @@ test.describe('Wallpaper Generation Wizard', () => {
     const textarea = page.locator('textarea').first();
     await textarea.fill(longPrompt);
 
-    // Check if there's a character limit or warning
-    await page.waitForTimeout(500);
-
+    // Check if there's a character limit or warning using assertion-based wait
     const warningText = page.locator('text=/character|limit|maximum/i');
-    const warningCount = await warningText.count();
 
-    // Should either show warning or truncate
-    const actualValue = await textarea.inputValue();
-    expect(actualValue.length <= longPrompt.length).toBeTruthy();
+    await expect(async () => {
+      // Should either show warning or allow the text
+      const warningCount = await warningText.count();
+      const actualValue = await textarea.inputValue();
+      // Value should be defined (either full or truncated)
+      expect(actualValue.length <= longPrompt.length).toBeTruthy();
+    }).toPass({ timeout: 5000 });
   });
 
   test('should persist form state on navigation', async ({ page }) => {
