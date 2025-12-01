@@ -1,22 +1,26 @@
-import { Component, ChangeDetectionStrategy, inject, OnInit, OnDestroy, signal } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  inject,
+  OnInit,
+  OnDestroy,
+  Signal,
+  WritableSignal,
+  computed,
+  signal,
+} from '@angular/core';
 import { ToastService } from '../../services/toast.service';
-import { PlatformService } from '../../services/platform.service';
 import { SkeletonComponent } from '../skeleton/skeleton.component';
-
-interface FeedImageEvent {
-  prompt: string;
-  imageURL: string;
-  model: string;
-  seed?: number;
-  width: number;
-  height: number;
-}
-
-interface FeedTextEvent {
-  response: string;
-  model: string;
-  messages?: { role: string; content: string }[];
-}
+import {
+  RealtimeFeedService,
+  FeedImageEvent,
+  FeedTextEvent,
+  FeedType,
+  FeedStatus,
+  FeedHealth,
+  FeedMetrics,
+  FeedDiagnostics,
+} from '../../services/realtime-feed.service';
 
 @Component({
   selector: 'pw-feed',
@@ -26,129 +30,79 @@ interface FeedTextEvent {
   imports: [SkeletonComponent],
 })
 export class FeedComponent implements OnInit, OnDestroy {
-  private toast = inject(ToastService);
-  private platformService = inject(PlatformService);
+  private readonly toast = inject(ToastService);
+  private readonly feedService = inject(RealtimeFeedService);
 
-  feedItems = signal<FeedImageEvent[]>([]);
-  textFeedItems = signal<FeedTextEvent[]>([]);
-  feedMode = signal<'image' | 'text'>('image');
-  isPaused = signal<boolean>(false);
+  /** Current feed mode (image or text) - writable signal for reactivity */
+  private readonly currentMode: WritableSignal<FeedType> = signal<FeedType>('image');
 
-  private imageEventSource: EventSource | null = null;
-  private textEventSource: EventSource | null = null;
+  /** Current feed mode as a readonly signal for template binding */
+  readonly feedMode: Signal<FeedType> = this.currentMode.asReadonly();
 
-  // Reconnection backoff strategy properties
-  private imageReconnectDelay = 2000; // ms
-  private textReconnectDelay = 2000; // ms
-  private readonly maxReconnectDelay = 30000; // 30 seconds
+  /** Image feed items from RealtimeFeedService */
+  readonly feedItems: Signal<FeedImageEvent[]> = this.feedService.imageFeedItems;
+
+  /** Text feed items from RealtimeFeedService */
+  readonly textFeedItems: Signal<FeedTextEvent[]> = this.feedService.textFeedItems;
+
+  /** Current feed status */
+  readonly status: Signal<FeedStatus> = computed(() => this.feedService.statusSignal(this.currentMode())());
+
+  /** Current feed health */
+  readonly health: Signal<FeedHealth> = computed(() => this.feedService.healthSignal(this.currentMode())());
+
+  /** Current feed metrics */
+  readonly metrics: Signal<FeedMetrics> = computed(() => this.feedService.metricsSignal(this.currentMode())());
+
+  /** Current feed diagnostics */
+  readonly diagnostics: Signal<FeedDiagnostics> = computed(() =>
+    this.feedService.diagnosticsSignal(this.currentMode())()
+  );
+
+  /** Whether the current feed is paused */
+  readonly isPaused: Signal<boolean> = computed(() => this.feedService.pausedSignal(this.currentMode())());
+
+  /** Current error message, if any */
+  readonly error: Signal<string | null> = computed(() => this.feedService.errorSignal(this.currentMode())());
 
   ngOnInit(): void {
-    if (!this.platformService.isBrowser) {
-      return; // Skip EventSource initialization in SSR
-    }
-    this.connectImageFeed();
+    // Start the image feed by default
+    this.feedService.start('image', { reset: true });
   }
 
-  connectImageFeed(): void {
-    if (!this.platformService.isBrowser) {
-      return;
-    }
+  /**
+   * Toggle between image and text feed modes
+   */
+  toggleFeedMode(mode: FeedType): void {
+    const current = this.currentMode();
+    if (current === mode) return;
 
-    this.imageEventSource?.close();
-    this.imageEventSource = new EventSource('https://image.pollinations.ai/feed');
+    // Stop the current feed
+    this.feedService.stop(current, { keepItems: false });
 
-    this.imageEventSource.onopen = (): void => {
-      // Reset delay on successful connection
-      this.imageReconnectDelay = 2000;
-    };
+    // Switch mode
+    this.currentMode.set(mode);
 
-    this.imageEventSource.onmessage = (event): void => {
-      if (!event.data || this.feedMode() !== 'image' || this.isPaused()) return;
-      try {
-        const data: FeedImageEvent = JSON.parse(event.data);
-        this.feedItems.update((list) => [data, ...list.slice(0, 99)]); // Keep list to 100 items
-      } catch {
-        // eslint-disable-next-line no-console
-        console.warn('Non-JSON image feed event:', event.data);
-      }
-    };
-
-    this.imageEventSource.onerror = (err): void => {
-      // eslint-disable-next-line no-console
-      console.error('Image feed error, reconnecting...', err);
-      this.toast.show(`Image feed disconnected. Retrying in ${this.imageReconnectDelay / 1000}s.`);
-      this.imageEventSource?.close(); // Close the faulty source
-
-      this.platformService.setTimeout(() => {
-        this.connectImageFeed();
-      }, this.imageReconnectDelay);
-
-      // Increase delay for the next attempt
-      this.imageReconnectDelay = Math.min(this.imageReconnectDelay * 2, this.maxReconnectDelay);
-    };
+    // Start the new feed
+    this.feedService.start(mode, { reset: true });
   }
 
-  connectTextFeed(): void {
-    if (!this.platformService.isBrowser) {
-      return;
-    }
-
-    this.textEventSource?.close();
-    this.textEventSource = new EventSource('https://text.pollinations.ai/feed');
-
-    this.textEventSource.onopen = (): void => {
-      // Reset delay on successful connection
-      this.textReconnectDelay = 2000;
-    };
-
-    this.textEventSource.onmessage = (event): void => {
-      if (!event.data || this.feedMode() !== 'text' || this.isPaused()) return;
-      try {
-        const data: FeedTextEvent = JSON.parse(event.data);
-        this.textFeedItems.update((list) => [data, ...list.slice(0, 99)]);
-      } catch {
-        // eslint-disable-next-line no-console
-        console.warn('Non-JSON text feed event:', event.data);
-      }
-    };
-
-    this.textEventSource.onerror = (err): void => {
-      // eslint-disable-next-line no-console
-      console.error('Text feed error, reconnecting...', err);
-      this.toast.show(`Text feed disconnected. Retrying in ${this.textReconnectDelay / 1000}s.`);
-      this.textEventSource?.close(); // Close the faulty source
-
-      this.platformService.setTimeout(() => this.connectTextFeed(), this.textReconnectDelay);
-
-      // Increase delay for the next attempt
-      this.textReconnectDelay = Math.min(this.textReconnectDelay * 2, this.maxReconnectDelay);
-    };
-  }
-
-  toggleFeedMode(mode: 'image' | 'text'): void {
-    if (this.feedMode() === mode) return;
-
-    this.feedMode.set(mode);
-    if (mode === 'image') {
-      this.textEventSource?.close();
-      this.textEventSource = null;
-      this.textFeedItems.set([]);
-      this.connectImageFeed();
-    } else {
-      this.imageEventSource?.close();
-      this.imageEventSource = null;
-      this.feedItems.set([]);
-      this.connectTextFeed();
-    }
-  }
-
+  /**
+   * Toggle pause state for the current feed
+   */
   togglePause(): void {
-    this.isPaused.update((v) => !v);
-    this.toast.show(this.isPaused() ? 'Feed paused.' : 'Feed resumed.');
+    const result = this.feedService.togglePause(this.currentMode());
+    if (result.paused) {
+      this.toast.show('Feed paused.');
+    } else {
+      const flushedMsg = result.flushed > 0 ? ` Flushed ${result.flushed} buffered events.` : '';
+      this.toast.show(`Feed resumed.${flushedMsg}`);
+    }
   }
 
   ngOnDestroy(): void {
-    this.imageEventSource?.close();
-    this.textEventSource?.close();
+    // Stop all feeds when component is destroyed
+    this.feedService.stop('image', { keepItems: false });
+    this.feedService.stop('text', { keepItems: false });
   }
 }
