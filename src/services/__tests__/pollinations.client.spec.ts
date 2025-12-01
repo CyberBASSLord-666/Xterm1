@@ -43,7 +43,7 @@ describe('pollinations.client integration', () => {
   });
 
   it('initializes the Gemini client and composes prompts', async () => {
-    initializeGeminiClient('api-key');
+    await initializeGeminiClient('api-key');
 
     generateContentMock.mockResolvedValueOnce({ text: 'Device prompt' });
     const devicePrompt = await composePromptForDevice(
@@ -63,7 +63,7 @@ describe('pollinations.client integration', () => {
   });
 
   it('queues image generation requests and returns blobs', async () => {
-    initializeGeminiClient('key');
+    await initializeGeminiClient('key');
     const blob = new Blob(['test']);
     (globalThis.fetch as jest.Mock).mockResolvedValue({
       ok: true,
@@ -183,16 +183,16 @@ describe('pollinations.client integration', () => {
   });
 
   describe('initializeGeminiClient', () => {
-    it('should warn when called with empty API key', () => {
+    it('should warn when called with empty API key', async () => {
       const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
-      initializeGeminiClient('');
+      await initializeGeminiClient('');
       expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('empty'));
       consoleSpy.mockRestore();
     });
 
-    it('should warn when called with whitespace-only API key', () => {
+    it('should warn when called with whitespace-only API key', async () => {
       const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
-      initializeGeminiClient('   ');
+      await initializeGeminiClient('   ');
       expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('empty'));
       consoleSpy.mockRestore();
     });
@@ -304,8 +304,8 @@ describe('pollinations.client integration', () => {
   });
 
   describe('Gemini prompt composition', () => {
-    beforeEach(() => {
-      initializeGeminiClient('test-api-key');
+    beforeEach(async () => {
+      await initializeGeminiClient('test-api-key');
     });
 
     it('should handle composePromptForDevice without base prompt', async () => {

@@ -1,4 +1,3 @@
-import { GoogleGenAI } from '@google/genai';
 import { API_CONFIG } from '../constants';
 
 export type DeviceInfo = { width: number; height: number; dpr: number };
@@ -27,25 +26,34 @@ const IMAGE_INTERVAL = API_CONFIG.IMAGE_INTERVAL;
 const TEXT_INTERVAL = API_CONFIG.TEXT_INTERVAL;
 
 // Gemini API Client - initialized lazily with API key
-let ai: GoogleGenAI | null = null;
+// Using dynamic import to reduce initial bundle size
+type GoogleGenAIType = InstanceType<typeof import('@google/genai').GoogleGenAI>;
+let ai: GoogleGenAIType | null = null;
 const geminiModel = 'gemini-2.0-flash-exp';
 
 /**
  * Initialize the Gemini AI client with an API key.
  * This must be called before using any Gemini-powered features.
+ * The @google/genai package is loaded dynamically to reduce initial bundle size.
  */
-export function initializeGeminiClient(apiKey: string): void {
+export async function initializeGeminiClient(apiKey: string): Promise<void> {
   if (!apiKey || apiKey.trim().length === 0) {
     console.warn('Gemini API key is empty. AI features will not be available.');
     return;
   }
-  ai = new GoogleGenAI({ apiKey });
+  try {
+    const { GoogleGenAI } = await import('@google/genai');
+    ai = new GoogleGenAI({ apiKey });
+  } catch (error) {
+    console.error('Failed to load Gemini AI client:', error);
+    throw new Error('Failed to initialize AI features. Please try again.');
+  }
 }
 
 /**
  * Check if the Gemini client is initialized.
  */
-function ensureGeminiClient(): GoogleGenAI {
+function ensureGeminiClient(): GoogleGenAIType {
   if (!ai) {
     throw new Error('Gemini API client is not initialized. Please configure your API key in settings.');
   }
