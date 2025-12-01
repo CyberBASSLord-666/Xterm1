@@ -69,7 +69,10 @@ type EventSourceFactory = (url: string) => EventSource;
 
 export const EVENT_SOURCE_FACTORY = new InjectionToken<EventSourceFactory>('REALTIME_FEED_EVENT_SOURCE_FACTORY', {
   providedIn: 'root',
-  factory: () => (url: string) => new EventSource(url),
+  factory:
+    (): EventSourceFactory =>
+    (url: string): EventSource =>
+      new EventSource(url),
 });
 
 interface FeedConfig<TEvent extends FeedEvent> {
@@ -213,9 +216,9 @@ export class RealtimeFeedService implements OnDestroy {
     text: computed(() => this.states.text.paused()),
   };
 
-  private readonly onlineListener = () => this.handleOnline();
-  private readonly offlineListener = () => this.handleOffline();
-  private readonly visibilityChangeListener = () => this.handleVisibilityChange();
+  private readonly onlineListener = (): void => this.handleOnline();
+  private readonly offlineListener = (): void => this.handleOffline();
+  private readonly visibilityChangeListener = (): void => this.handleVisibilityChange();
 
   private readonly maxReconnectDelay = 30_000;
 
@@ -439,8 +442,8 @@ export class RealtimeFeedService implements OnDestroy {
       const source = this.createEventSource(state.config.url);
       state.source = source;
 
-      source.onopen = () => {
-        this.ngZone.run(() => {
+      source.onopen = (): void => {
+        this.ngZone.run((): void => {
           state.status.set(state.paused() ? 'paused' : 'connected');
           state.reconnectAttempt = 0;
           const connectedAt = Date.now();
@@ -457,14 +460,14 @@ export class RealtimeFeedService implements OnDestroy {
         });
       };
 
-      source.onmessage = (event) => {
-        this.ngZone.run(() => {
+      source.onmessage = (event): void => {
+        this.ngZone.run((): void => {
           this.handleMessage(state, event.data);
         });
       };
 
-      source.onerror = (error) => {
-        this.ngZone.run(() => {
+      source.onerror = (error): void => {
+        this.ngZone.run((): void => {
           this.logger.error(`Realtime feed ${state.type} encountered an error`, error, 'RealtimeFeed');
           state.status.set('error');
           state.error.set('Feed connection lost. Attempting to reconnect...');
