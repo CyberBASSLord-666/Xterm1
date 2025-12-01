@@ -12,6 +12,49 @@ const sanitizeHtmlFn: SanitizeHtmlFn = ((sanitizeHtmlLib as unknown as { default
 /** Single source of truth for base URL in URL parsing across CSR/SSR. */
 const DEFAULT_BASE_URL = 'http://localhost';
 
+/** Attributes that are always forbidden in sanitized HTML. */
+const FORBIDDEN_ATTRS = ['style', 'srcdoc'] as const;
+
+/**
+ * Check if an attribute should be dropped during sanitization.
+ * Drops style, srcdoc, and all event handlers (on*).
+ */
+function shouldDropAttribute(name: string): boolean {
+  const lower = name.toLowerCase();
+  return FORBIDDEN_ATTRS.includes(lower as (typeof FORBIDDEN_ATTRS)[number]) || lower.startsWith('on');
+}
+
+/**
+ * Check if a URL value is safe for href/src/cite attributes.
+ */
+function isSafeUrlValue(value: string): boolean {
+  const v = (value ?? '').trim();
+  if (v.startsWith('//')) return false; // protocol-relative
+  if (v.startsWith('#')) return true; // fragment-only
+  if (v.startsWith('/') || v.startsWith('./') || v.startsWith('../')) return true; // relative
+
+  try {
+    const u = new URL(v, DEFAULT_BASE_URL);
+    return (VALIDATION_RULES.ALLOWED_PROTOCOLS as readonly string[]).includes(u.protocol);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Normalize allowed attributes by filtering out forbidden ones.
+ */
+function normalizeAllowedAttributes(allowedAttributes: Record<string, string[]>): Record<string, string[]> {
+  const normalized: Record<string, string[]> = {};
+  for (const [tag, attrs] of Object.entries(allowedAttributes)) {
+    normalized[tag.toLowerCase()] = (attrs || []).filter((a) => !shouldDropAttribute(a)).map((a) => a.toLowerCase());
+  }
+  if (normalized['*']) {
+    normalized['*'] = normalized['*'].filter((a) => !shouldDropAttribute(a));
+  }
+  return normalized;
+}
+
 export interface ValidationResult {
   isValid: boolean;
   errors: string[];
@@ -178,53 +221,77 @@ export class ValidationService {
     if (!raw) return '';
     if (allowedTags.length === 0) return this.sanitizeHtml(raw);
 
-    // Normalize allowlist: drop style/srcdoc/on* regardless of caller config.
-    const normalizedAllowedAttrs: Record<string, string[]> = {};
-    const dropAttr = (name: string): boolean => {
-      const lower = name.toLowerCase();
-      return lower === 'style' || lower === 'srcdoc' || lower.startsWith('on');
-    };
+    const normalizedAllowedAttrs = normalizeAllowedAttributes(allowedAttributes);
 
-    for (const [tag, attrs] of Object.entries(allowedAttributes)) {
-      normalizedAllowedAttrs[tag.toLowerCase()] = (attrs || []).filter((a) => !dropAttr(a)).map((a) => a.toLowerCase());
-    }
-    if (normalizedAllowedAttrs['*']) {
-      normalizedAllowedAttrs['*'] = normalizedAllowedAttrs['*'].filter((a) => !dropAttr(a));
+    if (!this.hasDomSupport()) {
+      return this.sanitizeWithLibrary(raw, allowedTags, normalizedAllowedAttrs);
     }
 
-    const hasDom =
+    return this.sanitizeWithDom(raw, allowedTags, normalizedAllowedAttrs);
+  }
+
+  /** Check if DOM APIs are available (browser vs SSR). */
+  private hasDomSupport(): boolean {
+    return (
       typeof window !== 'undefined' &&
       typeof (window as { DOMParser?: unknown }).DOMParser !== 'undefined' &&
-      typeof document !== 'undefined';
+      typeof document !== 'undefined'
+    );
+  }
 
-    if (!hasDom) {
-      return sanitizeHtmlFn(raw, {
-        allowedTags,
-        allowedAttributes: normalizedAllowedAttrs,
-        allowedSchemes: [...VALIDATION_RULES.ALLOWED_SCHEMES],
-        allowedSchemesByTag: {},
-        allowedSchemesAppliedToAttributes: ['href', 'src', 'cite'],
-        allowProtocolRelative: false,
-        transformTags: {
-          '*': (tagName: string, attribs: Record<string, string>) => {
-            const { style: _style, srcdoc: _srcdoc, ...rest } = attribs || {};
-            for (const k of Object.keys(rest)) {
-              if (k.toLowerCase().startsWith('on')) {
-                const restMutable = rest as Record<string, string>;
-                delete restMutable[k];
-              }
+  /** Sanitize HTML using the sanitize-html library (SSR path). */
+  private sanitizeWithLibrary(
+    raw: string,
+    allowedTags: string[],
+    normalizedAllowedAttrs: Record<string, string[]>
+  ): string {
+    return sanitizeHtmlFn(raw, {
+      allowedTags,
+      allowedAttributes: normalizedAllowedAttrs,
+      allowedSchemes: [...VALIDATION_RULES.ALLOWED_SCHEMES],
+      allowedSchemesByTag: {},
+      allowedSchemesAppliedToAttributes: ['href', 'src', 'cite'],
+      allowProtocolRelative: false,
+      transformTags: {
+        '*': (tagName: string, attribs: Record<string, string>) => {
+          const { style: _style, srcdoc: _srcdoc, ...rest } = attribs || {};
+          for (const k of Object.keys(rest)) {
+            if (k.toLowerCase().startsWith('on')) {
+              const restMutable = rest as Record<string, string>;
+              delete restMutable[k];
             }
-            return { tagName, attribs: rest };
-          },
+          }
+          return { tagName, attribs: rest };
         },
-      });
-    }
+      },
+    });
+  }
 
-    // Browser path: DOM traversal & selective attribute copy.
+  /** Sanitize HTML using DOM APIs (browser path). */
+  private sanitizeWithDom(
+    raw: string,
+    allowedTags: string[],
+    normalizedAllowedAttrs: Record<string, string[]>
+  ): string {
     const parser = new DOMParser();
     const doc = parser.parseFromString(raw, 'text/html');
-
     const outContainer = document.createElement('div');
+
+    const context = this.createSanitizationContext(allowedTags, normalizedAllowedAttrs);
+    this.appendChildrenSanitized(doc.body, outContainer, context);
+
+    return outContainer.innerHTML;
+  }
+
+  /** Create context object for DOM sanitization. */
+  private createSanitizationContext(
+    allowedTags: string[],
+    normalizedAllowedAttrs: Record<string, string[]>
+  ): {
+    allowedTagSet: Set<string>;
+    globalAllowed: Set<string>;
+    perTagAllowed: Map<string, Set<string>>;
+  } {
     const allowedTagSet = new Set(allowedTags.map((t) => t.toLowerCase()));
     const globalAllowed = new Set((normalizedAllowedAttrs['*'] ?? []).map((a) => a.toLowerCase()));
     const perTagAllowed = new Map<string, Set<string>>(
@@ -233,68 +300,88 @@ export class ValidationService {
         .map(([k, v]) => [k.toLowerCase(), new Set(v.map((x) => x.toLowerCase()))])
     );
 
-    const isSafeHrefOrSrc = (value: string): boolean => {
-      const v = (value ?? '').trim();
-      if (v.startsWith('//')) return false; // protocol-relative
-      if (v.startsWith('#')) return true; // fragment-only
-      if (v.startsWith('/') || v.startsWith('./') || v.startsWith('../')) return true; // relative
+    return { allowedTagSet, globalAllowed, perTagAllowed };
+  }
 
-      try {
-        const u = new URL(v, DEFAULT_BASE_URL);
-        return (VALIDATION_RULES.ALLOWED_PROTOCOLS as readonly string[]).includes(u.protocol);
-      } catch {
-        return false;
-      }
-    };
+  /** Recursively sanitize and append child nodes. */
+  private appendChildrenSanitized(
+    src: Node,
+    dest: Node,
+    context: {
+      allowedTagSet: Set<string>;
+      globalAllowed: Set<string>;
+      perTagAllowed: Map<string, Set<string>>;
+    }
+  ): void {
+    for (const child of Array.from(src.childNodes)) {
+      const sanitized = this.sanitizeNodeDom(child, context);
+      if (sanitized) dest.appendChild(sanitized);
+    }
+  }
 
-    const appendChildrenUnwrapped = (src: Node, dest: Node): void => {
-      for (const child of Array.from(src.childNodes)) {
-        const n = sanitizeNode(child);
-        if (n) dest.appendChild(n);
-      }
-    };
+  /** Sanitize a single DOM node. */
+  private sanitizeNodeDom(
+    node: Node,
+    context: {
+      allowedTagSet: Set<string>;
+      globalAllowed: Set<string>;
+      perTagAllowed: Map<string, Set<string>>;
+    }
+  ): Node | null {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = this.sanitizeString(node.textContent ?? '');
+      return document.createTextNode(text);
+    }
 
-    const sanitizeNode = (node: Node): Node | null => {
-      if (node.nodeType === Node.TEXT_NODE) {
-        const text = this.sanitizeString(node.textContent ?? '');
-        return document.createTextNode(text);
-      }
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        const el = node as Element;
-        const tag = el.tagName.toLowerCase();
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      return this.sanitizeElementNode(node as Element, context);
+    }
 
-        if (!allowedTagSet.has(tag)) {
-          const frag = document.createDocumentFragment();
-          appendChildrenUnwrapped(el, frag);
-          return frag;
+    return null; // drop comments/others
+  }
+
+  /** Sanitize an element node. */
+  private sanitizeElementNode(
+    el: Element,
+    context: {
+      allowedTagSet: Set<string>;
+      globalAllowed: Set<string>;
+      perTagAllowed: Map<string, Set<string>>;
+    }
+  ): Node {
+    const tag = el.tagName.toLowerCase();
+
+    if (!context.allowedTagSet.has(tag)) {
+      const frag = document.createDocumentFragment();
+      this.appendChildrenSanitized(el, frag, context);
+      return frag;
+    }
+
+    const outEl = document.createElement(tag);
+    const allowed = new Set([...context.globalAllowed, ...(context.perTagAllowed.get(tag) ?? new Set<string>())]);
+
+    this.copyAllowedAttributes(el, outEl, allowed);
+    this.appendChildrenSanitized(el, outEl, context);
+
+    return outEl;
+  }
+
+  /** Copy allowed attributes from source to destination element. */
+  private copyAllowedAttributes(src: Element, dest: Element, allowed: Set<string>): void {
+    for (const attr of Array.from(src.attributes)) {
+      const name = attr.name.toLowerCase();
+      if (shouldDropAttribute(name)) continue;
+      if (!allowed.has(name)) continue;
+
+      const val = attr.value;
+      if (name === 'href' || name === 'src' || name === 'cite') {
+        if (isSafeUrlValue(val)) {
+          dest.setAttribute(name, val);
         }
-
-        const outEl = document.createElement(tag);
-        const allowed = new Set([...globalAllowed, ...(perTagAllowed.get(tag) ?? new Set<string>())]);
-
-        for (const attr of Array.from(el.attributes)) {
-          const name = attr.name.toLowerCase();
-          if (name === 'style' || name === 'srcdoc' || name.startsWith('on')) continue; // hard bans
-          if (!allowed.has(name)) continue;
-
-          const val = attr.value;
-          if (name === 'href' || name === 'src' || name === 'cite') {
-            if (isSafeHrefOrSrc(val)) {
-              outEl.setAttribute(name, val);
-            }
-            continue;
-          }
-          outEl.setAttribute(name, val);
-        }
-
-        appendChildrenUnwrapped(el, outEl);
-        return outEl;
+        continue;
       }
-      return null; // drop comments/others
-    };
-
-    appendChildrenUnwrapped(doc.body, outContainer);
-    return outContainer.innerHTML;
+      dest.setAttribute(name, val);
+    }
   }
 
   /**
