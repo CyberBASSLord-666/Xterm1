@@ -443,7 +443,7 @@ export class RealtimeFeedService implements OnDestroy {
       state.source = source;
 
       source.onopen = (): void => {
-        this.ngZone.run((): void => {
+        this.ngZone.run(() => {
           state.status.set(state.paused() ? 'paused' : 'connected');
           state.reconnectAttempt = 0;
           const connectedAt = Date.now();
@@ -461,13 +461,13 @@ export class RealtimeFeedService implements OnDestroy {
       };
 
       source.onmessage = (event): void => {
-        this.ngZone.run((): void => {
+        this.ngZone.run(() => {
           this.handleMessage(state, event.data);
         });
       };
 
       source.onerror = (error): void => {
-        this.ngZone.run((): void => {
+        this.ngZone.run(() => {
           this.logger.error(`Realtime feed ${state.type} encountered an error`, error, 'RealtimeFeed');
           state.status.set('error');
           state.error.set('Feed connection lost. Attempting to reconnect...');
