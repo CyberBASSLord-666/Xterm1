@@ -1,7 +1,7 @@
 
-up to date, audited 988 packages in 1s
+up to date, audited 1005 packages in 1s
 
-190 packages are looking for funding
+194 packages are looking for funding
   run `npm fund` for details
 
 found 0 vulnerabilities
