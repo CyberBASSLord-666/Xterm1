@@ -65,7 +65,7 @@ describe('AppComponent', () => {
   });
 
   it('should apply dark class to document when dark theme is enabled', () => {
-    settingsService.themeDark.set(true);
+    settingsService.setTheme(true);
     fixture.detectChanges();
 
     // Note: Effect may need time to process, but for testing we can check the service state
@@ -73,7 +73,7 @@ describe('AppComponent', () => {
   });
 
   it('should remove dark class from document when dark theme is disabled', () => {
-    settingsService.themeDark.set(false);
+    settingsService.setTheme(false);
     fixture.detectChanges();
 
     expect(settingsService.themeDark()).toBe(false);

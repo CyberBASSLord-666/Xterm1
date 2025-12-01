@@ -23,20 +23,36 @@ permissions:
   contents: write
   pull-requests: write
 
+# Concurrency: Prevent multiple dependabot merges from running simultaneously
+concurrency:
+  group: dependabot-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
 jobs:
+  # ============================================================================
+  # DEPENDABOT AUTO-MERGE JOB
+  # ============================================================================
+  # Purpose: Automatically approves and merges Dependabot PRs for non-major updates
+  # Timeout: 10 minutes (approval and merge operations are quick)
+  # Security: Only runs for dependabot[bot] actor
+  # Policy: Auto-merges patch and minor updates; major updates require manual review
+  # ============================================================================
   dependabot:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     # Only run for Dependabot PRs
     if: github.actor == 'dependabot[bot]'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Fetch Dependabot metadata
         id: metadata
         uses: dependabot/fetch-metadata@v2
         with:
-          github-token: "${{ secrets.GITHUB_TOKEN }}"
+          # Use GH_TOKEN to enable triggering other workflows on auto-merge
+          # Falls back to GITHUB_TOKEN if GH_TOKEN is not configured
+          github-token: "${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}"
 
       - name: Auto-approve Dependabot PR
         # Auto-approve patch and minor updates
@@ -47,7 +63,8 @@ jobs:
           gh pr review --approve "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Use GH_TOKEN to enable approve/merge operations that trigger other workflows
+          GH_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Enable auto-merge for Dependabot PR
         # Enable auto-merge for patch and minor updates
@@ -58,7 +75,8 @@ jobs:
           gh pr merge --auto --squash "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Use GH_TOKEN to enable merge operations that trigger other workflows
+          GH_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Comment on major update PR
         # Add comment for major updates that need manual review
@@ -77,4 +95,5 @@ jobs:
           Please review the changelog and breaking changes before approving and merging."
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Use GH_TOKEN for comment operations
+          GH_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}

@@ -15,6 +15,7 @@ describe('SettingsService', () => {
   });
 
   afterEach(() => {
+    service.ngOnDestroy();
     localStorage.clear();
   });
 
@@ -55,8 +56,9 @@ describe('SettingsService', () => {
 
   it('should toggle themeDark', () => {
     const initialValue = service.themeDark();
-    service.themeDark.set(!initialValue);
-    expect(service.themeDark()).toBe(!initialValue);
+    const toggled = service.toggleTheme();
+    expect(toggled).toBe(!initialValue);
+    expect(service.themeDark()).toBe(toggled);
   });
 
   it('should update nologo setting', () => {
@@ -90,7 +92,7 @@ describe('SettingsService', () => {
   });
 
   it('should persist settings to localStorage', (done) => {
-    service.themeDark.set(true);
+    service.setTheme(true);
     service.nologo.set(false);
     service.referrer.set('custom-referrer');
 
@@ -120,18 +122,22 @@ describe('SettingsService', () => {
 
     localStorage.setItem('polliwall_settings', JSON.stringify(testSettings));
 
+    // Tear down current instance before recreating the module
+    service.ngOnDestroy();
+
     // Create a new service instance using TestBed to have injection context
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       providers: [SettingsService],
     });
     const newService = TestBed.inject(SettingsService);
+    service = newService;
 
-    expect(newService.referrer()).toBe('stored-referrer');
-    expect(newService.nologo()).toBe(false);
-    expect(newService.private()).toBe(false);
-    expect(newService.safe()).toBe(false);
-    expect(newService.themeDark()).toBe(true);
+    expect(service.referrer()).toBe('stored-referrer');
+    expect(service.nologo()).toBe(false);
+    expect(service.private()).toBe(false);
+    expect(service.safe()).toBe(false);
+    expect(service.themeDark()).toBe(true);
   });
 
   it('should handle corrupted localStorage data gracefully', () => {
@@ -139,15 +145,19 @@ describe('SettingsService', () => {
 
     const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
+    // Tear down current instance before recreating the module
+    service.ngOnDestroy();
+
     // Create a new service instance using TestBed to have injection context
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       providers: [SettingsService],
     });
     const newService = TestBed.inject(SettingsService);
+    service = newService;
 
-    expect(newService).toBeTruthy();
-    expect(newService.nologo()).toBe(true); // Should load defaults
+    expect(service).toBeTruthy();
+    expect(service.nologo()).toBe(true); // Should load defaults
     expect(consoleSpy).toHaveBeenCalled();
 
     consoleSpy.mockRestore();

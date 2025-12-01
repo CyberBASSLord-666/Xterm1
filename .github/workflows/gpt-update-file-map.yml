@@ -1,3 +1,12 @@
+# ============================================================================
+# GPT File Map Generator Workflow for PolliWall (Xterm1)
+# ============================================================================
+# This workflow automatically generates and updates the gpt/file-map.json file
+# which provides a structured index of the repository for AI assistants.
+#
+# Trigger: Push to main branch or manual workflow dispatch
+# ============================================================================
+
 name: GPT – Update File Map
 
 on:
@@ -6,15 +15,36 @@ on:
       - main
   workflow_dispatch: {}
 
+# Security: Explicit permissions following least privilege principle
+permissions:
+  contents: write
+
+# Concurrency: Prevent multiple file map generations from running simultaneously
+concurrency:
+  group: gpt-file-map-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  # ============================================================================
+  # GENERATE FILE MAP JOB
+  # ============================================================================
+  # Purpose: Generates and updates the gpt/file-map.json for AI assistants
+  # Timeout: 10 minutes (file map generation is quick)
+  # Output: Commits updated file-map.json if changes are detected
+  # Script: Uses scripts/generate-file-map.mjs for generation logic
+  # ============================================================================
   generate-file-map:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
+          # Use GH_TOKEN to enable pushing commits and triggering other workflows
+          # Falls back to GITHUB_TOKEN if GH_TOKEN is not configured
+          token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

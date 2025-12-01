@@ -1,0 +1,95 @@
+{
+  // ============================================================================
+  // Recommended VS Code Extensions for PolliWall (Xterm1)
+  // ============================================================================
+  // Install these extensions for the best development experience.
+  // VS Code will prompt to install them when opening this workspace.
+  // ============================================================================
+
+  "recommendations": [
+    // ============ ESSENTIAL ============
+    // Angular/TypeScript development
+    "angular.ng-template",
+    "ms-vscode.vscode-typescript-next",
+
+    // Code quality
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+
+    // ============ PRODUCTIVITY ============
+    // Git integration
+    "eamodio.gitlens",
+    "mhutchie.git-graph",
+
+    // AI assistance
+    "github.copilot",
+    "github.copilot-chat",
+
+    // Path intelligence
+    "christian-kohler.path-intellisense",
+    "christian-kohler.npm-intellisense",
+
+    // ============ TESTING ============
+    // Jest testing
+    "orta.vscode-jest",
+    "firsttris.vscode-jest-runner",
+
+    // Playwright testing
+    "ms-playwright.playwright",
+
+    // ============ STYLING ============
+    // Tailwind CSS
+    "bradlc.vscode-tailwindcss",
+
+    // CSS
+    "stylelint.vscode-stylelint",
+
+    // ============ DOCUMENTATION ============
+    // Markdown
+    "yzhang.markdown-all-in-one",
+    "davidanson.vscode-markdownlint",
+
+    // ============ UTILITIES ============
+    // File icons
+    "pkief.material-icon-theme",
+
+    // Bracket colorization
+    "coenraads.bracket-pair-colorizer-2",
+
+    // Auto-close tags
+    "formulahendry.auto-close-tag",
+    "formulahendry.auto-rename-tag",
+
+    // Error lens
+    "usernamehw.errorlens",
+
+    // TODO highlighting
+    "gruntfuggly.todo-tree",
+
+    // Import sorting
+    "amatiasq.sort-imports",
+
+    // REST client
+    "humao.rest-client",
+
+    // ============ DEBUGGING ============
+    // Chrome debugger
+    "msjsdiag.debugger-for-chrome",
+
+    // ============ WORKFLOW ============
+    // GitHub Actions
+    "github.vscode-github-actions",
+
+    // YAML support
+    "redhat.vscode-yaml",
+
+    // JSON support
+    "zainchen.json"
+  ],
+
+  "unwantedRecommendations": [
+    // Extensions that may conflict with project settings
+    "hookyqr.beautify",
+    "lonefy.vscode-js-css-html-formatter"
+  ]
+}

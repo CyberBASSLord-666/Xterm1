@@ -173,9 +173,30 @@ export class PerformanceMonitorService {
   public getWebVitals(): WebVitals {
     const vitals: WebVitals = {};
 
-    if (!this.platformService.isBrowser) {
-      return vitals; // Return empty vitals in SSR
-    }
+    if ('PerformanceObserver' in window) {
+      try {
+        // Time to First Byte / Time to Interactive
+        const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTimingExtended;
+
+        let responseStart = navigation?.responseStart;
+        let requestStart = navigation?.requestStart;
+        let domInteractive = navigation?.domInteractive;
+        let fetchStart = navigation?.fetchStart;
+
+        const legacyTiming = (performance as Performance & { timing?: PerformanceTiming }).timing;
+        if (legacyTiming) {
+          responseStart = responseStart ?? legacyTiming.responseStart;
+          requestStart = requestStart ?? legacyTiming.requestStart;
+          domInteractive = domInteractive ?? legacyTiming.domInteractive;
+          fetchStart = fetchStart ?? legacyTiming.fetchStart;
+        }
+
+        if (responseStart !== undefined && requestStart !== undefined) {
+          vitals.ttfb = responseStart - requestStart;
+        }
+        if (domInteractive !== undefined && fetchStart !== undefined) {
+          vitals.tti = domInteractive - fetchStart;
+        }
 
     const win = this.platformService.getWindow();
     if (!win || !('PerformanceObserver' in win)) {

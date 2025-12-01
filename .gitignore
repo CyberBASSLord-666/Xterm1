@@ -47,3 +47,10 @@ test-results
 *.spec.js.map
 /coverage
 .angular/
+
+# Temporary build/audit files
+audit-*.json
+audit-output.txt
+eslint-output.txt
+prettier-output.txt
+tsc-output.txt

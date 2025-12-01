@@ -1,34 +1,140 @@
+# ============================================================================
+# Core CI Workflow for PolliWall (Xterm1)
+# ============================================================================
+# This is the main continuous integration pipeline that runs on every push
+# and pull request to ensure code quality and correctness.
+#
+# Jobs:
+# - lint: ESLint validation for TypeScript and HTML files
+# - test: Jest unit tests with coverage reporting (Node.js matrix: 18, 20, 22)
+# - build: Production and development builds (matrix strategy)
+# - e2e: Playwright end-to-end tests
+# - lighthouse: Performance auditing with Lighthouse CI
+#
+# Enterprise Features:
+# - Node.js version matrix testing (18, 20, 22)
+# - Path-based filtering to skip irrelevant jobs
+# - npm caching for faster builds
+# - 30-day artifact retention
+# - Comprehensive step summaries
+# - Concurrency controls to prevent redundant runs
+#
+# This workflow is part of the Agentic Swarm system and coordinates with:
+# - swarm-coordinator.yml for orchestration
+# - auto-fix-all.yml for automatic fixes
+# - security.yml for security scanning
+#
+# QA NOTES:
+# - All jobs include timeout limits to prevent hanging builds
+# - Coverage thresholds are enforced in jest.config.ts
+# - E2E tests use continue-on-error to prevent blocking merges on flaky tests
+# - Lighthouse is advisory (continue-on-error) but results are tracked
+# - All artifacts are retained for 30 days for debugging purposes
+# ============================================================================
+
 name: CI
 
 on:
   push:
     branches: [main, develop]
+    # Path filters: Only run on relevant file changes
+    paths:
+      - 'src/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.json'
+      - 'angular.json'
+      - 'jest.config.ts'
+      - 'playwright.config.ts'
+      - '.eslintrc.json'
+      - '.github/workflows/ci.yml'
   pull_request:
     branches: [main, develop]
+    paths:
+      - 'src/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.json'
+      - 'angular.json'
+      - 'jest.config.ts'
+      - 'playwright.config.ts'
+      - '.eslintrc.json'
+      - '.github/workflows/ci.yml'
+
+# Security: Explicit permissions following least privilege principle
+permissions:
+  contents: read
+  pull-requests: read
+  checks: write
+
+# Concurrency: Cancel in-progress runs on the same branch/PR
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
+  # ============================================================================
+  # LINT JOB
+  # ============================================================================
+  # Purpose: Validates code style and quality using ESLint
+  # Timeout: 10 minutes (lint should complete quickly)
+  # Fallback: Fails the workflow if lint errors are found
+  # ============================================================================
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-      - run: npm ci --legacy-peer-deps
-      - run: npm run lint --if-present
+      - run: npm ci
+      - name: Run ESLint
+        id: lint
+        run: npm run lint --if-present
+      - name: Generate lint summary
+        if: always()
+        run: |
+          echo "## 📝 Lint Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.lint.outcome }}" == "success" ]; then
+            echo "✅ **All lint checks passed!**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Lint checks failed.** Review the logs above for details." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Suggested Actions:**" >> $GITHUB_STEP_SUMMARY
+            echo "- Run \`npm run lint:fix\` locally to auto-fix issues" >> $GITHUB_STEP_SUMMARY
+            echo "- Use \`@copilot fix lint\` to trigger automatic fixes" >> $GITHUB_STEP_SUMMARY
+          fi
 
+  # ============================================================================
+  # TEST JOB (Matrix Strategy)
+  # ============================================================================
+  # Purpose: Runs Jest unit tests with coverage reporting across Node.js versions
+  # Node.js Matrix: 18, 20, 22 for comprehensive compatibility testing
+  # Timeout: 15 minutes (allows for comprehensive test suite)
+  # Artifacts: Coverage reports uploaded to Codecov and as workflow artifacts
+  # ============================================================================
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [18, 20, 22]
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ matrix.node-version }}
           cache: 'npm'
-      - run: npm ci --legacy-peer-deps
-      - run: npm test -- --coverage --watchAll=false
+      - run: npm ci
+      - name: Run Jest tests with coverage
+        id: jest
+        run: npm test -- --coverage --watchAll=false
       - name: Upload coverage to Codecov
+        if: matrix.node-version == 20
         uses: codecov/codecov-action@v3
         with:
           file: ./coverage/lcov.info
@@ -36,67 +142,174 @@ jobs:
           name: codecov-umbrella
 
       - name: Upload coverage artifacts
-        uses: actions/upload-artifact@v5
-        if: always()
+        uses: actions/upload-artifact@v4
+        if: always() && matrix.node-version == 20
         with:
           name: coverage-report
           path: coverage/
-          retention-days: 7
+          retention-days: 30
 
+      - name: Generate test summary
+        if: always()
+        run: |
+          echo "## 🧪 Unit Test Results (Node.js ${{ matrix.node-version }})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.jest.outcome }}" == "success" ]; then
+            echo "✅ **All unit tests passed!**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Unit tests failed.** Review the logs above for details." >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ matrix.node-version }}" == "20" ]; then
+            echo "### Coverage Report" >> $GITHUB_STEP_SUMMARY
+            echo "📊 Coverage report uploaded as artifact: \`coverage-report\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Coverage Thresholds (from jest.config.ts):**" >> $GITHUB_STEP_SUMMARY
+            echo "| Metric | Threshold |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-----------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Branches | 46% |" >> $GITHUB_STEP_SUMMARY
+            echo "| Functions | 41% |" >> $GITHUB_STEP_SUMMARY
+            echo "| Lines | 49% |" >> $GITHUB_STEP_SUMMARY
+            echo "| Statements | 49% |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # ============================================================================
+  # BUILD JOB
+  # ============================================================================
+  # Purpose: Creates production and development builds using matrix strategy
+  # Timeout: 20 minutes (production builds may take longer)
+  # Artifacts: Build outputs uploaded for downstream jobs (e2e, lighthouse)
+  # ============================================================================
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       matrix:
         configuration: [development, production]
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-      - run: npm ci --legacy-peer-deps
-      - run: npm run build -- --configuration=${{ matrix.configuration }}
+      - run: npm ci
+      - name: Build application
+        id: build
+        run: npm run build -- --configuration=${{ matrix.configuration }}
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: dist-${{ matrix.configuration }}
           path: dist/
-          retention-days: 7
+          retention-days: 30
+      - name: Generate build summary
+        if: always()
+        run: |
+          echo "## 🏗️ Build Results (${{ matrix.configuration }})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.build.outcome }}" == "success" ]; then
+            echo "✅ **${{ matrix.configuration }} build succeeded!**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "📦 Artifacts uploaded as: \`dist-${{ matrix.configuration }}\`" >> $GITHUB_STEP_SUMMARY
+            if [ -d "dist/app/browser" ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "### Bundle Overview" >> $GITHUB_STEP_SUMMARY
+              TOTAL_SIZE=$(du -sh dist/app/browser 2>/dev/null | cut -f1 || echo "N/A")
+              echo "- Total bundle size: $TOTAL_SIZE" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "❌ **${{ matrix.configuration }} build failed.**" >> $GITHUB_STEP_SUMMARY
+          fi
 
+  # ============================================================================
+  # E2E JOB
+  # ============================================================================
+  # Purpose: Runs Playwright end-to-end tests against production build
+  # Timeout: 25 minutes (E2E tests involve browser automation)
+  # Dependencies: Requires build job to complete successfully
+  # Fallback: Uses continue-on-error to prevent blocking merges
+  # ============================================================================
   e2e:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: build
     continue-on-error: true
+    outputs:
+      test_result: ${{ steps.playwright.outcome }}
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-      - run: npm ci --legacy-peer-deps
-      - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-production
+          path: dist/
+      - name: Install dependencies (minimal)
+        run: npm ci --ignore-scripts
+      - name: Install Playwright (Chromium only)
+        run: npx playwright install chromium --with-deps
       - name: Run Playwright Tests
+        id: playwright
         run: npm run e2e:headless
+        env:
+          CI: true
         continue-on-error: true
       - name: Upload Playwright Report
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: playwright-report
+          name: playwright-report-${{ github.run_id }}
           path: playwright-report/
           retention-days: 30
+      - name: Generate E2E summary
+        if: always()
+        run: |
+          echo "## 🎭 E2E Test Results (Playwright)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.playwright.outcome }}" == "success" ]; then
+            echo "✅ **All E2E tests passed!**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **E2E tests completed with issues.** This is non-blocking." >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Details" >> $GITHUB_STEP_SUMMARY
+          echo "- 📋 Report artifact: \`playwright-report-${{ github.run_id }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- 🌐 Browser: Chromium (CI-optimized)" >> $GITHUB_STEP_SUMMARY
+          echo "- ⏱️ Timeout: 15s per test (CI mode)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Test Categories:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Application loading & navigation" >> $GITHUB_STEP_SUMMARY
+          echo "- Theme toggling & persistence" >> $GITHUB_STEP_SUMMARY
+          echo "- Wizard workflow validation" >> $GITHUB_STEP_SUMMARY
+          echo "- Accessibility compliance (WCAG 2.1 AA)" >> $GITHUB_STEP_SUMMARY
+          echo "- Keyboard navigation" >> $GITHUB_STEP_SUMMARY
 
+  # ============================================================================
+  # LIGHTHOUSE JOB
+  # ============================================================================
+  # Purpose: Runs Lighthouse CI to audit performance, accessibility, SEO
+  # Timeout: 15 minutes (Lighthouse audits are relatively quick)
+  # Dependencies: Requires build job to complete successfully
+  # Fallback: Uses continue-on-error as performance is advisory
+  # ============================================================================
   lighthouse:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: build
     continue-on-error: true
+    outputs:
+      performance_result: ${{ steps.lhci.outcome }}
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
       - name: Download build artifacts
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v4
         with:
           name: dist-production
           path: dist/
@@ -104,11 +317,116 @@ jobs:
       - name: Start static server
         run: |
           npx serve dist/app --listen 8080 &
-          sleep 3
+          sleep 5
       - name: Run Lighthouse CI
-        uses: treosh/lighthouse-ci-action@v10
+        id: lhci
+        uses: treosh/lighthouse-ci-action@v12
         with:
           urls: |
             http://localhost:8080
-          uploadArtifacts: true
+          uploadArtifacts: false
           temporaryPublicStorage: true
+      - name: Upload Lighthouse results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lighthouse-results-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .lighthouseci/
+          retention-days: 30
+      - name: Generate Lighthouse summary
+        if: always()
+        run: |
+          echo "## 🔦 Lighthouse Performance Audit" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.lhci.outcome }}" == "success" ]; then
+            echo "✅ **Lighthouse audit completed successfully!**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **Lighthouse audit completed with warnings.** This is advisory." >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Performance Targets" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Target | Description |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|--------|-------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Performance | >90 | Overall performance score |" >> $GITHUB_STEP_SUMMARY
+          echo "| Accessibility | >90 | WCAG compliance |" >> $GITHUB_STEP_SUMMARY
+          echo "| Best Practices | >90 | Security & coding standards |" >> $GITHUB_STEP_SUMMARY
+          echo "| SEO | >90 | Search engine optimization |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📋 Full report: \`lighthouse-results-${{ github.run_id }}-${{ github.run_attempt }}\`" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================================================
+  # CI SUMMARY JOB
+  # ============================================================================
+  # Purpose: Aggregates results from all CI jobs into a single status report
+  # Timeout: 5 minutes (summary generation is quick)
+  # Dependencies: Runs after all other jobs complete
+  # Output: Comprehensive CI status report in workflow summary
+  # ============================================================================
+  ci-summary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [lint, test, build, e2e, lighthouse]
+    if: always()
+    steps:
+      - name: Generate CI Summary
+        run: |
+          echo "# 📊 CI Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Job Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status | Description |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|-------------|" >> $GITHUB_STEP_SUMMARY
+          
+          # Lint job
+          if [ "${{ needs.lint.result }}" == "success" ]; then
+            echo "| 📝 Lint | ✅ Passed | Code style validation |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| 📝 Lint | ❌ Failed | Code style validation |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Test job
+          if [ "${{ needs.test.result }}" == "success" ]; then
+            echo "| 🧪 Tests | ✅ Passed | Unit tests with coverage |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| 🧪 Tests | ❌ Failed | Unit tests with coverage |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Build job
+          if [ "${{ needs.build.result }}" == "success" ]; then
+            echo "| 🏗️ Build | ✅ Passed | Production & development builds |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| 🏗️ Build | ❌ Failed | Production & development builds |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # E2E job (advisory)
+          if [ "${{ needs.e2e.result }}" == "success" ]; then
+            echo "| 🎭 E2E | ✅ Passed | Playwright tests (advisory) |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| 🎭 E2E | ⚠️ Issues | Playwright tests (advisory) |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Lighthouse job (advisory)
+          if [ "${{ needs.lighthouse.result }}" == "success" ]; then
+            echo "| 🔦 Lighthouse | ✅ Passed | Performance audit (advisory) |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| 🔦 Lighthouse | ⚠️ Issues | Performance audit (advisory) |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Overall status
+          if [ "${{ needs.lint.result }}" == "success" ] && \
+             [ "${{ needs.test.result }}" == "success" ] && \
+             [ "${{ needs.build.result }}" == "success" ]; then
+            echo "## ✅ CI Pipeline Passed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "All required checks passed. This PR is ready for review." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ❌ CI Pipeline Failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "One or more required checks failed. Please review the logs above." >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "*Generated by CI Pipeline • Run ID: ${{ github.run_id }}*" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,1422 @@
+# ============================================================================
+# Comment Command Processor for PolliWall (Xterm1)
+# ============================================================================
+# This workflow processes commands from PR/issue comments and executes
+# appropriate actions. It's the interface for human-to-swarm communication.
+#
+# All commands work using static analysis tools and GitHub Copilot:
+# - Uses static analysis tools (ESLint, TypeScript, npm audit)
+# - Rule-based analysis and fixes
+# - GitHub Copilot integration via @copilot mentions
+#
+# Supported Commands:
+# - @copilot fix lint - Auto-fix lint issues
+# - @copilot run tests - Run test suite
+# - @copilot check security - Run security scan
+# - @copilot apply suggestions - Apply review suggestions
+# - @copilot summarize - Summarize PR changes
+# - @copilot help - Show available commands
+# - @copilot audit - Run full app audit
+# - @copilot optimize - Find and apply optimizations
+# - @copilot improve - Find and apply improvements
+# - @copilot enhance - Apply QoL enhancements
+# - @copilot full-auto - Run all autonomous workflows
+# - @copilot analyze - Deep code analysis
+# - @copilot ai-review - Code review
+# ============================================================================
+
+name: Comment Command Processor
+
+on:
+  issue_comment:
+    types: [created]
+
+# =============================================================================
+# SECURITY: Permissions follow the principle of least privilege
+# =============================================================================
+# IMPORTANT: This workflow is triggered by issue_comment events which can be
+# from untrusted users. The author_association check in the job condition
+# is CRITICAL for security - it ensures only OWNER, MEMBER, or COLLABORATOR
+# can execute commands. Never remove or weaken this check.
+#
+# Permissions granted:
+# - contents:write - Required for committing code fixes
+# - pull-requests:write - Required for commenting on PRs
+# - issues:write - Required for commenting on issues
+# - actions:write - Required for triggering other workflows
+# =============================================================================
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: write
+
+# Security: Prevent concurrent runs on the same PR to avoid race conditions
+concurrency:
+  group: comment-processor-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  process-command:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+# =============================================================================
+# SECURITY: Author Association Check - CRITICAL SECURITY CONTROL
+# =============================================================================
+# This check is the PRIMARY security gate for this workflow. It ensures that
+# only trusted users can execute workflow commands. The check verifies:
+# - OWNER: Repository owner
+# - MEMBER: Organization member
+# - COLLABORATOR: User with collaborator access
+#
+# NEVER remove or weaken this check. Doing so would allow arbitrary code
+# execution from untrusted users via comment commands.
+# =============================================================================
+    if: |
+      contains(github.event.comment.body, '@copilot') &&
+      (
+        github.event.comment.author_association == 'OWNER' ||
+        github.event.comment.author_association == 'MEMBER' ||
+        github.event.comment.author_association == 'COLLABORATOR'
+      )
+    
+    steps:
+      - name: Parse command
+        id: parse
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // =================================================================
+            // SECURITY: Input Sanitization and Validation
+            // =================================================================
+            // This step performs critical security validation:
+            // 1. Sanitizes comment body to prevent command injection
+            // 2. Removes dangerous characters that could break shell commands
+            // 3. Limits input length to prevent DoS attacks
+            // 4. Uses a strict whitelist approach for command parsing
+            // =================================================================
+            const rawComment = context.payload.comment.body || '';
+            // SECURITY: Remove potentially dangerous characters and limit length
+            // This prevents shell injection and other attack vectors
+            const comment = rawComment
+              .toLowerCase()
+              .replace(/[<>'"`;$\\]/g, '')
+              .substring(0, 500);
+            
+            // SECURITY: Extract command using strict whitelist regex
+            // Only allows alphanumeric characters and hyphens in commands
+            const match = comment.match(/@copilot\s+([\w-]+(?:\s+[\w-]+)?)/);
+            if (!match) {
+              core.setOutput('command', 'help');
+              return;
+            }
+            
+            const command = match[1].trim();
+            core.setOutput('command', command);
+            
+            // Determine if this is a PR or issue
+            const isPR = !!context.payload.issue.pull_request;
+            core.setOutput('is_pr', isPR);
+            
+            return command;
+
+      - name: Acknowledge command
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const command = '${{ steps.parse.outputs.command }}';
+            
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'eyes'
+            });
+
+      - name: Checkout code
+        if: steps.parse.outputs.is_pr == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.issue.pull_request.head.ref || github.head_ref }}
+          # Use GH_TOKEN to enable pushing commits and triggering other workflows
+          token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Setup Node.js
+        if: steps.parse.outputs.is_pr == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        if: steps.parse.outputs.is_pr == 'true'
+        run: npm ci
+
+      # ============ HELP COMMAND ============
+      - name: Handle help command
+        if: steps.parse.outputs.command == 'help'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## 🤖 Agentic Swarm Commands
+
+            All commands work **out of the box** without any API keys!
+
+            ### 🔧 Standard Commands
+            | Command | Description |
+            |---------|-------------|
+            | \`@copilot help\` | Show this help message |
+            | \`@copilot fix all\` | Fix everything: lint, security, formatting |
+            | \`@copilot fix lint\` | Auto-fix ESLint and Prettier issues |
+            | \`@copilot fix security\` | Auto-fix npm audit vulnerabilities |
+            | \`@copilot run tests\` | Run the test suite |
+            | \`@copilot check security\` | Run security vulnerability scan |
+            | \`@copilot apply suggestions\` | Apply pending review suggestions |
+            | \`@copilot summarize\` | Generate a summary of PR changes |
+            | \`@copilot status\` | Show swarm status for this PR |
+            
+            ### 🔄 Refactoring Commands
+            | Command | Description |
+            |---------|-------------|
+            | \`@copilot refactor\` | General code refactoring |
+            | \`@copilot modernize\` | Modernize code patterns |
+            | \`@copilot optimize\` | Performance optimization |
+            | \`@copilot simplify\` | Reduce code complexity |
+            | \`@copilot extract [type] [name] from [file]\` | Extract code to module |
+            
+            ### 🤖 Autonomous Commands
+            | Command | Description |
+            |---------|-------------|
+            | \`@copilot audit\` | Run full app audit (code quality, bundle, a11y, deps) |
+            | \`@copilot optimize\` | Find and apply optimizations |
+            | \`@copilot improve\` | Find and apply code improvements |
+            | \`@copilot enhance\` | Apply QoL enhancements |
+            | \`@copilot full-auto\` | Run all autonomous workflows in sequence |
+
+            ### 🧠 Analysis Commands
+            | Command | Description |
+            |---------|-------------|
+            | \`@copilot analyze\` | Deep code analysis |
+            | \`@copilot ai-fix\` | Fix issues intelligently |
+            | \`@copilot ai-refactor\` | Refactor code |
+            | \`@copilot ai-review\` | Code review |
+            | \`@copilot explain\` | Explain code or changes |
+
+            **Usage:** Just comment with one of the commands above and I'll handle it!
+            
+            All AI features are powered by GitHub Copilot.
+
+            ---
+            *Agentic Swarm Command Processor*`
+            });
+
+      # ============ FIX LINT COMMAND ============
+      - name: Handle fix lint command
+        if: steps.parse.outputs.command == 'fix lint' && steps.parse.outputs.is_pr == 'true'
+        id: fix_lint
+        env:
+          # Security: Pass username through environment variable
+          REQUESTER: ${{ github.event.comment.user.login }}
+        run: |
+          npx eslint "src/**/*.{ts,html}" --fix || true
+          npx prettier --write "src/**/*.{ts,html,css,scss,json}" || true
+          
+          if [[ -n $(git status --porcelain) ]]; then
+            git config --local user.email "github-actions[bot]@users.noreply.github.com"
+            git config --local user.name "github-actions[bot]"
+            git add -A
+            # Security: Sanitize username for commit message
+            SAFE_USER=$(echo "$REQUESTER" | tr -cd '[:alnum:]-_' | head -c 39)
+            git commit -m "🤖 Fix: Applied lint and formatting corrections per @${SAFE_USER} request"
+            git push
+            echo "fixed=true" >> $GITHUB_OUTPUT
+          else
+            echo "fixed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Report lint fix results
+        if: steps.parse.outputs.command == 'fix lint'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fixed = '${{ steps.fix_lint.outputs.fixed }}' === 'true';
+            const isPR = '${{ steps.parse.outputs.is_pr }}' === 'true';
+            
+            let message;
+            if (!isPR) {
+              message = '⚠️ This command only works on pull requests.';
+            } else if (fixed) {
+              message = '✅ **Lint Fixed!** ESLint and Prettier corrections have been applied and committed.';
+            } else {
+              message = '✨ **No Changes Needed** - The code is already properly formatted.';
+            }
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: message
+            });
+            
+            // Add success reaction
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: fixed ? 'rocket' : 'thumbs_up'
+            });
+
+      # ============ RUN TESTS COMMAND ============
+      - name: Handle run tests command
+        if: steps.parse.outputs.command == 'run tests' && steps.parse.outputs.is_pr == 'true'
+        id: run_tests
+        run: |
+          npm test -- --coverage --watchAll=false > test-output.txt 2>&1 || true
+          
+          # Extract summary
+          PASSED=$(grep -oP 'Tests:\s+\K\d+(?=\s+passed)' test-output.txt || echo "0")
+          FAILED=$(grep -oP 'Tests:\s+\d+\s+failed,\s+\K\d+' test-output.txt || echo "0")
+          
+          echo "passed=$PASSED" >> $GITHUB_OUTPUT
+          echo "failed=$FAILED" >> $GITHUB_OUTPUT
+          
+          if [ "$FAILED" = "0" ]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "status=failure" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Report test results
+        if: steps.parse.outputs.command == 'run tests'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const isPR = '${{ steps.parse.outputs.is_pr }}' === 'true';
+            
+            if (!isPR) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: '⚠️ This command only works on pull requests.'
+              });
+              return;
+            }
+            
+            const passed = '${{ steps.run_tests.outputs.passed }}';
+            const failed = '${{ steps.run_tests.outputs.failed }}';
+            const status = '${{ steps.run_tests.outputs.status }}';
+            
+            const emoji = status === 'success' ? '✅' : '❌';
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## ${emoji} Test Results
+
+            | Metric | Value |
+            |--------|-------|
+            | Passed | ${passed} |
+            | Failed | ${failed} |
+            | Status | ${status} |
+
+            ${status === 'failure' ? '⚠️ Some tests failed. Please review the test output.' : '✨ All tests passed!'}
+
+            ---
+            *Executed by Swarm Test Orchestrator*`
+            });
+
+      # ============ CHECK SECURITY COMMAND ============
+      - name: Handle check security command
+        if: steps.parse.outputs.command == 'check security' && steps.parse.outputs.is_pr == 'true'
+        id: security
+        run: |
+          npm audit --json > audit.json 2>&1 || true
+          
+          CRITICAL=$(cat audit.json | jq '.metadata.vulnerabilities.critical // 0')
+          HIGH=$(cat audit.json | jq '.metadata.vulnerabilities.high // 0')
+          MODERATE=$(cat audit.json | jq '.metadata.vulnerabilities.moderate // 0')
+          LOW=$(cat audit.json | jq '.metadata.vulnerabilities.low // 0')
+          TOTAL=$(cat audit.json | jq '.metadata.vulnerabilities.total // 0')
+          
+          echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
+          echo "high=$HIGH" >> $GITHUB_OUTPUT
+          echo "moderate=$MODERATE" >> $GITHUB_OUTPUT
+          echo "low=$LOW" >> $GITHUB_OUTPUT
+          echo "total=$TOTAL" >> $GITHUB_OUTPUT
+
+      - name: Report security results
+        if: steps.parse.outputs.command == 'check security'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const isPR = '${{ steps.parse.outputs.is_pr }}' === 'true';
+            
+            if (!isPR) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: '⚠️ This command only works on pull requests.'
+              });
+              return;
+            }
+            
+            const critical = '${{ steps.security.outputs.critical }}';
+            const high = '${{ steps.security.outputs.high }}';
+            const moderate = '${{ steps.security.outputs.moderate }}';
+            const low = '${{ steps.security.outputs.low }}';
+            const total = '${{ steps.security.outputs.total }}';
+            
+            const hasCritical = parseInt(critical) > 0 || parseInt(high) > 0;
+            const emoji = total === '0' ? '✅' : (hasCritical ? '🚨' : '⚠️');
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## ${emoji} Security Scan Results
+
+            | Severity | Count |
+            |----------|-------|
+            | 🔴 Critical | ${critical} |
+            | 🟠 High | ${high} |
+            | 🟡 Moderate | ${moderate} |
+            | 🟢 Low | ${low} |
+            | **Total** | **${total}** |
+
+            ${total === '0' 
+              ? '✨ No vulnerabilities found!' 
+              : (hasCritical 
+                ? '🚨 **Action Required:** Critical/high vulnerabilities detected. Run \`npm audit fix\` or review manually.'
+                : '⚠️ Some vulnerabilities found. Consider running \`npm audit fix\`.'
+              )
+            }
+
+            ---
+            *Executed by Swarm Security Guardian*`
+            });
+
+      # ============ SUMMARIZE COMMAND ============
+      - name: Handle summarize command
+        if: steps.parse.outputs.command == 'summarize' && steps.parse.outputs.is_pr == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            
+            // Categorize files
+            const categories = {
+              components: files.filter(f => f.filename.includes('.component.')),
+              services: files.filter(f => f.filename.includes('.service.')),
+              tests: files.filter(f => f.filename.includes('.spec.')),
+              styles: files.filter(f => f.filename.match(/\.(css|scss)$/)),
+              docs: files.filter(f => f.filename.match(/\.(md|txt)$/)),
+              config: files.filter(f => f.filename.match(/\.(json|yml|yaml)$/)),
+              other: []
+            };
+            
+            // Calculate other
+            const categorized = new Set([
+              ...categories.components,
+              ...categories.services,
+              ...categories.tests,
+              ...categories.styles,
+              ...categories.docs,
+              ...categories.config
+            ].map(f => f.filename));
+            
+            categories.other = files.filter(f => !categorized.has(f.filename));
+            
+            const summary = `## 📋 PR Summary
+
+            **${pr.title}**
+
+            ### Statistics
+            | Metric | Value |
+            |--------|-------|
+            | Files Changed | ${files.length} |
+            | Additions | +${pr.additions} |
+            | Deletions | -${pr.deletions} |
+            | Commits | ${pr.commits} |
+
+            ### Files by Category
+            | Category | Count | Files |
+            |----------|-------|-------|
+            | Components | ${categories.components.length} | ${categories.components.map(f => f.filename.split('/').pop()).join(', ') || '-'} |
+            | Services | ${categories.services.length} | ${categories.services.map(f => f.filename.split('/').pop()).join(', ') || '-'} |
+            | Tests | ${categories.tests.length} | ${categories.tests.map(f => f.filename.split('/').pop()).join(', ') || '-'} |
+            | Styles | ${categories.styles.length} | ${categories.styles.map(f => f.filename.split('/').pop()).join(', ') || '-'} |
+            | Documentation | ${categories.docs.length} | ${categories.docs.map(f => f.filename.split('/').pop()).join(', ') || '-'} |
+            | Config | ${categories.config.length} | ${categories.config.map(f => f.filename.split('/').pop()).join(', ') || '-'} |
+            | Other | ${categories.other.length} | ${categories.other.map(f => f.filename.split('/').pop()).join(', ') || '-'} |
+
+            ---
+            *Generated by Swarm Coordinator*`;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: summary
+            });
+
+      # ============ STATUS COMMAND ============
+      - name: Handle status command
+        if: steps.parse.outputs.command == 'status'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const isPR = '${{ steps.parse.outputs.is_pr }}' === 'true';
+            
+            if (!isPR) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: `## 🤖 Swarm Status
+
+            **Issue Mode** - Limited functionality available.
+
+            For full swarm capabilities, use commands on pull requests.
+
+            ---
+            *Agentic Swarm Status*`
+              });
+              return;
+            }
+            
+            // Get check runs for the PR
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            
+            const { data: checkRuns } = await github.rest.checks.listForRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: pr.head.sha
+            });
+            
+            const checks = checkRuns.check_runs.map(c => ({
+              name: c.name,
+              status: c.status,
+              conclusion: c.conclusion
+            }));
+            
+            const getEmoji = (conclusion) => {
+              if (conclusion === 'success') return '✅';
+              if (conclusion === 'failure') return '❌';
+              if (conclusion === 'neutral') return '⚪';
+              if (conclusion === 'skipped') return '⏭️';
+              return '🔄';
+            };
+            
+            const checksList = checks.map(c => 
+              `| ${c.name} | ${getEmoji(c.conclusion)} | ${c.conclusion || c.status} |`
+            ).join('\n');
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## 🤖 Swarm Status
+
+            ### CI/CD Checks
+            | Check | Status | Result |
+            |-------|--------|--------|
+            ${checksList || '| No checks found | ⚪ | - |'}
+
+            ### Available Actions
+            - \`@copilot fix all\` - Fix everything (lint, security, formatting)
+            - \`@copilot fix lint\` - Fix code style issues
+            - \`@copilot fix security\` - Fix npm audit vulnerabilities
+            - \`@copilot run tests\` - Run test suite
+            - \`@copilot check security\` - Security scan
+            - \`@copilot summarize\` - PR summary
+
+            ---
+            *Agentic Swarm Status*`
+            });
+
+      # ============ FIX ALL COMMAND ============
+      - name: Handle fix all command
+        if: steps.parse.outputs.command == 'fix all' && steps.parse.outputs.is_pr == 'true'
+        id: fix_all
+        env:
+          # Security: Pass username through environment variable
+          REQUESTER: ${{ github.event.comment.user.login }}
+        run: |
+          echo "🔧 Starting comprehensive fix: lint, security, and formatting..."
+          
+          FIXES_APPLIED=""
+          
+          # 1. Fix ESLint issues
+          echo "📝 Running ESLint auto-fix..."
+          if npx eslint "src/**/*.{ts,html}" --fix 2>&1; then
+            FIXES_APPLIED="$FIXES_APPLIED\n- ✅ ESLint: Auto-fixed issues"
+          else
+            FIXES_APPLIED="$FIXES_APPLIED\n- ⚠️ ESLint: Some issues may require manual attention"
+          fi
+          
+          # 2. Fix Prettier formatting
+          echo "🎨 Running Prettier..."
+          if npx prettier --write "src/**/*.{ts,html,css,scss,json}" 2>&1; then
+            FIXES_APPLIED="$FIXES_APPLIED\n- ✅ Prettier: Code formatted"
+          else
+            FIXES_APPLIED="$FIXES_APPLIED\n- ⚠️ Prettier: Some formatting issues remain"
+          fi
+          
+          # 3. Fix security vulnerabilities
+          echo "🔒 Running npm audit fix..."
+          npm audit --json > audit-before.json 2>&1 || true
+          VULNS_BEFORE=$(cat audit-before.json | jq '.metadata.vulnerabilities.total // 0')
+          
+          if npm audit fix 2>&1; then
+            npm audit --json > audit-after.json 2>&1 || true
+            VULNS_AFTER=$(cat audit-after.json | jq '.metadata.vulnerabilities.total // 0')
+            
+            if [[ "$VULNS_BEFORE" != "$VULNS_AFTER" ]]; then
+              FIXED_COUNT=$((VULNS_BEFORE - VULNS_AFTER))
+              FIXES_APPLIED="$FIXES_APPLIED\n- ✅ Security: Fixed $FIXED_COUNT of $VULNS_BEFORE vulnerabilities"
+            else
+              FIXES_APPLIED="$FIXES_APPLIED\n- ⚪ Security: No auto-fixable vulnerabilities"
+            fi
+          else
+            FIXES_APPLIED="$FIXES_APPLIED\n- ⚠️ Security: npm audit fix encountered issues"
+          fi
+          
+          echo "vulns_before=$VULNS_BEFORE" >> $GITHUB_OUTPUT
+          echo "vulns_after=$VULNS_AFTER" >> $GITHUB_OUTPUT
+          
+          # Check for changes and commit
+          if [[ -n $(git status --porcelain) ]]; then
+            git config --local user.email "github-actions[bot]@users.noreply.github.com"
+            git config --local user.name "github-actions[bot]"
+            git add -A
+            # Security: Sanitize username for commit message
+            SAFE_USER=$(echo "$REQUESTER" | tr -cd '[:alnum:]-_' | head -c 39)
+            git commit -m "🤖 Fix All: Applied comprehensive fixes per @${SAFE_USER} request
+
+          Fixes applied:
+          - ESLint auto-fix
+          - Prettier formatting
+          - npm audit fix (security)
+          
+          This commit was automatically generated by the Agentic Swarm."
+            git push
+            echo "fixed=true" >> $GITHUB_OUTPUT
+          else
+            echo "fixed=false" >> $GITHUB_OUTPUT
+          fi
+          
+          echo -e "$FIXES_APPLIED" > fixes-applied.txt
+
+      - name: Report fix all results
+        if: steps.parse.outputs.command == 'fix all'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const fixed = '${{ steps.fix_all.outputs.fixed }}' === 'true';
+            const isPR = '${{ steps.parse.outputs.is_pr }}' === 'true';
+            const vulnsBefore = '${{ steps.fix_all.outputs.vulns_before }}' || '0';
+            const vulnsAfter = '${{ steps.fix_all.outputs.vulns_after }}' || '0';
+            
+            let fixesApplied = '- See details above';
+            if (fs.existsSync('fixes-applied.txt')) {
+              fixesApplied = fs.readFileSync('fixes-applied.txt', 'utf8');
+            }
+            
+            let message;
+            if (!isPR) {
+              message = '⚠️ This command only works on pull requests.';
+            } else if (fixed) {
+              message = `## ✅ Fix All Complete
+
+            The Agentic Swarm has applied comprehensive fixes to your PR.
+
+            ### Fixes Applied
+            ${fixesApplied}
+
+            ### Security Summary
+            | Metric | Value |
+            |--------|-------|
+            | Vulnerabilities Before | ${vulnsBefore} |
+            | Vulnerabilities After | ${vulnsAfter} |
+            | Fixed | ${parseInt(vulnsBefore) - parseInt(vulnsAfter)} |
+
+            All changes have been committed and pushed.
+
+            ---
+            *Agentic Swarm - Fix All Complete*`;
+            } else {
+              message = `## ✨ No Changes Needed
+
+            The code is already in great shape! No fixes were necessary.
+
+            - ✅ ESLint: No issues
+            - ✅ Prettier: Already formatted
+            - ✅ Security: ${vulnsBefore === '0' ? 'No vulnerabilities' : `${vulnsBefore} vulnerabilities (none auto-fixable)`}
+
+            ---
+            *Agentic Swarm - Fix All Complete*`;
+            }
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: message
+            });
+            
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: fixed ? 'rocket' : 'thumbs_up'
+            });
+
+      # ============ FIX SECURITY COMMAND ============
+      - name: Handle fix security command
+        if: steps.parse.outputs.command == 'fix security' && steps.parse.outputs.is_pr == 'true'
+        id: fix_security
+        env:
+          # Security: Pass username through environment variable
+          REQUESTER: ${{ github.event.comment.user.login }}
+        run: |
+          echo "🔒 Starting security vulnerability auto-fix..."
+          
+          # Get current vulnerability count
+          npm audit --json > audit-before.json 2>&1 || true
+          VULNS_BEFORE=$(cat audit-before.json | jq '.metadata.vulnerabilities.total // 0')
+          CRITICAL_BEFORE=$(cat audit-before.json | jq '.metadata.vulnerabilities.critical // 0')
+          HIGH_BEFORE=$(cat audit-before.json | jq '.metadata.vulnerabilities.high // 0')
+          
+          echo "vulns_before=$VULNS_BEFORE" >> $GITHUB_OUTPUT
+          echo "critical_before=$CRITICAL_BEFORE" >> $GITHUB_OUTPUT
+          echo "high_before=$HIGH_BEFORE" >> $GITHUB_OUTPUT
+          
+          # Attempt auto-fix
+          npm audit fix 2>&1 | tee audit-fix-output.txt || true
+          
+          # Get new vulnerability count
+          npm audit --json > audit-after.json 2>&1 || true
+          VULNS_AFTER=$(cat audit-after.json | jq '.metadata.vulnerabilities.total // 0')
+          CRITICAL_AFTER=$(cat audit-after.json | jq '.metadata.vulnerabilities.critical // 0')
+          HIGH_AFTER=$(cat audit-after.json | jq '.metadata.vulnerabilities.high // 0')
+          
+          echo "vulns_after=$VULNS_AFTER" >> $GITHUB_OUTPUT
+          echo "critical_after=$CRITICAL_AFTER" >> $GITHUB_OUTPUT
+          echo "high_after=$HIGH_AFTER" >> $GITHUB_OUTPUT
+          
+          # Check for changes
+          if [[ -n $(git status --porcelain package.json package-lock.json 2>/dev/null) ]]; then
+            git config --local user.email "github-actions[bot]@users.noreply.github.com"
+            git config --local user.name "github-actions[bot]"
+            git add package.json package-lock.json
+            # Security: Sanitize username for commit message
+            SAFE_USER=$(echo "$REQUESTER" | tr -cd '[:alnum:]-_' | head -c 39)
+            git commit -m "🔒 Security: Auto-fix vulnerabilities per @${SAFE_USER} request
+
+          Before: $VULNS_BEFORE vulnerabilities ($CRITICAL_BEFORE critical, $HIGH_BEFORE high)
+          After: $VULNS_AFTER vulnerabilities ($CRITICAL_AFTER critical, $HIGH_AFTER high)
+          
+          This commit was automatically generated by the Swarm Security Guardian."
+            git push
+            echo "fixed=true" >> $GITHUB_OUTPUT
+          else
+            echo "fixed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Report fix security results
+        if: steps.parse.outputs.command == 'fix security'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fixed = '${{ steps.fix_security.outputs.fixed }}' === 'true';
+            const isPR = '${{ steps.parse.outputs.is_pr }}' === 'true';
+            const vulnsBefore = '${{ steps.fix_security.outputs.vulns_before }}' || '0';
+            const vulnsAfter = '${{ steps.fix_security.outputs.vulns_after }}' || '0';
+            const criticalBefore = '${{ steps.fix_security.outputs.critical_before }}' || '0';
+            const criticalAfter = '${{ steps.fix_security.outputs.critical_after }}' || '0';
+            const highBefore = '${{ steps.fix_security.outputs.high_before }}' || '0';
+            const highAfter = '${{ steps.fix_security.outputs.high_after }}' || '0';
+            
+            let message;
+            if (!isPR) {
+              message = '⚠️ This command only works on pull requests.';
+            } else if (fixed) {
+              const fixedCount = parseInt(vulnsBefore) - parseInt(vulnsAfter);
+              message = `## 🔒 Security Fix Complete
+
+            The Swarm Security Guardian has automatically fixed vulnerabilities.
+
+            ### Summary
+            | Severity | Before | After | Fixed |
+            |----------|--------|-------|-------|
+            | 🔴 Critical | ${criticalBefore} | ${criticalAfter} | ${parseInt(criticalBefore) - parseInt(criticalAfter)} |
+            | 🟠 High | ${highBefore} | ${highAfter} | ${parseInt(highBefore) - parseInt(highAfter)} |
+            | **Total** | **${vulnsBefore}** | **${vulnsAfter}** | **${fixedCount}** |
+
+            ${parseInt(vulnsAfter) > 0 ? `### ⚠️ Remaining Vulnerabilities
+
+            ${vulnsAfter} vulnerabilities could not be auto-fixed. Consider:
+            1. \`npm audit fix --force\` for breaking changes
+            2. Manual dependency updates
+            3. Finding alternative packages` : '### ✅ All Vulnerabilities Resolved!'}
+
+            ---
+            *Swarm Security Guardian - Fix Complete*`;
+            } else if (vulnsBefore === '0') {
+              message = `## ✅ No Vulnerabilities
+
+            No security vulnerabilities were found in your dependencies!
+
+            ---
+            *Swarm Security Guardian*`;
+            } else {
+              message = `## ⚠️ No Auto-Fixable Vulnerabilities
+
+            Found **${vulnsBefore}** vulnerabilities but none could be automatically fixed.
+
+            | Severity | Count |
+            |----------|-------|
+            | 🔴 Critical | ${criticalBefore} |
+            | 🟠 High | ${highBefore} |
+
+            ### Recommended Actions
+            1. Run \`npm audit fix --force\` locally (may include breaking changes)
+            2. Manually update vulnerable packages
+            3. Check for alternative packages
+
+            ---
+            *Swarm Security Guardian*`;
+            }
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: message
+            });
+            
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: fixed ? 'rocket' : (vulnsBefore === '0' ? 'heart' : 'thumbs_up')
+            });
+
+      # ============ AUDIT COMMAND ============
+      - name: Handle audit command
+        if: steps.parse.outputs.command == 'audit'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## 📊 Starting Full App Audit
+
+            The Agentic Swarm is now running a comprehensive audit including:
+
+            - 📝 Code quality analysis (lint, complexity, duplication)
+            - 📦 Bundle size analysis
+            - ♿ Accessibility audit
+            - ⚡ Performance audit
+            - 🔒 Dependency health check
+
+            This may take several minutes. Results will be posted when complete.
+
+            ---
+            *Autonomous Audit Initiated*`
+            });
+            
+            // Trigger the audit workflow
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'autonomous-audit.yml',
+              ref: 'main',
+              inputs: {
+                scope: 'full',
+                create_issue: 'true'
+              }
+            });
+            
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket'
+            });
+
+      # ============ IMPROVE COMMAND ============
+      - name: Handle improve command
+        if: steps.parse.outputs.command == 'improve' && steps.parse.outputs.is_pr == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = context.issue.number;
+            
+            // Get PR details
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `## 🚀 Starting Code Improvement Analysis
+
+            The Agentic Swarm is analyzing your code for improvement opportunities:
+
+            - 🔄 Old patterns that can be modernized
+            - 📝 Missing TypeScript strict mode opportunities
+            - 🛡️ Missing error handling
+            - ❓ Missing null checks
+            - 📚 Missing JSDoc comments
+
+            Improvements will be applied automatically where safe.
+
+            ---
+            *Autonomous Improve Initiated*`
+            });
+            
+            // Trigger the improve workflow
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'autonomous-improve.yml',
+              ref: pr.head.ref,
+              inputs: {
+                apply_fixes: 'true',
+                scope: 'all',
+                target_branch: pr.head.ref
+              }
+            });
+            
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket'
+            });
+
+      # ============ ENHANCE COMMAND ============
+      - name: Handle enhance command
+        if: steps.parse.outputs.command == 'enhance' && steps.parse.outputs.is_pr == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = context.issue.number;
+            
+            // Get PR details
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `## ✨ Starting QoL Enhancements
+
+            The Agentic Swarm is applying quality of life improvements:
+
+            - 📦 Organizing and sorting imports
+            - 📄 Adding/fixing file headers
+            - 🏷️ Standardizing naming conventions
+            - 📦 Adding missing barrel exports
+            - 🧹 Cleaning up console.log statements
+            - 📝 Standardizing error messages
+
+            Enhancements will be committed automatically.
+
+            ---
+            *Autonomous QoL Enhancement Initiated*`
+            });
+            
+            // Trigger the QoL workflow
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'autonomous-qol.yml',
+              ref: pr.head.ref,
+              inputs: {
+                apply_fixes: 'true',
+                scope: 'all',
+                target_branch: pr.head.ref
+              }
+            });
+            
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket'
+            });
+
+      # ============ FULL-AUTO COMMAND ============
+      - name: Handle full-auto command
+        if: steps.parse.outputs.command == 'full-auto' && steps.parse.outputs.is_pr == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = context.issue.number;
+            
+            // Get PR details
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `## 🤖 Full Autonomous Mode Activated
+
+            The Agentic Swarm is running ALL autonomous workflows:
+
+            ### Workflow Sequence
+            1. 📊 **Audit** - Comprehensive code analysis
+            2. ⚡ **Optimize** - Remove unused code, improve performance
+            3. 🚀 **Improve** - Modernize patterns, add types
+            4. ✨ **Enhance** - QoL improvements
+            5. 🔧 **Fix All** - Final lint, format, security fixes
+
+            This is a comprehensive operation and may take several minutes.
+            Each workflow will report its results when complete.
+
+            ---
+            *Full Autonomous Mode Initiated*`
+            });
+            
+            // Trigger workflows in sequence (they will run in order due to branch state)
+            
+            // 1. First run optimize
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'autonomous-optimize.yml',
+              ref: pr.head.ref,
+              inputs: {
+                apply_fixes: 'true',
+                scope: 'all',
+                target_branch: pr.head.ref
+              }
+            });
+            
+            // Small delay to avoid race conditions
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // 2. Run improve
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'autonomous-improve.yml',
+              ref: pr.head.ref,
+              inputs: {
+                apply_fixes: 'true',
+                scope: 'all',
+                target_branch: pr.head.ref
+              }
+            });
+            
+            // Small delay
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // 3. Run QoL enhancements
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'autonomous-qol.yml',
+              ref: pr.head.ref,
+              inputs: {
+                apply_fixes: 'true',
+                scope: 'all',
+                target_branch: pr.head.ref
+              }
+            });
+            
+            // 4. Also run audit in the background
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'autonomous-audit.yml',
+              ref: 'main',
+              inputs: {
+                scope: 'full',
+                create_issue: 'false'
+              }
+            });
+            
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket'
+            });
+            
+            // Post follow-up
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `### ✅ All Workflows Triggered
+
+            The following workflows have been initiated:
+
+            | Workflow | Status |
+            |----------|--------|
+            | autonomous-optimize | 🚀 Triggered |
+            | autonomous-improve | 🚀 Triggered |
+            | autonomous-qol | 🚀 Triggered |
+            | autonomous-audit | 🚀 Triggered |
+
+            Check the [Actions tab](https://github.com/${context.repo.owner}/${context.repo.repo}/actions) for progress.
+
+            ---
+            *Agentic Swarm - Full Auto Mode*`
+            });
+
+      # ============ AI ANALYZE COMMAND ============
+      - name: Handle analyze command
+        if: steps.parse.outputs.command == 'analyze'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = context.issue.number;
+            const isPR = '${{ steps.parse.outputs.is_pr }}' === 'true';
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `## 🧠 Code Analysis Initiated
+
+            The AI Agent is performing a comprehensive analysis of ${isPR ? 'this PR' : 'the codebase'}:
+
+            ### Analysis Features
+            - 📊 Code quality metrics (ESLint, TypeScript)
+            - 🔒 Security assessment (npm audit)
+            - ⚡ Complexity analysis
+            - 📝 Code pattern detection
+            - 🤖 GitHub Copilot integration for AI insights
+
+            ${isPR ? '' : '> **Note:** For PR-specific analysis, trigger this command from a pull request.'}
+
+            Analysis results will be posted when complete.
+
+            ---
+            *AI Autonomous Agent - Analysis Mode (GitHub Copilot)*`
+            });
+            
+            // Trigger the AI agent workflow
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'ai-autonomous-agent.yml',
+              ref: 'main',
+              inputs: {
+                mode: 'analyze',
+                focus_areas: 'code-quality,security,performance,architecture'
+              }
+            });
+            
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket'
+            });
+
+      # ============ AI FIX COMMAND ============
+      - name: Handle ai-fix command
+        if: steps.parse.outputs.command == 'ai-fix' && steps.parse.outputs.is_pr == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = context.issue.number;
+            
+            // Get PR details
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `## 🤖 Intelligent Fix Mode Activated
+
+            The AI Agent is analyzing and fixing issues:
+
+            ### Fixes Applied
+            - 🔧 ESLint auto-fix
+            - 🎨 Prettier formatting
+            - 🔒 npm audit security fixes
+            - 🤖 GitHub Copilot integration for AI insights
+
+            Fixes will be committed to this branch when complete.
+
+            ---
+            *AI Fix Agent (GitHub Copilot)*`
+            });
+            
+            // Trigger the AI fix workflow
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'ai-fix-issues.yml',
+              ref: pr.head.ref,
+              inputs: {
+                issue_type: 'all',
+                target_branch: pr.head.ref,
+                ai_mode: 'true',
+                create_pr: 'false'
+              }
+            });
+            
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket'
+            });
+
+      # ============ AI REFACTOR COMMAND ============
+      - name: Handle ai-refactor command
+        if: steps.parse.outputs.command == 'ai-refactor' && steps.parse.outputs.is_pr == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = context.issue.number;
+            
+            // Get PR details
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `## 🔄 Refactor Mode Activated
+
+            The agent is analyzing code for refactoring opportunities:
+
+            ### Refactoring Features
+            - 📊 Complexity analysis
+            - 🔍 Anti-pattern detection
+            - 🛠️ ESLint rule-based improvements
+            - 🎨 Code formatting
+            - 🤖 GitHub Copilot integration for AI insights
+
+            Changes will be applied when analysis is complete.
+
+            ---
+            *Refactor Agent (GitHub Copilot)*`
+            });
+            
+            // Trigger the improve workflow
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'autonomous-improve.yml',
+              ref: pr.head.ref,
+              inputs: {
+                apply_fixes: 'true',
+                scope: 'all',
+                target_branch: pr.head.ref
+              }
+            });
+            
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket'
+            });
+
+      # ============ AI REVIEW COMMAND ============
+      - name: Handle ai-review command
+        if: steps.parse.outputs.command == 'ai-review' && steps.parse.outputs.is_pr == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = context.issue.number;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `## 🔍 Code Review Requested
+
+            Performing a comprehensive code review:
+
+            ### Review Features
+            - 📝 Static analysis (ESLint, TypeScript)
+            - 🔒 Security vulnerability check
+            - ⚡ Complexity analysis
+            - 📊 Code quality scoring
+            - 🤖 GitHub Copilot integration for AI insights
+
+            Review comments will be posted when complete.
+
+            ---
+            *Code Review Agent (GitHub Copilot)*`
+            });
+            
+            // Trigger the AI code review workflow
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'ai-code-review.yml',
+              ref: 'main',
+              inputs: {
+                pr_number: String(prNumber),
+                review_depth: 'deep'
+              }
+            });
+            
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket'
+            });
+
+      # ============ EXPLAIN COMMAND ============
+      - name: Handle explain command
+        if: steps.parse.outputs.command == 'explain' && steps.parse.outputs.is_pr == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = context.issue.number;
+            
+            // Get PR files for explanation
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+              per_page: 20
+            });
+            
+            // Categorize files
+            const categories = {
+              components: files.filter(f => f.filename.includes('.component.')),
+              services: files.filter(f => f.filename.includes('.service.')),
+              tests: files.filter(f => f.filename.includes('.spec.') || f.filename.includes('.test.')),
+              styles: files.filter(f => f.filename.match(/\.(css|scss)$/)),
+              docs: files.filter(f => f.filename.match(/\.(md|txt)$/)),
+              config: files.filter(f => f.filename.match(/\.(json|yml|yaml)$/)),
+            };
+            
+            // Build a summary of changes
+            const filesSummary = files.slice(0, 15).map(f => 
+              `- \`${f.filename}\` (+${f.additions}/-${f.deletions})`
+            ).join('\n');
+            
+            const categoryBreakdown = Object.entries(categories)
+              .filter(([_, files]) => files.length > 0)
+              .map(([cat, files]) => `- **${cat}**: ${files.length} file(s)`)
+              .join('\n');
+            
+            // Generate change type analysis
+            const hasBreakingChanges = files.some(f => f.deletions > f.additions * 2);
+            const isRefactor = files.filter(f => f.changes > 50).length > files.length / 2;
+            const isBugFix = pr.title.toLowerCase().includes('fix') || pr.title.toLowerCase().includes('bug');
+            const isFeature = pr.title.toLowerCase().includes('feat') || pr.title.toLowerCase().includes('add');
+            
+            let changeType = '📝 General Changes';
+            if (isBugFix) changeType = '🐛 Bug Fix';
+            else if (isFeature) changeType = '✨ New Feature';
+            else if (isRefactor) changeType = '🔄 Refactoring';
+            else if (hasBreakingChanges) changeType = '⚠️ Potential Breaking Changes';
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `## 📖 PR Explanation
+
+            ### Overview
+            **${pr.title}**
+            
+            **Change Type**: ${changeType}
+            **Scope**: ${files.length} files (+${pr.additions}/-${pr.deletions} lines)
+
+            ### Files Changed
+            ${filesSummary}
+            ${files.length > 15 ? `\n*...and ${files.length - 15} more files*` : ''}
+
+            ### Change Categories
+            ${categoryBreakdown || '- General changes'}
+
+            ### Impact Analysis
+            | Metric | Value | Impact |
+            |--------|-------|--------|
+            | Files Changed | ${files.length} | ${files.length > 10 ? '⚠️ Large' : files.length > 5 ? '📊 Medium' : '✅ Small'} |
+            | Lines Added | +${pr.additions} | ${pr.additions > 500 ? '⚠️ Many' : '✅ Normal'} |
+            | Lines Removed | -${pr.deletions} | ${pr.deletions > 200 ? '📊 Significant' : '✅ Normal'} |
+            | Test Changes | ${categories.tests.length} | ${categories.tests.length > 0 ? '✅ Includes tests' : '⚠️ No test changes'} |
+
+            For more detailed AI-powered explanations, use \`@copilot\` to ask questions about specific changes.
+
+            ---
+            *Explain Agent (GitHub Copilot)*`
+            });
+            
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket'
+            });

@@ -90,7 +90,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   public onThemeChange(event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
-    this.settingsService.themeDark.set(checked);
+    this.settingsService.setTheme(checked);
     this.toastService.show(`Dark mode ${checked ? 'enabled' : 'disabled'}.`);
   }
   // --- End of type-safe event handlers ---

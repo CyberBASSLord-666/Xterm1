@@ -14,9 +14,9 @@ describe('LazyImageDirective', () => {
   afterEach(() => {
     (globalThis as any).IntersectionObserver = originalIntersectionObserver;
     (globalThis as any).Image = originalImage;
-    document.head.querySelectorAll('meta[name="gemini-api-key"], meta[name="analytics-measurement-id"]').forEach(meta =>
-      meta.remove()
-    );
+    document.head
+      .querySelectorAll('meta[name="gemini-api-key"], meta[name="analytics-measurement-id"]')
+      .forEach((meta) => meta.remove());
   });
 
   @Component({
@@ -83,7 +83,10 @@ describe('LazyImageDirective', () => {
       static instances: MockIntersectionObserver[] = [];
       private readonly elements = new Set<Element>();
 
-      constructor(private readonly callback: IntersectionCallback, public readonly options?: IntersectionObserverInit) {
+      constructor(
+        private readonly callback: IntersectionCallback,
+        public readonly options?: IntersectionObserverInit
+      ) {
         MockIntersectionObserver.instances.push(this);
       }
 

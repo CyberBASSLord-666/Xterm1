@@ -31,11 +31,7 @@ export class RequestCacheService {
    * @param ttl Time to live in milliseconds (default: 5 minutes)
    * @returns The cached or fresh data
    */
-  async execute<T>(
-    key: string,
-    requestFn: () => Promise<T>,
-    ttl: number = this.defaultTTL
-  ): Promise<T> {
+  async execute<T>(key: string, requestFn: () => Promise<T>, ttl: number = this.defaultTTL): Promise<T> {
     // Check cache first
     const cached = this.get<T>(key);
     if (cached !== null) {
@@ -136,11 +132,7 @@ export class RequestCacheService {
         count++;
       }
     }
-    this.logger.debug(
-      `Cache invalidated by pattern: ${pattern} (${count} entries)`,
-      undefined,
-      'RequestCache'
-    );
+    this.logger.debug(`Cache invalidated by pattern: ${pattern} (${count} entries)`, undefined, 'RequestCache');
   }
 
   /**
@@ -165,11 +157,7 @@ export class RequestCacheService {
       }
     }
     if (removed > 0) {
-      this.logger.debug(
-        `Cache cleanup: ${removed} expired entries removed`,
-        undefined,
-        'RequestCache'
-      );
+      this.logger.debug(`Cache cleanup: ${removed} expired entries removed`, undefined, 'RequestCache');
     }
   }
 

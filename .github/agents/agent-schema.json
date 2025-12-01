@@ -1,0 +1,83 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/CyberBASSLord-666/Xterm1/agent-schema.json",
+  "title": "Agentic Swarm Agent Configuration Schema",
+  "description": "JSON Schema for validating agent configuration files in the Xterm1 Agentic Swarm",
+  "type": "object",
+  "required": ["agent_name", "role", "responsibilities", "configuration"],
+  "properties": {
+    "agent_name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "description": "Unique identifier for the agent in snake_case format"
+    },
+    "role": {
+      "type": "string",
+      "minLength": 20,
+      "description": "Comprehensive description of the agent's primary role and expertise"
+    },
+    "responsibilities": {
+      "type": "array",
+      "minItems": 5,
+      "items": {
+        "type": "string",
+        "minLength": 100
+      },
+      "description": "Detailed list of responsibilities with functional outcomes and operational context"
+    },
+    "configuration": {
+      "type": "object",
+      "required": ["trigger_events", "execution_context"],
+      "properties": {
+        "trigger_events": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          },
+          "description": "GitHub events that trigger this agent"
+        },
+        "execution_context": {
+          "type": "object",
+          "required": ["runs_on", "timeout_minutes", "permissions"],
+          "properties": {
+            "runs_on": {
+              "type": "string",
+              "enum": ["ubuntu-latest", "ubuntu-22.04", "ubuntu-20.04", "windows-latest", "macos-latest"],
+              "description": "GitHub Actions runner environment"
+            },
+            "node_version": {
+              "type": "string",
+              "pattern": "^[0-9]+$",
+              "description": "Node.js version to use"
+            },
+            "timeout_minutes": {
+              "type": "integer",
+              "minimum": 5,
+              "maximum": 360,
+              "description": "Maximum execution time in minutes"
+            },
+            "cache_dependencies": {
+              "type": "boolean",
+              "description": "Whether to cache npm dependencies"
+            },
+            "npm_install_command": {
+              "type": "string",
+              "description": "Command used to install npm dependencies"
+            },
+            "permissions": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string",
+                "enum": ["read", "write", "none"]
+              },
+              "description": "GitHub token permissions required by the agent"
+            }
+          }
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

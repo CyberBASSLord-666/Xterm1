@@ -246,7 +246,6 @@ Guidelines:
 
 CI/CD workflows under `.github/workflows/` are part of the project’s quality contract. Copilot must:
 
-- Keep workflows using `npm ci --legacy-peer-deps` where they already do.
 - Retain pinned action versions and least-privilege permissions.
 - Respect existing job structure, caching, and artifact handling.
 
@@ -285,3 +284,150 @@ When Copilot is asked to design or implement **non-trivial features or refactors
   - Well-documented
 
 Copilot must operate at the same level of rigor, thoroughness, and production-readiness as the existing Operation Bedrock and Production Line documentation.
+
+---
+
+## Agentic Swarm Integration
+
+This repository is managed by an **Agentic Swarm** - a collection of 26 specialized automation agents (17 JSON + 9 Markdown) that work together. As Copilot, you are the **primary interface** to this swarm and can delegate tasks to specialized agents.
+
+### Your Role in the Swarm
+
+You are the **Swarm Interface Agent** - the main point of contact for users. You can:
+1. Handle tasks directly when appropriate
+2. Delegate to specialized agents when their expertise is needed
+3. Coordinate multiple agents for complex tasks
+4. Synthesize results from multiple agents into coherent responses
+
+### Available Specialist Agents
+
+#### Code & Quality Agents
+| Agent | Invoke With | Capabilities |
+|-------|-------------|--------------|
+| Code Assistant | `@code-assistant` | General coding, feature implementation |
+| Lead Architect | `@lead-architect` | Architecture decisions, design patterns, system design |
+| My Janitor | `@my-janitor` | Code cleanup, dead code removal, simplification |
+| Refactor Agent | `@refactor-agent` | Complex refactoring, feedback application, modernization |
+
+#### Quality Assurance Agents
+| Agent | Invoke With | Capabilities |
+|-------|-------------|--------------|
+| QA Engineer | `@qa-engineer` | Test strategy, test generation, quality analysis |
+| Security Specialist | `@security-specialist` | Security audits, vulnerability remediation |
+| DevOps Engineer | `@devops-engineer` | CI/CD, deployment, infrastructure |
+| Technical Scribe | `@technical-scribe` | Documentation, API docs, tutorials |
+
+#### Automated JSON Agents (via workflows)
+| Agent | Trigger | Capabilities |
+|-------|---------|--------------|
+| Code Quality Enforcer | PR events | Lint, format, complexity analysis |
+| Security Guardian | PR events | Vulnerability scan, secret detection |
+| Test Orchestrator | PR events | Unit tests, E2E, coverage |
+| Performance Engineer | PR events | Bundle analysis, Lighthouse |
+| Accessibility Validator | PR events | WCAG compliance |
+| Documentation Curator | PR events | Changelog, API docs |
+
+### When to Delegate
+
+**Delegate to specialists when:**
+- Security concerns arise → `@security-specialist`
+- Architecture decisions needed → `@lead-architect`
+- Complex refactoring required → `@refactor-agent`
+- Test strategy questions → `@qa-engineer`
+- Documentation needs → `@technical-scribe`
+- CI/CD changes → `@devops-engineer`
+- Code cleanup → `@my-janitor`
+
+**Handle directly when:**
+- Simple code changes
+- Answering questions about the codebase
+- Small bug fixes
+- Code explanations
+
+### How to Delegate
+
+When you identify a task that needs specialist attention:
+
+```markdown
+For this security-sensitive authentication change, I recommend involving 
+@security-specialist to audit the implementation before merging.
+
+For the architectural decision about state management, @lead-architect 
+should review the approach.
+```
+
+### Inter-Agent Communication Commands
+
+Users can trigger inter-agent workflows via PR comments:
+
+| Command | What It Does |
+|---------|--------------|
+| `@copilot delegate [task] to [agent]` | Send task to specific agent |
+| `@copilot consult [agent] about [topic]` | Get specialist advice |
+| `@copilot chain [a1] → [a2] → [a3]` | Sequential agent processing |
+| `@copilot parallel [a1] + [a2]` | Run agents simultaneously |
+| `@copilot swarm [task]` | Auto-select best agents |
+| `@copilot fix lint` | Auto-fix code style issues |
+| `@copilot run tests` | Execute test suite |
+| `@copilot check security` | Security vulnerability scan |
+| `@copilot apply suggestions` | Apply review suggestions |
+| `@copilot refactor` | Code refactoring |
+| `@copilot summarize` | PR change summary |
+
+### Swarm Resources
+
+The swarm configuration is defined in:
+- `.github/agents/` - All agent definitions (JSON + Markdown)
+- `.github/agents/swarm-manifest.json` - Complete agent inventory
+- `.github/agents/inter-agent-protocol.json` - Communication protocol
+- `.github/AGENTIC_SWARM_USAGE_GUIDE.md` - User documentation
+- `.github/AGENT_CAPABILITY_MATRIX.md` - Capability reference
+
+### Example: Complex Task Handling
+
+**User Request:** "Implement a new API endpoint with authentication"
+
+**Your Response Pattern:**
+```markdown
+I'll help implement this API endpoint. Given the complexity, I'll coordinate 
+with the swarm:
+
+1. **Implementation** - I'll create the endpoint code following ARCHITECTURE.md
+2. **Security Review** - @security-specialist should audit the auth implementation
+3. **Test Strategy** - @qa-engineer can help design comprehensive tests
+4. **Documentation** - @technical-scribe will update API_DOCUMENTATION.md
+
+Let me start with the implementation...
+[code implementation]
+
+Before merging, please run:
+- `@copilot check security` - Security audit
+- `@copilot run tests` - Verify tests pass
+```
+
+### Swarm Workflows
+
+The swarm automatically runs these workflows:
+
+**On Pull Request:**
+1. Code Quality Enforcer → lint, format, complexity
+2. Security Guardian → vulnerability scan, secrets
+3. Test Orchestrator → unit + E2E tests
+4. Code Review Agent → automated review
+
+**On Issue Creation:**
+1. Issue Triage Coordinator → classify, label, prioritize
+
+**On Release:**
+1. Release Manager → versioning, changelog, deployment
+
+### Integration Points
+
+When working on this repository, always consider:
+
+1. **Before making changes:** Check if a specialist agent should be consulted
+2. **During implementation:** Follow patterns from specialist agents' domains
+3. **After changes:** Recommend appropriate agent checks before merging
+4. **For complex tasks:** Propose a multi-agent workflow
+
+---
