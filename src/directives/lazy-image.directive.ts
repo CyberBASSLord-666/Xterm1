@@ -1,13 +1,4 @@
-import {
-  Directive,
-  ElementRef,
-  Input,
-  OnInit,
-  OnDestroy,
-  OnChanges,
-  SimpleChanges,
-  inject,
-} from '@angular/core';
+import { Directive, ElementRef, Input, OnInit, OnDestroy, OnChanges, SimpleChanges, inject } from '@angular/core';
 
 /**
  * Directive for lazy loading images using Intersection Observer.

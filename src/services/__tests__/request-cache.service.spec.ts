@@ -40,7 +40,12 @@ describe('RequestCacheService', () => {
 
   it('deduplicates concurrent requests', async () => {
     let resolveFn: ((value: number) => void) | undefined;
-    const requestSpy = jest.fn(() => new Promise<number>(resolve => { resolveFn = resolve; }));
+    const requestSpy = jest.fn(
+      () =>
+        new Promise<number>((resolve) => {
+          resolveFn = resolve;
+        })
+    );
 
     const promise1 = service.execute('parallel', requestSpy, 1000);
     const promise2 = service.execute('parallel', requestSpy, 1000);

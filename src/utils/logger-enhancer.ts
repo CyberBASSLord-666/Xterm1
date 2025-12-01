@@ -173,6 +173,7 @@ export class LoggerEnhancer {
     }
 
     // Console output with appropriate method based on log level
+    /* eslint-disable no-console */
     const consoleMethod =
       level === 'error'
         ? console.error
@@ -181,8 +182,8 @@ export class LoggerEnhancer {
           : level === 'info'
             ? console.info
             : console.debug;
-    // eslint-disable-next-line no-console
     consoleMethod(...formatted);
+    /* eslint-enable no-console */
   }
 
   /**

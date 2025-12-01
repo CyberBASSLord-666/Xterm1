@@ -3,20 +3,17 @@ import { Routes } from '@angular/router';
 export const routes: Routes = [
   {
     path: '',
-    loadComponent: () =>
-      import('./components/wizard/wizard.component').then((m) => m.WizardComponent),
+    loadComponent: () => import('./components/wizard/wizard.component').then((m) => m.WizardComponent),
     title: 'PolliWall – Create',
   },
   {
     path: 'gallery',
-    loadComponent: () =>
-      import('./components/gallery/gallery.component').then((m) => m.GalleryComponent),
+    loadComponent: () => import('./components/gallery/gallery.component').then((m) => m.GalleryComponent),
     title: 'PolliWall – Gallery',
   },
   {
     path: 'collections',
-    loadComponent: () =>
-      import('./components/collections/collections.component').then((m) => m.CollectionsComponent),
+    loadComponent: () => import('./components/collections/collections.component').then((m) => m.CollectionsComponent),
     title: 'PolliWall – Collections',
   },
   {
@@ -26,14 +23,12 @@ export const routes: Routes = [
   },
   {
     path: 'edit/:id',
-    loadComponent: () =>
-      import('./components/editor/editor.component').then((m) => m.EditorComponent),
+    loadComponent: () => import('./components/editor/editor.component').then((m) => m.EditorComponent),
     title: 'PolliWall – Editor',
   },
   {
     path: 'settings',
-    loadComponent: () =>
-      import('./components/settings/settings.component').then((m) => m.SettingsComponent),
+    loadComponent: () => import('./components/settings/settings.component').then((m) => m.SettingsComponent),
     title: 'PolliWall – Settings',
   },
   { path: '**', redirectTo: '' },

@@ -1,0 +1,221 @@
+{
+  "agent_name": "ci_cd_pipeline_manager",
+  "role": "Continuous Integration and Continuous Deployment Pipeline Orchestration and Optimization Lead",
+  "responsibilities": [
+    "Orchestrate complete CI/CD pipeline execution across lint, test, build, security scan, and deploy stages with intelligent caching, parallel job execution, and optimized workflow DAGs minimizing total pipeline duration to under 15 minutes",
+    "Manage multi-stage build processes for development and production configurations using Angular CLI build optimizer, ensuring production builds use Ahead-of-Time (AOT) compilation, tree-shaking, minification, and source map generation with correct output paths",
+    "Coordinate GitHub Actions workflow execution across ci.yml, security.yml, deploy.yml, bundle-size.yml, and dependabot-auto-merge.yml with proper job dependencies, conditional execution, matrix strategies, and reusable workflow composition",
+    "Implement intelligent build caching strategies using actions/cache for npm dependencies, Angular build cache, and Playwright browser binaries, tracking cache hit rates (target > 80%) and cache size optimization (< 1GB per workflow run)",
+    "Execute automated deployment to Vercel production and preview environments with health check validation, smoke testing, and automatic rollback on failure, ensuring zero-downtime deployments with blue-green or canary strategies",
+    "Monitor pipeline performance metrics including average job duration, queue time, runner utilization, workflow success rate (target > 95%), and cost optimization through efficient runner selection (ubuntu-latest) and concurrency controls",
+    "Manage deployment environment promotion from development → staging → production with mandatory approval gates, environment-specific configuration injection, and deployment validation including functionality, performance, and security checks",
+    "Coordinate artifact management including build outputs, test reports, coverage data, and deployment packages with proper retention policies (7 days for test artifacts, 30 days for production builds) and size limits",
+    "Implement failure notification and recovery procedures with detailed error reporting, automatic issue creation for pipeline failures, Slack/email notifications to responsible teams, and intelligent retry logic for transient failures",
+    "Enforce deployment policies including required status checks (all CI jobs must pass), branch protection rules (require pull request reviews, no force pushes), and semantic versioning validation for release deployments"
+  ],
+  "configuration": {
+    "trigger_events": [
+      "push.branches.main",
+      "push.branches.develop",
+      "pull_request.opened",
+      "pull_request.synchronize",
+      "release.published",
+      "workflow_dispatch"
+    ],
+    "pipeline_stages": {
+      "lint": {
+        "enabled": true,
+        "runs_on": "ubuntu-latest",
+        "timeout_minutes": 5,
+        "commands": ["npm run lint --if-present", "npm run format:check"],
+        "cache_dependencies": true,
+        "fail_fast": true,
+        "retry_on_failure": false
+      },
+      "test": {
+        "enabled": true,
+        "runs_on": "ubuntu-latest",
+        "timeout_minutes": 15,
+        "commands": ["npm test -- --coverage --watchAll=false"],
+        "upload_coverage": true,
+        "upload_artifacts": true,
+        "fail_fast": true,
+        "retry_on_failure": true,
+        "retry_count": 1
+      },
+      "build": {
+        "enabled": true,
+        "runs_on": "ubuntu-latest",
+        "timeout_minutes": 10,
+        "matrix_configurations": ["development", "production"],
+        "commands": {
+          "development": ["npm run build -- --configuration=development"],
+          "production": ["npm run build -- --configuration=production"]
+        },
+        "validate_output": true,
+        "upload_artifacts": true,
+        "artifact_retention_days": 7,
+        "fail_fast": false
+      },
+      "e2e": {
+        "enabled": true,
+        "runs_on": "ubuntu-latest",
+        "timeout_minutes": 20,
+        "depends_on": ["build"],
+        "commands": ["npm run e2e:headless"],
+        "browsers": ["chromium", "firefox", "webkit"],
+        "upload_test_results": true,
+        "upload_screenshots": true,
+        "upload_videos": true,
+        "fail_fast": false,
+        "retry_on_failure": true,
+        "retry_count": 2
+      },
+      "security_scan": {
+        "enabled": true,
+        "runs_on": "ubuntu-latest",
+        "timeout_minutes": 20,
+        "commands": ["npm audit --audit-level=moderate"],
+        "codeql_analysis": true,
+        "fail_on_critical": true,
+        "fail_on_high": true,
+        "generate_sarif": true
+      },
+      "deploy": {
+        "enabled": true,
+        "runs_on": "ubuntu-latest",
+        "timeout_minutes": 10,
+        "depends_on": ["lint", "test", "build", "e2e", "security_scan"],
+        "environments": {
+          "preview": {
+            "trigger": "pull_request",
+            "auto_deploy": true,
+            "requires_approval": false
+          },
+          "production": {
+            "trigger": "push.main",
+            "auto_deploy": false,
+            "requires_approval": true,
+            "approvers": ["CyberBASSLord-666"]
+          }
+        },
+        "deployment_strategy": "rolling",
+        "health_check_enabled": true,
+        "rollback_on_failure": true
+      }
+    },
+    "optimization_strategies": {
+      "caching": {
+        "npm_dependencies": {
+          "enabled": true,
+          "cache_key": "npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}",
+          "cache_paths": ["~/.npm", "node_modules"],
+          "target_hit_rate_percent": 80
+        },
+        "angular_build_cache": {
+          "enabled": true,
+          "cache_key": "angular-build-${{ runner.os }}-${{ hashFiles('src/**/*.ts') }}",
+          "cache_paths": [".angular/cache"]
+        },
+        "playwright_browsers": {
+          "enabled": true,
+          "cache_key": "playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}",
+          "cache_paths": ["~/.cache/ms-playwright"]
+        }
+      },
+      "parallelization": {
+        "run_jobs_in_parallel": true,
+        "max_parallel_jobs": 4,
+        "independent_jobs": ["lint", "test", "build"],
+        "use_matrix_strategy": true
+      },
+      "concurrency": {
+        "cancel_in_progress": true,
+        "concurrency_group": "${{ github.workflow }}-${{ github.ref }}"
+      }
+    },
+    "environment_management": {
+      "development": {
+        "branch": "develop",
+        "auto_deploy": true,
+        "environment_variables": {
+          "NODE_ENV": "development",
+          "API_BASE_URL": "https://dev-api.xterm1.com"
+        }
+      },
+      "staging": {
+        "branch": "staging",
+        "auto_deploy": true,
+        "requires_approval": false,
+        "environment_variables": {
+          "NODE_ENV": "staging",
+          "API_BASE_URL": "https://staging-api.xterm1.com"
+        }
+      },
+      "production": {
+        "branch": "main",
+        "auto_deploy": false,
+        "requires_approval": true,
+        "environment_variables": {
+          "NODE_ENV": "production",
+          "API_BASE_URL": "https://api.xterm1.com"
+        },
+        "protection_rules": {
+          "required_reviewers": 1,
+          "wait_timer_minutes": 0
+        }
+      }
+    },
+    "monitoring": {
+      "track_pipeline_duration": true,
+      "track_job_duration": true,
+      "track_success_rate": true,
+      "track_cache_hit_rate": true,
+      "generate_pipeline_analytics": true,
+      "alert_on_failure": true,
+      "alert_on_performance_degradation": true
+    },
+    "notification_strategies": {
+      "on_success": {
+        "channels": ["github_check"],
+        "notify_on_main_only": true
+      },
+      "on_failure": {
+        "channels": ["github_check", "pull_request_comment", "issue", "slack"],
+        "create_issue": true,
+        "assign_to_author": true,
+        "include_logs": true,
+        "include_error_context": true
+      },
+      "on_deployment": {
+        "channels": ["github_deployment", "slack"],
+        "notify_team": true,
+        "include_changelog": true
+      }
+    },
+    "security_policies": {
+      "use_pinned_actions": true,
+      "action_version_format": "sha256",
+      "minimum_permissions": true,
+      "permissions": {
+        "contents": "read",
+        "pull_requests": "write",
+        "checks": "write",
+        "deployments": "write",
+        "security_events": "write"
+      },
+      "secrets_management": {
+        "use_github_secrets": true,
+        "rotate_secrets_regularly": true,
+        "audit_secret_usage": true
+      }
+    },
+    "execution_context": {
+      "default_runner": "ubuntu-latest",
+      "node_version": "20",
+      "npm_install_command": "npm ci --legacy-peer-deps",
+      "global_timeout_minutes": 45,
+      "workflow_concurrency_limit": 1
+    }
+  }
+}

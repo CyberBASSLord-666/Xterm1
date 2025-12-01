@@ -47,19 +47,14 @@ export function initializeGeminiClient(apiKey: string): void {
  */
 function ensureGeminiClient(): GoogleGenAI {
   if (!ai) {
-    throw new Error(
-      'Gemini API client is not initialized. Please configure your API key in settings.'
-    );
+    throw new Error('Gemini API client is not initialized. Please configure your API key in settings.');
   }
   return ai;
 }
 
 type RequestFn<T> = () => Promise<T>;
 
-async function fetchWithRetries(
-  url: string,
-  options: { timeout: number; retries: number }
-): Promise<Response> {
+async function fetchWithRetries(url: string, options: { timeout: number; retries: number }): Promise<Response> {
   const { timeout, retries } = options;
   let lastError: Error | undefined;
 
@@ -89,8 +84,7 @@ async function fetchWithRetries(
         try {
           const errorJson = JSON.parse(errorText);
           if (errorJson.details?.error?.code === 'content_filter') {
-            errorMessage =
-              'Your prompt was blocked by the content safety filter. Please rephrase it.';
+            errorMessage = 'Your prompt was blocked by the content safety filter. Please rephrase it.';
           } else if (errorJson.details?.error?.message) {
             errorMessage = errorJson.details.error.message;
           } else if (errorJson.error && typeof errorJson.error === 'string') {
@@ -247,10 +241,7 @@ export function generateTextGet(prompt: string, options: TextOptions = {}): Prom
   });
 }
 
-export function computeExactFitTarget(
-  device: DeviceInfo,
-  supported: SupportedResolutions
-): ExactFitTarget {
+export function computeExactFitTarget(device: DeviceInfo, supported: SupportedResolutions): ExactFitTarget {
   const deviceRatio = device.width / device.height;
 
   let bestRatioKey = '';
@@ -402,10 +393,7 @@ Generate a prompt that strictly adheres to these rules and embodies the user's p
   return response.text.trim();
 }
 
-export async function composeVariantPrompt(
-  basePrompt: string,
-  _options: TextOptions = {}
-): Promise<string> {
+export async function composeVariantPrompt(basePrompt: string, _options: TextOptions = {}): Promise<string> {
   const systemPrompt = `You are a prompt refinement expert. Your task is to generate a subtle variation of the following hyperrealistic image prompt.
 
 **Rules for Variation:**

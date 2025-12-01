@@ -327,6 +327,110 @@ describe('ValidationService', () => {
     });
   });
 
+  describe('sanitizeHtmlAdvanced', () => {
+    it('should strip all tags when no tags allowed', () => {
+      const result = service.sanitizeHtmlAdvanced('<p>text</p>');
+      // Falls back to sanitizeHtml when allowedTags is empty
+      expect(result).toBe('text');
+    });
+
+    it('should allow specified tags', () => {
+      const result = service.sanitizeHtmlAdvanced('<p><strong>bold</strong></p>', ['p', 'strong']);
+      expect(result).toContain('<p>');
+      expect(result).toContain('<strong>');
+    });
+
+    it('should remove disallowed tags but keep content', () => {
+      const result = service.sanitizeHtmlAdvanced('<div><p>text</p></div>', ['p']);
+      expect(result).toContain('<p>');
+      expect(result).toContain('text');
+      expect(result).not.toContain('<div>');
+    });
+
+    it('should allow specified attributes', () => {
+      const result = service.sanitizeHtmlAdvanced('<a href="https://example.com" class="link">test</a>', ['a'], {
+        a: ['href', 'class'],
+      });
+      expect(result).toContain('href=');
+      expect(result).toContain('class=');
+    });
+
+    it('should always remove style attribute', () => {
+      const result = service.sanitizeHtmlAdvanced('<div style="color: red">text</div>', ['div'], { div: ['style'] });
+      expect(result).not.toContain('style');
+    });
+
+    it('should always remove srcdoc attribute', () => {
+      const result = service.sanitizeHtmlAdvanced(
+        '<iframe srcdoc="<script>alert(1)</script>">text</iframe>',
+        ['iframe'],
+        { iframe: ['srcdoc'] }
+      );
+      expect(result).not.toContain('srcdoc');
+    });
+
+    it('should always remove on* event handlers', () => {
+      const result = service.sanitizeHtmlAdvanced('<div onclick="alert(1)">text</div>', ['div'], { div: ['onclick'] });
+      expect(result).not.toContain('onclick');
+    });
+
+    it('should handle empty input', () => {
+      const result = service.sanitizeHtmlAdvanced('', ['p']);
+      expect(result).toBe('');
+    });
+
+    it('should handle whitespace-only input', () => {
+      const result = service.sanitizeHtmlAdvanced('   ', ['p']);
+      expect(result).toBe('');
+    });
+
+    it('should validate href attributes with safe protocols', () => {
+      const result = service.sanitizeHtmlAdvanced(
+        '<a href="https://example.com">safe</a><a href="javascript:alert(1)">unsafe</a>',
+        ['a'],
+        { a: ['href'] }
+      );
+      expect(result).toContain('https://example.com');
+      expect(result).not.toContain('javascript');
+    });
+
+    it('should allow fragment-only links', () => {
+      const result = service.sanitizeHtmlAdvanced('<a href="#section">link</a>', ['a'], { a: ['href'] });
+      expect(result).toContain('#section');
+    });
+
+    it('should allow relative URLs', () => {
+      const result = service.sanitizeHtmlAdvanced('<a href="/page">link</a>', ['a'], { a: ['href'] });
+      expect(result).toContain('/page');
+    });
+
+    it('should allow relative path URLs', () => {
+      const result = service.sanitizeHtmlAdvanced('<a href="./page">link</a><a href="../page">back</a>', ['a'], {
+        a: ['href'],
+      });
+      expect(result).toContain('./page');
+      expect(result).toContain('../page');
+    });
+
+    it('should reject protocol-relative URLs', () => {
+      const result = service.sanitizeHtmlAdvanced('<a href="//evil.com">link</a>', ['a'], { a: ['href'] });
+      expect(result).not.toContain('//evil.com');
+    });
+
+    it('should handle global allowed attributes (*)', () => {
+      const result = service.sanitizeHtmlAdvanced('<p id="para" class="text">text</p>', ['p'], {
+        '*': ['id', 'class'],
+      });
+      expect(result).toContain('id=');
+      expect(result).toContain('class=');
+    });
+
+    it('should sanitize text nodes', () => {
+      const result = service.sanitizeHtmlAdvanced('<p>text with\x00null</p>', ['p']);
+      expect(result).not.toContain('\x00');
+    });
+  });
+
   describe('validateApiKey', () => {
     it('should accept valid API key', () => {
       const result = service.validateApiKey('AIzaSyDtX-valid-key-1234567890');

@@ -5,9 +5,7 @@ import type { EnvironmentConfig } from '../types/utility.types';
 @Injectable({ providedIn: 'root' })
 export class ConfigService {
   private geminiApiKey: string = this.normalizeString(
-    (environment as EnvironmentConfig).geminiApiKey ??
-      (environment as EnvironmentConfig).defaults?.geminiApiKey ??
-      ''
+    (environment as EnvironmentConfig).geminiApiKey ?? (environment as EnvironmentConfig).defaults?.geminiApiKey ?? ''
   );
   private analyticsMeasurementId: string = this.normalizeString(
     (environment as EnvironmentConfig).analyticsMeasurementId ??
