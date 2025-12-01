@@ -51,11 +51,25 @@ on:
           - low
         default: 'normal'
 
+# =============================================================================
+# SECURITY: Permissions follow the principle of least privilege
+# =============================================================================
+# This workflow handles inter-agent communication and task delegation.
+# It requires elevated permissions for code modification and workflow dispatch.
+#
+# CRITICAL: The author_association check in parse-command job is essential
+# for preventing untrusted users from triggering agent actions.
+# =============================================================================
 permissions:
   contents: write
   pull-requests: write
   issues: write
   actions: write
+
+# Security: Prevent concurrent runs to avoid race conditions
+concurrency:
+  group: inter-agent-${{ github.event.issue.number || github.run_id }}
+  cancel-in-progress: false
 
 env:
   NODE_VERSION: '20'
@@ -64,10 +78,33 @@ jobs:
   # ============================================================================
   # PARSE INTER-AGENT COMMAND
   # ============================================================================
+  # SECURITY: This job contains critical security controls
+  # - Author association check prevents untrusted command execution
+  # - Input sanitization prevents injection attacks
+  # - Strict command parsing with whitelist approach
+  # ============================================================================
   parse-command:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # ==========================================================================
+    # SECURITY: Author Association Check - CRITICAL SECURITY CONTROL
+    # ==========================================================================
+    # This check is the PRIMARY security gate for inter-agent commands.
+    # It ensures only trusted users can trigger agent actions:
+    # - OWNER: Repository owner
+    # - MEMBER: Organization member  
+    # - COLLABORATOR: User with collaborator access
+    #
+    # NEVER remove or weaken this check. Doing so would allow arbitrary
+    # code execution and workflow dispatch from untrusted users.
+    # ==========================================================================
     if: |
       github.event_name == 'issue_comment' && 
+      (
+        github.event.comment.author_association == 'OWNER' ||
+        github.event.comment.author_association == 'MEMBER' ||
+        github.event.comment.author_association == 'COLLABORATOR'
+      ) &&
       (
         contains(github.event.comment.body, '@copilot delegate') ||
         contains(github.event.comment.body, '@copilot consult') ||
@@ -87,7 +124,19 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const comment = context.payload.comment.body;
+            // =================================================================
+            // SECURITY: Input Sanitization and Validation
+            // =================================================================
+            // This step performs critical security validation:
+            // 1. Sanitizes comment to prevent command injection attacks
+            // 2. Removes shell metacharacters and script tags
+            // 3. Limits input length to prevent DoS attacks
+            // 4. Uses strict whitelist for agent name mapping
+            // =================================================================
+            const rawComment = context.payload.comment.body || '';
+            const comment = rawComment
+              .replace(/[<>'"`;$\\]/g, '')
+              .substring(0, 1000);
             const isPR = !!context.payload.issue.pull_request;
             core.setOutput('is_pr', isPR);
             
@@ -219,6 +268,7 @@ The swarm is coordinating agents to handle your request.`
   delegate-task:
     needs: parse-command
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     if: needs.parse-command.outputs.command_type == 'delegate' && needs.parse-command.outputs.is_pr == 'true'
     
     steps:
@@ -239,8 +289,12 @@ The swarm is coordinating agents to handle your request.`
         uses: actions/checkout@v4
         with:
           ref: ${{ steps.pr.outputs.head_ref }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # Security: Use GH_TOKEN to enable pushing commits and triggering other workflows
+          # Falls back to GITHUB_TOKEN if GH_TOKEN is not configured
+          token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
           fetch-depth: 0
+          # Security: Persist credentials for git push operations
+          persist-credentials: true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -257,8 +311,11 @@ The swarm is coordinating agents to handle your request.`
         with:
           script: |
             const fs = require('fs');
-            const targetAgents = JSON.parse('${{ needs.parse-command.outputs.target_agents }}');
-            const task = '${{ needs.parse-command.outputs.task }}';
+            // Security: Safely parse JSON from outputs
+            const targetAgents = JSON.parse('${{ needs.parse-command.outputs.target_agents }}' || '[]');
+            // Security: Sanitize task input
+            const rawTask = '${{ needs.parse-command.outputs.task }}' || '';
+            const task = rawTask.replace(/[<>'"`;$\\]/g, '').substring(0, 200);
             const agent = targetAgents[0];
             
             // Load agent registry
@@ -309,10 +366,14 @@ The swarm is coordinating agents to handle your request.`
 
       - name: Run delegated action
         id: action
+        env:
+          # Security: Pass task through environment variable to prevent command injection
+          RAW_TASK: ${{ needs.parse-command.outputs.task }}
         run: |
-          TASK="${{ needs.parse-command.outputs.task }}"
+          # Security: Sanitize task input - only allow alphanumeric and common safe characters
+          TASK=$(echo "$RAW_TASK" | tr -cd '[:alnum:][:space:]-_')
           
-          # Execute based on task keywords
+          # Execute based on task keywords (safe operations only)
           if [[ "$TASK" == *"lint"* ]] || [[ "$TASK" == *"format"* ]]; then
             npm run lint -- --fix || true
             npx prettier --write "src/**/*.{ts,html,css,scss,json}" || true
@@ -329,12 +390,19 @@ The swarm is coordinating agents to handle your request.`
 
       - name: Commit any changes
         id: commit
+        env:
+          # Security: Pass values through environment variables
+          TASK_DESC: ${{ needs.parse-command.outputs.task }}
+          TARGET_AGENTS: ${{ needs.parse-command.outputs.target_agents }}
         run: |
           if [[ -n $(git status --porcelain) ]]; then
             git config --local user.email "github-actions[bot]@users.noreply.github.com"
             git config --local user.name "github-actions[bot]"
             git add -A
-            git commit -m "🤖 Delegated task: ${{ needs.parse-command.outputs.task }} (via ${{ needs.parse-command.outputs.target_agents }})"
+            # Security: Sanitize task description for commit message
+            SAFE_TASK=$(echo "$TASK_DESC" | tr -cd '[:alnum:][:space:]-_' | head -c 100)
+            SAFE_AGENTS=$(echo "$TARGET_AGENTS" | tr -cd '[:alnum:][:space:]-_,\[\]"' | head -c 100)
+            git commit -m "🤖 Delegated task: ${SAFE_TASK} (via ${SAFE_AGENTS})"
             git push
             echo "committed=true" >> $GITHUB_OUTPUT
             echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
@@ -346,8 +414,11 @@ The swarm is coordinating agents to handle your request.`
         uses: actions/github-script@v7
         with:
           script: |
-            const targetAgents = JSON.parse('${{ needs.parse-command.outputs.target_agents }}');
-            const task = '${{ needs.parse-command.outputs.task }}';
+            // Security: Safely parse JSON from outputs
+            const targetAgents = JSON.parse('${{ needs.parse-command.outputs.target_agents }}' || '[]');
+            // Security: Sanitize task for display
+            const rawTask = '${{ needs.parse-command.outputs.task }}' || '';
+            const task = rawTask.replace(/[<>'"`;$\\]/g, '').substring(0, 200);
             const committed = '${{ steps.commit.outputs.committed }}' === 'true';
             const sha = '${{ steps.commit.outputs.sha }}';
             const action = '${{ steps.action.outputs.action }}';
@@ -396,6 +467,7 @@ ${details}
   parallel-execution:
     needs: parse-command
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     if: needs.parse-command.outputs.command_type == 'parallel' && needs.parse-command.outputs.is_pr == 'true'
     
     steps:
@@ -416,7 +488,9 @@ ${details}
         uses: actions/checkout@v4
         with:
           ref: ${{ steps.pr.outputs.head_ref }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # Use GH_TOKEN to enable pushing commits and triggering other workflows
+          # Falls back to GITHUB_TOKEN if GH_TOKEN is not configured
+          token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
       - name: Setup Node.js
@@ -556,6 +630,7 @@ ${resultRows}
   chain-execution:
     needs: parse-command
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     if: needs.parse-command.outputs.command_type == 'chain' && needs.parse-command.outputs.is_pr == 'true'
     
     steps:
@@ -576,7 +651,9 @@ ${resultRows}
         uses: actions/checkout@v4
         with:
           ref: ${{ steps.pr.outputs.head_ref }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # Use GH_TOKEN to enable pushing commits and triggering other workflows
+          # Falls back to GITHUB_TOKEN if GH_TOKEN is not configured
+          token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
       - name: Setup Node.js
@@ -691,6 +768,7 @@ ${committed ? \`✅ Changes committed (\\\`\${sha}\\\`)\` : '⚪ No changes need
   swarm-execution:
     needs: parse-command
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     if: needs.parse-command.outputs.command_type == 'swarm'
     
     steps:
@@ -808,6 +886,7 @@ To execute this plan, use one of these commands:
   # ============================================================================
   programmatic-invoke:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     if: github.event_name == 'workflow_dispatch'
     
     steps:

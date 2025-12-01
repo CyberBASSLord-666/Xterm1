@@ -26,9 +26,23 @@ permissions:
   pull-requests: write
   issues: write
 
+# Concurrency: Prevent multiple feedback analysis runs from running simultaneously per PR
+concurrency:
+  group: pr-feedback-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: false
+
 jobs:
+  # ============================================================================
+  # ANALYZE FEEDBACK JOB
+  # ============================================================================
+  # Purpose: Analyzes PR review comments and categorizes actionable feedback
+  # Timeout: 15 minutes (processes review comments and generates summary)
+  # Categories: Suggestions (code blocks), Action Items (fix/change requests), Questions
+  # Output: Posts feedback summary with quick action recommendations
+  # ============================================================================
   analyze-feedback:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     # Only run on PR comments (not issue comments)
     if: github.event.issue.pull_request || github.event.pull_request
     
@@ -37,7 +51,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.ref || github.head_ref }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # Use GH_TOKEN to enable pushing commits and triggering other workflows
+          # Falls back to GITHUB_TOKEN if GH_TOKEN is not configured
+          token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
       - name: Analyze review feedback
@@ -166,8 +182,17 @@ jobs:
               }
             }
 
+  # ============================================================================
+  # APPLY SUGGESTIONS JOB
+  # ============================================================================
+  # Purpose: Processes @copilot apply suggestions commands to batch apply changes
+  # Timeout: 15 minutes (applies suggestions and commits changes)
+  # Trigger: Comment containing '@copilot apply suggestions'
+  # Output: Lists pending suggestions for user to apply via GitHub UI
+  # ============================================================================
   apply-suggestions:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     # Trigger on specific command comment
     if: |
       github.event_name == 'issue_comment' && 
@@ -179,7 +204,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.issue.pull_request.head.ref }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # Use GH_TOKEN to enable pushing commits and triggering other workflows
+          # Falls back to GITHUB_TOKEN if GH_TOKEN is not configured
+          token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
       - name: Apply pending suggestions

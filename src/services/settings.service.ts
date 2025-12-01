@@ -214,7 +214,7 @@ export class SettingsService implements OnDestroy {
     }
 
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const updateFromSystem = (matches: boolean) => {
+    const updateFromSystem = (matches: boolean): void => {
       if (this.hasExplicitThemePreference) {
         return;
       }
@@ -223,16 +223,16 @@ export class SettingsService implements OnDestroy {
 
     updateFromSystem(mediaQuery.matches);
 
-    const listener = (event: MediaQueryListEvent) => {
+    const listener = (event: MediaQueryListEvent): void => {
       updateFromSystem(event.matches);
     };
 
     if (typeof mediaQuery.addEventListener === 'function') {
       mediaQuery.addEventListener('change', listener);
-      this.systemThemeListenerCleanup = () => mediaQuery.removeEventListener('change', listener);
+      this.systemThemeListenerCleanup = (): void => mediaQuery.removeEventListener('change', listener);
     } else if (typeof mediaQuery.addListener === 'function') {
       mediaQuery.addListener(listener);
-      this.systemThemeListenerCleanup = () => mediaQuery.removeListener(listener);
+      this.systemThemeListenerCleanup = (): void => mediaQuery.removeListener(listener);
     } else {
       this.systemThemeListenerCleanup = null;
     }

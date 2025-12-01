@@ -1,0 +1,577 @@
+# ============================================================================
+# Release Automation Workflow for PolliWall (Xterm1)
+# ============================================================================
+# This workflow automates the release process for the PolliWall project.
+# It triggers on version tags (v*) and performs the following:
+#
+# Jobs:
+# - validate: Validates the tag and extracts version information
+# - build: Builds the production application
+# - test: Runs the full test suite to ensure release quality
+# - changelog: Generates changelog from commit history
+# - release: Creates GitHub Release with assets
+# - publish: Publishes to npm if configured (optional)
+#
+# Enterprise Features:
+# - Semantic versioning support (major, minor, patch)
+# - Automated changelog generation from commit messages
+# - Conventional Commits parsing for categorized changelogs
+# - Build artifact bundling and upload
+# - npm publishing support (when configured)
+# - Draft releases for review before publishing
+# - Comprehensive release notes with contributor credits
+#
+# Trigger:
+# - Push of version tags matching 'v*' pattern (e.g., v1.0.0, v2.1.3-beta.1)
+# - Manual workflow dispatch for testing
+#
+# Prerequisites:
+# - GH_TOKEN secret with repo and packages permissions
+# - NPM_TOKEN secret (if npm publishing is enabled)
+# ============================================================================
+
+name: Release Automation
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.0.0)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Is this a pre-release?'
+        required: false
+        type: boolean
+        default: false
+      draft:
+        description: 'Create as draft release?'
+        required: false
+        type: boolean
+        default: true
+
+# Security: Explicit permissions following least privilege principle
+permissions:
+  contents: write
+  packages: write
+  issues: write
+  pull-requests: read
+
+# Concurrency: Prevent multiple releases from running simultaneously
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ============================================================================
+  # VALIDATE JOB
+  # ============================================================================
+  # Purpose: Validates the tag format and extracts version information
+  # Timeout: 5 minutes (validation is quick)
+  # Output: Version components for downstream jobs
+  # ============================================================================
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      major: ${{ steps.version.outputs.major }}
+      minor: ${{ steps.version.outputs.minor }}
+      patch: ${{ steps.version.outputs.patch }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+      is_prerelease: ${{ steps.version.outputs.is_prerelease }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version information
+        id: version
+        run: |
+          # Handle both tag push and manual dispatch
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+            IS_PRERELEASE="${{ inputs.prerelease }}"
+          else
+            # Extract version from tag (remove 'v' prefix)
+            VERSION="${GITHUB_REF#refs/tags/v}"
+            # Check if it's a prerelease based on version string
+            if [[ "$VERSION" =~ (alpha|beta|rc|pre) ]]; then
+              IS_PRERELEASE="true"
+            else
+              IS_PRERELEASE="false"
+            fi
+          fi
+          
+          # Validate semver format
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+            echo "❌ Invalid version format: $VERSION"
+            echo "Version must follow semantic versioning: MAJOR.MINOR.PATCH[-PRERELEASE]"
+            exit 1
+          fi
+          
+          # Extract version components
+          MAJOR=$(echo "$VERSION" | cut -d. -f1)
+          MINOR=$(echo "$VERSION" | cut -d. -f2)
+          PATCH=$(echo "$VERSION" | cut -d. -f3 | cut -d- -f1)
+          PRERELEASE=$(echo "$VERSION" | grep -oP '(?<=-).+' || echo "")
+          
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "major=$MAJOR" >> $GITHUB_OUTPUT
+          echo "minor=$MINOR" >> $GITHUB_OUTPUT
+          echo "patch=$PATCH" >> $GITHUB_OUTPUT
+          echo "prerelease=$PRERELEASE" >> $GITHUB_OUTPUT
+          echo "is_prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
+          
+          echo "## 🏷️ Release Version: v$VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Major | $MAJOR |" >> $GITHUB_STEP_SUMMARY
+          echo "| Minor | $MINOR |" >> $GITHUB_STEP_SUMMARY
+          echo "| Patch | $PATCH |" >> $GITHUB_STEP_SUMMARY
+          echo "| Pre-release | ${PRERELEASE:-N/A} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Is Pre-release | $IS_PRERELEASE |" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================================================
+  # BUILD JOB
+  # ============================================================================
+  # Purpose: Creates production build for the release
+  # Timeout: 20 minutes (production builds with optimization)
+  # Output: Build artifacts for release
+  # ============================================================================
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: validate
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production application
+        run: npm run build -- --configuration=production
+
+      - name: Create release archive
+        run: |
+          cd dist
+          # Create zip archive
+          zip -r ../polliwall-${{ needs.validate.outputs.version }}.zip .
+          # Create tar.gz archive
+          tar -czvf ../polliwall-${{ needs.validate.outputs.version }}.tar.gz .
+          cd ..
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-build
+          path: |
+            polliwall-${{ needs.validate.outputs.version }}.zip
+            polliwall-${{ needs.validate.outputs.version }}.tar.gz
+          retention-days: 30
+
+      - name: Generate build summary
+        run: |
+          echo "## 🏗️ Release Build" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Production build completed successfully" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "| File | Size |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|------|" >> $GITHUB_STEP_SUMMARY
+          ZIP_SIZE=$(ls -lh polliwall-${{ needs.validate.outputs.version }}.zip | awk '{print $5}')
+          TAR_SIZE=$(ls -lh polliwall-${{ needs.validate.outputs.version }}.tar.gz | awk '{print $5}')
+          echo "| polliwall-${{ needs.validate.outputs.version }}.zip | $ZIP_SIZE |" >> $GITHUB_STEP_SUMMARY
+          echo "| polliwall-${{ needs.validate.outputs.version }}.tar.gz | $TAR_SIZE |" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================================================
+  # TEST JOB
+  # ============================================================================
+  # Purpose: Runs full test suite to validate release quality
+  # Timeout: 20 minutes (comprehensive testing)
+  # ============================================================================
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: validate
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linting
+        run: npm run lint --if-present
+
+      - name: Run unit tests
+        run: npm test -- --coverage --watchAll=false
+
+      - name: Generate test summary
+        run: |
+          echo "## 🧪 Release Tests" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ All tests passed for release v${{ needs.validate.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================================================
+  # CHANGELOG JOB
+  # ============================================================================
+  # Purpose: Generates changelog from commit history using Conventional Commits
+  # Timeout: 10 minutes (changelog generation is quick)
+  # Output: Formatted changelog for release notes
+  # ============================================================================
+  changelog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: validate
+    outputs:
+      changelog: ${{ steps.changelog.outputs.changelog }}
+      previous_tag: ${{ steps.previous.outputs.tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get previous tag
+        id: previous
+        run: |
+          # Get the previous tag for comparison
+          CURRENT_TAG="v${{ needs.validate.outputs.version }}"
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 "$CURRENT_TAG^" 2>/dev/null || echo "")
+          
+          if [ -z "$PREVIOUS_TAG" ]; then
+            # If no previous tag, use the first commit
+            PREVIOUS_TAG=$(git rev-list --max-parents=0 HEAD)
+            echo "No previous tag found, using first commit"
+          fi
+          
+          echo "tag=$PREVIOUS_TAG" >> $GITHUB_OUTPUT
+          echo "Previous tag: $PREVIOUS_TAG"
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          CURRENT_TAG="v${{ needs.validate.outputs.version }}"
+          PREVIOUS_TAG="${{ steps.previous.outputs.tag }}"
+          
+          echo "Generating changelog from $PREVIOUS_TAG to $CURRENT_TAG"
+          
+          # Initialize changelog sections
+          FEATURES=""
+          FIXES=""
+          DOCS=""
+          CHORES=""
+          OTHER=""
+          
+          # Parse commits using Conventional Commits format
+          while IFS= read -r commit; do
+            HASH=$(echo "$commit" | cut -d'|' -f1)
+            MESSAGE=$(echo "$commit" | cut -d'|' -f2-)
+            SHORT_HASH="${HASH:0:7}"
+            
+            # Categorize based on Conventional Commits prefix
+            if [[ "$MESSAGE" =~ ^feat(\(.*\))?!?: ]]; then
+              CLEAN_MSG=$(echo "$MESSAGE" | sed 's/^feat(\([^)]*\))!*:\s*//' | sed 's/^feat!*:\s*//')
+              FEATURES="$FEATURES\n- $CLEAN_MSG (\`$SHORT_HASH\`)"
+            elif [[ "$MESSAGE" =~ ^fix(\(.*\))?!?: ]]; then
+              CLEAN_MSG=$(echo "$MESSAGE" | sed 's/^fix(\([^)]*\))!*:\s*//' | sed 's/^fix!*:\s*//')
+              FIXES="$FIXES\n- $CLEAN_MSG (\`$SHORT_HASH\`)"
+            elif [[ "$MESSAGE" =~ ^docs(\(.*\))?: ]]; then
+              CLEAN_MSG=$(echo "$MESSAGE" | sed 's/^docs(\([^)]*\)):\s*//' | sed 's/^docs:\s*//')
+              DOCS="$DOCS\n- $CLEAN_MSG (\`$SHORT_HASH\`)"
+            elif [[ "$MESSAGE" =~ ^(chore|build|ci|style|refactor|perf|test)(\(.*\))?: ]]; then
+              CLEAN_MSG=$(echo "$MESSAGE" | sed 's/^[a-z]*(\([^)]*\)):\s*//' | sed 's/^[a-z]*:\s*//')
+              CHORES="$CHORES\n- $CLEAN_MSG (\`$SHORT_HASH\`)"
+            else
+              OTHER="$OTHER\n- $MESSAGE (\`$SHORT_HASH\`)"
+            fi
+          done < <(git log --pretty=format:"%H|%s" "$PREVIOUS_TAG..$CURRENT_TAG" 2>/dev/null || git log --pretty=format:"%H|%s")
+          
+          # Build the changelog
+          CHANGELOG=""
+          
+          if [ -n "$FEATURES" ]; then
+            CHANGELOG="$CHANGELOG### ✨ New Features\n$FEATURES\n\n"
+          fi
+          
+          if [ -n "$FIXES" ]; then
+            CHANGELOG="$CHANGELOG### 🐛 Bug Fixes\n$FIXES\n\n"
+          fi
+          
+          if [ -n "$DOCS" ]; then
+            CHANGELOG="$CHANGELOG### 📚 Documentation\n$DOCS\n\n"
+          fi
+          
+          if [ -n "$CHORES" ]; then
+            CHANGELOG="$CHANGELOG### 🔧 Maintenance\n$CHORES\n\n"
+          fi
+          
+          if [ -n "$OTHER" ]; then
+            CHANGELOG="$CHANGELOG### 📦 Other Changes\n$OTHER\n\n"
+          fi
+          
+          if [ -z "$CHANGELOG" ]; then
+            CHANGELOG="No notable changes in this release."
+          fi
+          
+          # Write to file for multi-line output handling
+          echo -e "$CHANGELOG" > changelog.md
+          
+          # Set output using EOF delimiter for multi-line content
+          {
+            echo "changelog<<EOF"
+            cat changelog.md
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+          
+          echo "## 📝 Generated Changelog" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat changelog.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload changelog artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: changelog
+          path: changelog.md
+          retention-days: 30
+
+  # ============================================================================
+  # RELEASE JOB
+  # ============================================================================
+  # Purpose: Creates GitHub Release with assets and release notes
+  # Timeout: 15 minutes (includes artifact download and upload)
+  # Dependencies: Requires build, test, and changelog jobs to complete
+  # ============================================================================
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [validate, build, test, changelog]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-build
+          path: ./release-assets/
+
+      - name: Download changelog
+        uses: actions/download-artifact@v4
+        with:
+          name: changelog
+          path: ./
+
+      - name: Get contributors
+        id: contributors
+        run: |
+          PREVIOUS_TAG="${{ needs.changelog.outputs.previous_tag }}"
+          CURRENT_TAG="v${{ needs.validate.outputs.version }}"
+          
+          # Get unique contributors since last release
+          CONTRIBUTORS=$(git log --pretty=format:"%an" "$PREVIOUS_TAG..$CURRENT_TAG" 2>/dev/null | sort | uniq | while read name; do echo "- @$name"; done || echo "")
+          
+          if [ -n "$CONTRIBUTORS" ]; then
+            echo "contributors<<EOF" >> $GITHUB_OUTPUT
+            echo "$CONTRIBUTORS" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "contributors=No contributor information available" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create release notes
+        id: notes
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          IS_PRERELEASE="${{ needs.validate.outputs.is_prerelease }}"
+          CHANGELOG=$(cat changelog.md)
+          
+          cat > release-notes.md << 'RELEASE_NOTES_EOF'
+          # 🚀 PolliWall v${{ needs.validate.outputs.version }}
+          
+          ${{ needs.validate.outputs.is_prerelease == 'true' && '> ⚠️ **This is a pre-release version.** Use with caution in production environments.' || '' }}
+          
+          ## What's Changed
+          
+          ${{ needs.changelog.outputs.changelog }}
+          
+          ## 📦 Installation
+          
+          ### From Release Assets
+          Download the appropriate archive for your platform:
+          - `polliwall-${{ needs.validate.outputs.version }}.zip` - ZIP archive
+          - `polliwall-${{ needs.validate.outputs.version }}.tar.gz` - TAR.GZ archive
+          
+          ### From Source
+          ```bash
+          git clone https://github.com/${{ github.repository }}.git
+          cd Xterm1
+          git checkout v${{ needs.validate.outputs.version }}
+          npm install
+          npm run build
+          ```
+          
+          ## 🙏 Contributors
+          
+          Thanks to everyone who contributed to this release!
+          
+          ${{ steps.contributors.outputs.contributors }}
+          
+          ---
+          
+          **Full Changelog**: https://github.com/${{ github.repository }}/compare/${{ needs.changelog.outputs.previous_tag }}...v${{ needs.validate.outputs.version }}
+          
+          ---
+          *Released by the PolliWall Release Automation Workflow*
+          RELEASE_NOTES_EOF
+
+      - name: Create GitHub Release
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            
+            const version = '${{ needs.validate.outputs.version }}';
+            const isPrerelease = '${{ needs.validate.outputs.is_prerelease }}' === 'true';
+            const isDraft = '${{ inputs.draft }}' === 'true' || false;
+            
+            // Read release notes
+            const releaseNotes = fs.readFileSync('release-notes.md', 'utf8');
+            
+            // Create the release
+            const release = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: `v${version}`,
+              name: `PolliWall v${version}`,
+              body: releaseNotes,
+              draft: isDraft,
+              prerelease: isPrerelease,
+              generate_release_notes: false
+            });
+            
+            console.log(`Created release: ${release.data.html_url}`);
+            
+            // Upload release assets
+            const assets = [
+              { name: `polliwall-${version}.zip`, path: `./release-assets/polliwall-${version}.zip` },
+              { name: `polliwall-${version}.tar.gz`, path: `./release-assets/polliwall-${version}.tar.gz` }
+            ];
+            
+            for (const asset of assets) {
+              if (fs.existsSync(asset.path)) {
+                const content = fs.readFileSync(asset.path);
+                await github.rest.repos.uploadReleaseAsset({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  release_id: release.data.id,
+                  name: asset.name,
+                  data: content
+                });
+                console.log(`Uploaded asset: ${asset.name}`);
+              }
+            }
+            
+            core.setOutput('release_url', release.data.html_url);
+            core.setOutput('release_id', release.data.id);
+
+      - name: Generate release summary
+        run: |
+          echo "## 🎉 Release Created Successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Release Details" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | v${{ needs.validate.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Pre-release | ${{ needs.validate.outputs.is_prerelease }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Draft | ${{ inputs.draft || 'false' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Assets Uploaded" >> $GITHUB_STEP_SUMMARY
+          echo "- polliwall-${{ needs.validate.outputs.version }}.zip" >> $GITHUB_STEP_SUMMARY
+          echo "- polliwall-${{ needs.validate.outputs.version }}.tar.gz" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================================================
+  # PUBLISH JOB (Optional)
+  # ============================================================================
+  # Purpose: Publishes the package to npm registry
+  # Timeout: 10 minutes (npm publish is typically quick)
+  # Condition: Only runs if NPM_TOKEN is configured and package is not private
+  # ============================================================================
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [validate, release]
+    # Only publish if not a prerelease and NPM_TOKEN exists
+    if: needs.validate.outputs.is_prerelease != 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Check npm publishing configuration
+        id: npm-check
+        run: |
+          # Check if package.json has private: true
+          IS_PRIVATE=$(node -e "console.log(require('./package.json').private || false)")
+          
+          if [ "$IS_PRIVATE" = "true" ]; then
+            echo "📦 Package is marked as private, skipping npm publish"
+            echo "should_publish=false" >> $GITHUB_OUTPUT
+          elif [ -z "${{ secrets.NPM_TOKEN }}" ]; then
+            echo "⚠️ NPM_TOKEN not configured, skipping npm publish"
+            echo "should_publish=false" >> $GITHUB_OUTPUT
+          else
+            echo "✅ npm publishing is enabled"
+            echo "should_publish=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install dependencies
+        if: steps.npm-check.outputs.should_publish == 'true'
+        run: npm ci
+
+      - name: Publish to npm
+        if: steps.npm-check.outputs.should_publish == 'true'
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Generate publish summary
+        run: |
+          echo "## 📦 npm Publishing" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.npm-check.outputs.should_publish }}" = "true" ]; then
+            echo "✅ Package published to npm registry" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⏭️ npm publishing skipped (package is private or NPM_TOKEN not configured)" >> $GITHUB_STEP_SUMMARY
+          fi

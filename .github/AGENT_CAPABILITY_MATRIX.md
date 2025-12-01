@@ -1,8 +1,8 @@
 # Agentic Swarm Capability Matrix
 
 > **Status**: ✅ **COMPLETE** - Enterprise-Grade Agentic Swarm  
-> **Last Updated**: 2025-11-25  
-> **Total Agents**: 17 JSON + 7 Markdown (24 total)
+> **Last Updated**: 2025-11-30  
+> **Total Agents**: 17 JSON + 9 Markdown (26 total)
 
 ---
 
@@ -284,6 +284,8 @@ Agents that provide **warnings but don't block**:
 ## Documentation References
 
 - [AGENT_WORKFLOW.md](./AGENT_WORKFLOW.md) - Complete workflow process
+- [AGENTIC_SWARM_ARCHITECTURE_REVIEW.md](./AGENTIC_SWARM_ARCHITECTURE_REVIEW.md) - Architecture review and recommendations
+- [AGENTIC_SWARM_USAGE_GUIDE.md](./AGENTIC_SWARM_USAGE_GUIDE.md) - User guide for the swarm
 - [PRODUCTION_LINE_GUIDE.md](../PRODUCTION_LINE_GUIDE.md) - Feature development workflow
 - [DOCUMENTATION_INDEX.md](../DOCUMENTATION_INDEX.md) - All documentation
 
