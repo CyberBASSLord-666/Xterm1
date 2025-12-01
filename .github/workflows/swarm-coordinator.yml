@@ -10,6 +10,7 @@
 # - Routes tasks to appropriate specialized agents
 # - Provides unified reporting and status updates
 # - Handles escalation for complex issues
+# - AUTONOMOUS MODE: Automatically triggers @copilot fix commands when issues are detected
 # ============================================================================
 
 name: Swarm Coordinator
@@ -38,6 +39,22 @@ on:
         required: false
         type: string
 
+# =============================================================================
+# SECURITY: Permissions Configuration
+# =============================================================================
+# These permissions follow the principle of least privilege while enabling
+# the necessary operations for the swarm coordinator.
+#
+# - contents:write - Required for committing auto-fixes
+# - pull-requests:write - Required for PR comments and labels
+# - issues:write - Required for issue management
+# - actions:write - Required for triggering autonomous fix workflows
+# - security-events:read - Required for reading security scan results
+#
+# IMPORTANT: The autonomous-fix-trigger job posts comments that can trigger
+# the comment-command-processor workflow. This is an intentional design for
+# autonomous self-healing, but relies on the security controls in that workflow.
+# =============================================================================
 permissions:
   contents: write
   pull-requests: write
@@ -45,10 +62,21 @@ permissions:
   actions: write
   security-events: read
 
+# Security: Prevent concurrent runs to avoid race conditions
+concurrency:
+  group: swarm-coordinator-${{ github.event.pull_request.number || github.event.issue.number || github.run_id }}
+  cancel-in-progress: false
+
+# Environment variables for autonomous mode
+env:
+  AUTO_FIX_LABEL: 'swarm-auto-fix-attempted'
+  AUTO_FIX_IN_PROGRESS_LABEL: 'swarm-auto-fix-in-progress'
+
 jobs:
   # ============ CONTEXT ANALYSIS ============
   analyze-context:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     outputs:
       needs_lint: ${{ steps.analyze.outputs.needs_lint }}
       needs_tests: ${{ steps.analyze.outputs.needs_tests }}
@@ -58,12 +86,49 @@ jobs:
       needs_a11y: ${{ steps.analyze.outputs.needs_a11y }}
       changed_files: ${{ steps.changes.outputs.files }}
       is_critical: ${{ steps.analyze.outputs.is_critical }}
+      auto_fix_attempted: ${{ steps.check_labels.outputs.auto_fix_attempted }}
+      is_auto_fix_commit: ${{ steps.check_commit.outputs.is_auto_fix }}
       
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Check if this is an auto-fix commit
+        id: check_commit
+        if: github.event_name == 'pull_request'
+        run: |
+          # Check if the last commit was made by the bot (auto-fix)
+          LAST_COMMIT_AUTHOR=$(git log -1 --pretty=format:'%an')
+          LAST_COMMIT_MSG=$(git log -1 --pretty=format:'%s')
+          
+          if [[ "$LAST_COMMIT_AUTHOR" == "github-actions[bot]" ]] && [[ "$LAST_COMMIT_MSG" =~ (Auto-fix|Auto-Fix|🤖) ]]; then
+            echo "is_auto_fix=true" >> $GITHUB_OUTPUT
+            echo "🔄 Detected auto-fix commit, skipping autonomous triggers to prevent loops"
+          else
+            echo "is_auto_fix=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check for auto-fix labels
+        id: check_labels
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const labels = context.payload.pull_request.labels.map(l => l.name);
+            const autoFixAttempted = labels.includes('${{ env.AUTO_FIX_LABEL }}');
+            const autoFixInProgress = labels.includes('${{ env.AUTO_FIX_IN_PROGRESS_LABEL }}');
+            
+            core.setOutput('auto_fix_attempted', autoFixAttempted);
+            core.setOutput('auto_fix_in_progress', autoFixInProgress);
+            
+            if (autoFixAttempted) {
+              console.log('⚠️ Auto-fix was already attempted on this PR');
+            }
+            if (autoFixInProgress) {
+              console.log('🔄 Auto-fix is currently in progress');
+            }
 
       - name: Get changed files
         id: changes
@@ -130,15 +195,24 @@ jobs:
   # ============ LINT & FIX ============
   lint-fix:
     needs: analyze-context
-    if: needs.analyze-context.outputs.needs_lint == 'true'
+    if: |
+      needs.analyze-context.outputs.needs_lint == 'true' &&
+      needs.analyze-context.outputs.is_auto_fix_commit != 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      lint_status: ${{ steps.lint.outputs.status }}
+      has_errors: ${{ steps.lint.outputs.has_errors }}
+      has_warnings: ${{ steps.lint.outputs.has_warnings }}
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # Use GH_TOKEN to enable pushing commits and triggering other workflows
+          # Falls back to GITHUB_TOKEN if GH_TOKEN is not configured
+          token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -150,7 +224,35 @@ jobs:
         run: npm ci
 
       - name: Run ESLint with auto-fix
-        run: npx eslint "src/**/*.{ts,html}" --fix || true
+        id: lint
+        run: |
+          set +e
+          npx eslint "src/**/*.{ts,html}" --fix 2>&1 | tee eslint-output.txt
+          ESLINT_EXIT=$?
+          set -e
+          
+          # Parse output for errors/warnings
+          ERRORS=$(grep -c "error" eslint-output.txt || echo "0")
+          WARNINGS=$(grep -c "warning" eslint-output.txt || echo "0")
+          
+          echo "has_errors=$([[ $ERRORS -gt 0 ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+          echo "has_warnings=$([[ $WARNINGS -gt 0 ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+          echo "error_count=$ERRORS" >> $GITHUB_OUTPUT
+          echo "warning_count=$WARNINGS" >> $GITHUB_OUTPUT
+          
+          if [[ $ESLINT_EXIT -eq 0 ]]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "status=failure" >> $GITHUB_OUTPUT
+          fi
+          
+          # Add step summary
+          echo "## 📝 Lint Results" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Errors | $ERRORS |" >> $GITHUB_STEP_SUMMARY
+          echo "| Warnings | $WARNINGS |" >> $GITHUB_STEP_SUMMARY
+          echo "| Exit Code | $ESLINT_EXIT |" >> $GITHUB_STEP_SUMMARY
 
       - name: Run Prettier
         run: npx prettier --write "src/**/*.{ts,html,css,scss,json}" || true
@@ -176,8 +278,17 @@ jobs:
   # ============ RUN TESTS ============
   run-tests:
     needs: [analyze-context, lint-fix]
-    if: always() && needs.analyze-context.outputs.needs_tests == 'true'
+    if: |
+      always() && 
+      needs.analyze-context.outputs.needs_tests == 'true' &&
+      needs.analyze-context.outputs.is_auto_fix_commit != 'true' &&
+      (needs.lint-fix.result == 'success' || needs.lint-fix.result == 'skipped')
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      test_status: ${{ steps.test.outputs.status }}
+      tests_passed: ${{ steps.test.outputs.passed }}
+      tests_failed: ${{ steps.test.outputs.failed }}
     
     steps:
       - name: Checkout code
@@ -196,7 +307,32 @@ jobs:
 
       - name: Run tests with coverage
         id: test
-        run: npm test -- --coverage --watchAll=false
+        run: |
+          set +e
+          npm test -- --coverage --watchAll=false 2>&1 | tee test-output.txt
+          TEST_EXIT=$?
+          set -e
+          
+          # Parse test output
+          PASSED=$(grep -oP 'Tests:\s+\K\d+(?=\s+passed)' test-output.txt || echo "0")
+          FAILED=$(grep -oP 'Tests:\s+\d+\s+failed' test-output.txt | grep -oP '\d+' | head -1 || echo "0")
+          
+          echo "passed=$PASSED" >> $GITHUB_OUTPUT
+          echo "failed=$FAILED" >> $GITHUB_OUTPUT
+          
+          if [[ $TEST_EXIT -eq 0 ]]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "status=failure" >> $GITHUB_OUTPUT
+          fi
+          
+          # Add step summary
+          echo "## 🧪 Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Passed | $PASSED |" >> $GITHUB_STEP_SUMMARY
+          echo "| Failed | $FAILED |" >> $GITHUB_STEP_SUMMARY
+          echo "| Exit Code | $TEST_EXIT |" >> $GITHUB_STEP_SUMMARY
         continue-on-error: true
 
       - name: Report test results
@@ -204,7 +340,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const testResult = '${{ steps.test.outcome }}';
+            const testResult = '${{ steps.test.outputs.status }}';
             const status = testResult === 'success' ? '✅' : '❌';
             
             if (context.eventName === 'pull_request') {
@@ -238,63 +374,166 @@ jobs:
               }
             }
 
-  # ============ SECURITY SCAN ============
+  # ============ SECURITY SCAN & AUTO-FIX ============
   security-scan:
     needs: analyze-context
-    if: needs.analyze-context.outputs.needs_security == 'true' || needs.analyze-context.outputs.is_critical == 'true'
+    if: |
+      (needs.analyze-context.outputs.needs_security == 'true' || needs.analyze-context.outputs.is_critical == 'true') &&
+      needs.analyze-context.outputs.is_auto_fix_commit != 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      vulnerability_count: ${{ steps.audit.outputs.vulnerabilities }}
+      remaining_count: ${{ steps.security_fix.outputs.remaining }}
+      fixed: ${{ steps.security_fix.outputs.fixed }}
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          # Use GH_TOKEN to enable pushing commits and triggering other workflows
+          # Falls back to GITHUB_TOKEN if GH_TOKEN is not configured
+          token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Run npm audit
         id: audit
         run: |
           npm audit --json > audit-results.json 2>&1 || true
           VULNS=$(cat audit-results.json | jq '.metadata.vulnerabilities.total // 0')
+          CRITICAL=$(cat audit-results.json | jq '.metadata.vulnerabilities.critical // 0')
+          HIGH=$(cat audit-results.json | jq '.metadata.vulnerabilities.high // 0')
+          FIXABLE=$(cat audit-results.json | jq '.metadata.vulnerabilities.total // 0')
           echo "vulnerabilities=$VULNS" >> $GITHUB_OUTPUT
+          echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
+          echo "high=$HIGH" >> $GITHUB_OUTPUT
+          echo "fixable=$FIXABLE" >> $GITHUB_OUTPUT
+          
+          # Add step summary
+          echo "## 🔒 Security Audit Results" >> $GITHUB_STEP_SUMMARY
+          echo "| Severity | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Critical | $CRITICAL |" >> $GITHUB_STEP_SUMMARY
+          echo "| High | $HIGH |" >> $GITHUB_STEP_SUMMARY
+          echo "| Total | $VULNS |" >> $GITHUB_STEP_SUMMARY
         continue-on-error: true
 
-      - name: Report security findings
+      - name: Auto-fix security vulnerabilities
+        id: security_fix
         if: steps.audit.outputs.vulnerabilities != '0'
+        run: |
+          echo "🔧 Attempting to auto-fix security vulnerabilities..."
+          
+          # Run npm audit fix (safe fixes only, no breaking changes)
+          npm audit fix 2>&1 | tee audit-fix-output.txt || true
+          
+          # Check if any fixes were applied
+          if [[ -n $(git status --porcelain package.json package-lock.json 2>/dev/null) ]]; then
+            echo "fixed=true" >> $GITHUB_OUTPUT
+            
+            # Re-run audit to get new count
+            npm audit --json > audit-after-fix.json 2>&1 || true
+            REMAINING=$(cat audit-after-fix.json | jq '.metadata.vulnerabilities.total // 0')
+            echo "remaining=$REMAINING" >> $GITHUB_OUTPUT
+          else
+            echo "fixed=false" >> $GITHUB_OUTPUT
+            echo "remaining=${{ steps.audit.outputs.vulnerabilities }}" >> $GITHUB_OUTPUT
+          fi
+        continue-on-error: true
+
+      - name: Commit security fixes
+        id: commit_security
+        if: steps.security_fix.outputs.fixed == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add package.json package-lock.json
+          git commit -m "🔒 Security: Auto-fix npm audit vulnerabilities
+
+          Applied npm audit fix to resolve security vulnerabilities.
+          Original count: ${{ steps.audit.outputs.vulnerabilities }}
+          Remaining: ${{ steps.security_fix.outputs.remaining }}
+          
+          This commit was automatically generated by the Swarm Security Guardian."
+          git push
+          echo "committed=true" >> $GITHUB_OUTPUT
+          echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Report security findings
         uses: actions/github-script@v7
         with:
           script: |
             const vulns = '${{ steps.audit.outputs.vulnerabilities }}';
+            const fixed = '${{ steps.security_fix.outputs.fixed }}' === 'true';
+            const remaining = '${{ steps.security_fix.outputs.remaining }}' || vulns;
+            const committed = '${{ steps.commit_security.outputs.committed }}' === 'true';
+            const sha = '${{ steps.commit_security.outputs.sha }}';
             
             if (context.eventName === 'pull_request' && parseInt(vulns) > 0) {
+              let message = `## 🔒 Security Scan Results
+
+            | Metric | Value |
+            |--------|-------|
+            | Original Vulnerabilities | ${vulns} |
+            | Auto-Fixed | ${fixed ? '✅ Yes' : '❌ No fixable issues'} |
+            | Remaining | ${remaining} |
+            ${committed ? `| Commit | \`${sha}\` |` : ''}
+
+            `;
+              
+              if (fixed && committed) {
+                message += `### ✅ Security Fixes Applied
+
+            The Swarm Security Guardian automatically fixed ${parseInt(vulns) - parseInt(remaining)} vulnerabilities using \`npm audit fix\`.
+
+            `;
+              }
+              
+              if (parseInt(remaining) > 0) {
+                message += `### ⚠️ Manual Review Required
+
+            ${remaining} vulnerabilities remain that require manual review:
+            1. Run \`npm audit\` locally to see details
+            2. Consider \`npm audit fix --force\` for breaking changes
+            3. Review and update packages manually if needed
+
+            `;
+              }
+              
+              message += `---
+            *Generated by Swarm Security Guardian*`;
+              
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.payload.pull_request.number,
-                body: `## ⚠️ Security Alert
-
-            Found **${vulns}** vulnerabilities in dependencies.
-
-            **Recommended Actions:**
-            1. Run \`npm audit fix\` to auto-fix safe updates
-            2. Review breaking changes for major updates
-            3. Consider alternative packages if unpatched
-
-            ---
-            *Generated by Swarm Security Guardian*`
+                body: message
               });
             }
 
   # ============ STATUS SUMMARY ============
   swarm-summary:
     needs: [analyze-context, lint-fix, run-tests, security-scan]
-    if: always()
+    if: always() && needs.analyze-context.result == 'success'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      has_issues: ${{ steps.summary.outputs.has_issues }}
+      issue_types: ${{ steps.summary.outputs.issue_types }}
     
     steps:
       - name: Generate swarm summary
+        id: summary
         uses: actions/github-script@v7
         with:
           script: |
@@ -304,12 +543,35 @@ jobs:
             const testStatus = '${{ needs.run-tests.result }}';
             const securityStatus = '${{ needs.security-scan.result }}';
             
+            // Check for lint issues
+            const lintHasErrors = '${{ needs.lint-fix.outputs.has_errors }}' === 'true';
+            const lintHasWarnings = '${{ needs.lint-fix.outputs.has_warnings }}' === 'true';
+            
+            // Check for test failures
+            const testsFailed = parseInt('${{ needs.run-tests.outputs.tests_failed }}' || '0') > 0;
+            
+            // Check for remaining security issues
+            const securityRemaining = parseInt('${{ needs.security-scan.outputs.remaining_count }}' || '0') > 0;
+            
             const getEmoji = (status) => {
               if (status === 'success') return '✅';
               if (status === 'failure') return '❌';
               if (status === 'skipped') return '⏭️';
               return '⚪';
             };
+            
+            // Determine if there are issues that need attention
+            const hasIssues = lintStatus === 'failure' || testStatus === 'failure' || 
+                              lintHasErrors || testsFailed || securityRemaining;
+            
+            // Track issue types
+            const issueTypes = [];
+            if (lintStatus === 'failure' || lintHasErrors) issueTypes.push('lint');
+            if (testStatus === 'failure' || testsFailed) issueTypes.push('tests');
+            if (securityRemaining) issueTypes.push('security');
+            
+            core.setOutput('has_issues', hasIssues);
+            core.setOutput('issue_types', issueTypes.join(','));
             
             const summary = `## 🤖 Swarm Coordinator Summary
 
@@ -333,3 +595,137 @@ jobs:
               issue_number: context.payload.pull_request.number,
               body: summary
             });
+
+  # ============ AUTONOMOUS FIX TRIGGER ============
+  # This job automatically triggers @copilot fix commands when issues are detected
+  # to enable fully autonomous self-healing of the codebase
+  autonomous-fix-trigger:
+    needs: [analyze-context, lint-fix, run-tests, security-scan, swarm-summary]
+    if: |
+      always() &&
+      github.event_name == 'pull_request' &&
+      needs.swarm-summary.result == 'success' &&
+      needs.swarm-summary.outputs.has_issues == 'true' &&
+      needs.analyze-context.outputs.auto_fix_attempted != 'true' &&
+      needs.analyze-context.outputs.is_auto_fix_commit != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Add auto-fix-in-progress label
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            try {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                labels: ['${{ env.AUTO_FIX_IN_PROGRESS_LABEL }}']
+              });
+            } catch (e) {
+              console.log('Could not add label:', e.message);
+            }
+
+      - name: Determine fix command to trigger
+        id: determine_command
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueTypes = '${{ needs.swarm-summary.outputs.issue_types }}'.split(',').filter(Boolean);
+            
+            // Check lint status
+            const lintFailed = '${{ needs.lint-fix.result }}' === 'failure';
+            const lintHasErrors = '${{ needs.lint-fix.outputs.has_errors }}' === 'true';
+            
+            // Check test status
+            const testsFailed = '${{ needs.run-tests.result }}' === 'failure';
+            const testsHadFailures = parseInt('${{ needs.run-tests.outputs.tests_failed }}' || '0') > 0;
+            
+            // Check security status
+            const securityRemaining = parseInt('${{ needs.security-scan.outputs.remaining_count }}' || '0') > 0;
+            
+            let command = '';
+            let reason = '';
+            
+            // Determine the most appropriate fix command
+            if (issueTypes.length > 1 || (lintFailed && securityRemaining)) {
+              command = '@copilot fix all';
+              reason = `Multiple issue types detected: ${issueTypes.join(', ')}`;
+            } else if (lintFailed || lintHasErrors) {
+              command = '@copilot fix lint';
+              reason = 'Lint issues detected that could not be auto-fixed';
+            } else if (securityRemaining) {
+              command = '@copilot fix security';
+              reason = `Security vulnerabilities remain (${parseInt('${{ needs.security-scan.outputs.remaining_count }}' || '0')} issues)`;
+            }
+            
+            core.setOutput('command', command);
+            core.setOutput('reason', reason);
+            core.setOutput('should_trigger', command !== '');
+            
+            console.log(`Determined command: ${command}`);
+            console.log(`Reason: ${reason}`);
+
+      - name: Trigger autonomous fix command
+        if: steps.determine_command.outputs.should_trigger == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const command = '${{ steps.determine_command.outputs.command }}';
+            const reason = '${{ steps.determine_command.outputs.reason }}';
+            
+            const comment = `## 🤖 Autonomous Swarm Action
+
+            The Swarm Coordinator has detected issues that require attention.
+
+            **Reason:** ${reason}
+
+            **Triggering autonomous fix...**
+
+            ${command}
+
+            ---
+            *This is an autonomous action by the Agentic Swarm. The system will attempt to fix the detected issues automatically.*
+            *If fixes cannot be applied, manual intervention will be requested.*`;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: comment
+            });
+            
+            console.log(`✅ Posted autonomous fix trigger: ${command}`);
+
+      - name: Mark auto-fix as attempted
+        if: steps.determine_command.outputs.should_trigger == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            try {
+              // Add the attempted label
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                labels: ['${{ env.AUTO_FIX_LABEL }}']
+              });
+              
+              // Remove in-progress label
+              try {
+                await github.rest.issues.removeLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.payload.pull_request.number,
+                  name: '${{ env.AUTO_FIX_IN_PROGRESS_LABEL }}'
+                });
+              } catch (e) {
+                // Label might not exist
+              }
+            } catch (e) {
+              console.log('Could not update labels:', e.message);
+            }

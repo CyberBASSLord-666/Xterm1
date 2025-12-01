@@ -1,0 +1,18 @@
+# ============================================================================
+# Issue Template Configuration
+# ============================================================================
+# Configures the issue template chooser displayed when creating new issues.
+# This provides a clean interface for users to select the appropriate template.
+# ============================================================================
+
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Documentation
+    url: https://github.com/CyberBASSLord-666/Xterm1/blob/main/README.md
+    about: Check the documentation before opening an issue
+  - name: 💬 Discussions
+    url: https://github.com/CyberBASSLord-666/Xterm1/discussions
+    about: Ask questions and discuss ideas in GitHub Discussions
+  - name: 🔒 Security Issues
+    url: https://github.com/CyberBASSLord-666/Xterm1/security/policy
+    about: Report security vulnerabilities privately

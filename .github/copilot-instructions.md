@@ -289,7 +289,7 @@ Copilot must operate at the same level of rigor, thoroughness, and production-re
 
 ## Agentic Swarm Integration
 
-This repository is managed by an **Agentic Swarm** - a collection of 25+ specialized automation agents that work together. As Copilot, you are the **primary interface** to this swarm and can delegate tasks to specialized agents.
+This repository is managed by an **Agentic Swarm** - a collection of 26 specialized automation agents (17 JSON + 9 Markdown) that work together. As Copilot, you are the **primary interface** to this swarm and can delegate tasks to specialized agents.
 
 ### Your Role in the Swarm
 

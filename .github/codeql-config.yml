@@ -1,3 +1,20 @@
+# =============================================================================
+# CodeQL Configuration for PolliWall (Xterm1)
+# =============================================================================
+# This configuration provides comprehensive security analysis using GitHub's
+# CodeQL engine. It is optimized for TypeScript/JavaScript applications with
+# a focus on detecting security vulnerabilities.
+#
+# Security Focus Areas:
+# - XSS (Cross-Site Scripting) vulnerabilities
+# - Injection attacks (SQL, command, path traversal)
+# - Insecure data handling
+# - Cryptographic weaknesses
+# - Authentication/authorization flaws
+#
+# Integration: This config is used by security.yml workflow
+# =============================================================================
+
 name: "CodeQL Configuration"
 
 # Disable default queries and use security-and-quality suite

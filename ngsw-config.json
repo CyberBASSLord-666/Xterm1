@@ -7,12 +7,7 @@
       "installMode": "prefetch",
       "updateMode": "prefetch",
       "resources": {
-        "files": [
-          "/index.html",
-          "/*.js",
-          "/*.css",
-          "/manifest.webmanifest"
-        ]
+        "files": ["/index.html", "/*.js", "/*.css", "/manifest.webmanifest"]
       }
     },
     {
@@ -20,19 +15,14 @@
       "installMode": "lazy",
       "updateMode": "prefetch",
       "resources": {
-        "files": [
-          "/assets/**",
-          "/favicon.ico"
-        ]
+        "files": ["/assets/**", "/favicon.ico"]
       }
     }
   ],
   "dataGroups": [
     {
       "name": "api-images",
-      "urls": [
-        "https://image.pollinations.ai/**"
-      ],
+      "urls": ["https://image.pollinations.ai/**"],
       "cacheConfig": {
         "strategy": "performance",
         "maxSize": 50,
@@ -42,9 +32,7 @@
     },
     {
       "name": "api-text",
-      "urls": [
-        "https://text.pollinations.ai/**"
-      ],
+      "urls": ["https://text.pollinations.ai/**"],
       "cacheConfig": {
         "strategy": "freshness",
         "maxSize": 20,
@@ -54,10 +42,7 @@
     },
     {
       "name": "api-models",
-      "urls": [
-        "https://image.pollinations.ai/models",
-        "https://text.pollinations.ai/models"
-      ],
+      "urls": ["https://image.pollinations.ai/models", "https://text.pollinations.ai/models"],
       "cacheConfig": {
         "strategy": "performance",
         "maxSize": 5,

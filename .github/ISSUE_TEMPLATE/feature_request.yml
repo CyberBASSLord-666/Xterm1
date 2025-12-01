@@ -1,0 +1,142 @@
+name: ✨ Feature Request
+description: Suggest a new feature or enhancement
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## ✨ Feature Request
+        
+        Thank you for suggesting a new feature! Please fill out the form below to help us understand your request.
+        
+        **Before submitting**, please:
+        - Search existing issues and discussions to avoid duplicates
+        - Check the roadmap for planned features
+        - Consider if this aligns with the project's goals
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: Is your feature request related to a problem? Describe the problem you're trying to solve.
+      placeholder: A clear description of what the problem is. Ex. I'm always frustrated when...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution you'd like to see implemented.
+      placeholder: A clear and concise description of what you want to happen...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative Solutions
+      description: Describe any alternative solutions or features you've considered.
+      placeholder: Other approaches you've thought about...
+    validations:
+      required: false
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feature Category
+      description: What category does this feature fall under?
+      options:
+        - User Interface
+        - Performance
+        - Developer Experience
+        - Accessibility
+        - Security
+        - Documentation
+        - Testing
+        - Build/Tooling
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature to you?
+      options:
+        - Nice to have
+        - Would be helpful
+        - Important for my use case
+        - Critical for my use case
+    validations:
+      required: true
+
+  - type: textarea
+    id: use_case
+    attributes:
+      label: Use Case
+      description: Describe your use case for this feature. How would you use it?
+      placeholder: |
+        As a [type of user], I want [goal] so that [benefit].
+        
+        Example workflow:
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: mockups
+    attributes:
+      label: Mockups/Examples
+      description: If applicable, add mockups, diagrams, or examples from other projects.
+      placeholder: Drag and drop images here, or paste links...
+    validations:
+      required: false
+
+  - type: textarea
+    id: implementation
+    attributes:
+      label: Implementation Ideas
+      description: If you have thoughts on how this could be implemented, share them here.
+      placeholder: Technical details, API suggestions, etc...
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution Interest
+      description: Would you be interested in contributing to this feature?
+      options:
+        - label: I would be willing to implement this feature myself
+          required: false
+        - label: I would be willing to help test this feature
+          required: false
+        - label: I would be willing to help document this feature
+          required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other context, links, or references about the feature request here.
+      placeholder: Any additional information...
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please confirm the following before submitting.
+      options:
+        - label: I have searched existing issues and discussions to ensure this hasn't been requested
+          required: true
+        - label: I have provided a clear problem statement and proposed solution
+          required: true
