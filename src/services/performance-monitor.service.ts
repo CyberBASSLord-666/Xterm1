@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { LoggerService } from './logger.service';
+import { PlatformService } from './platform.service';
 import type { Metadata, PerformanceEntryWithProcessing } from '../types/utility.types';
 import { CACHE_CONFIG, FEATURE_FLAGS } from '../constants';
 
@@ -34,6 +35,7 @@ interface PerformanceNavigationTimingExtended extends PerformanceEntry {
 @Injectable({ providedIn: 'root' })
 export class PerformanceMonitorService {
   private logger = inject(LoggerService);
+  private platformService = inject(PlatformService);
   private activeMetrics = new Map<string, PerformanceMetric>();
   private completedMetrics: PerformanceMetric[] = [];
   private readonly maxHistorySize = CACHE_CONFIG.MAX_CACHE_SIZE;
@@ -47,9 +49,12 @@ export class PerformanceMonitorService {
    */
   public startMeasure(name: string, metadata?: Metadata): string {
     const id = `${name}-${Date.now()}-${Math.random()}`;
+    const performance = this.platformService.getPerformance();
+    const startTime = performance ? performance.now() : Date.now();
+
     const metric: PerformanceMetric = {
       name,
-      startTime: performance.now(),
+      startTime,
       metadata,
     };
     this.activeMetrics.set(id, metric);
@@ -67,7 +72,8 @@ export class PerformanceMonitorService {
       return;
     }
 
-    metric.endTime = performance.now();
+    const performance = this.platformService.getPerformance();
+    metric.endTime = performance ? performance.now() : Date.now();
     metric.duration = metric.endTime - metric.startTime;
 
     this.activeMetrics.delete(id);
@@ -167,55 +173,55 @@ export class PerformanceMonitorService {
   public getWebVitals(): WebVitals {
     const vitals: WebVitals = {};
 
-    if ('PerformanceObserver' in window) {
-      try {
-        // Time to First Byte / Time to Interactive
-        const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTimingExtended;
+    if (!this.platformService.isBrowser) {
+      return vitals; // Return empty vitals in SSR
+    }
 
-        let responseStart = navigation?.responseStart;
-        let requestStart = navigation?.requestStart;
-        let domInteractive = navigation?.domInteractive;
-        let fetchStart = navigation?.fetchStart;
+    const win = this.platformService.getWindow();
+    if (!win || !('PerformanceObserver' in win)) {
+      return vitals;
+    }
 
-        const legacyTiming = (performance as Performance & { timing?: PerformanceTiming }).timing;
-        if (legacyTiming) {
-          responseStart = responseStart ?? legacyTiming.responseStart;
-          requestStart = requestStart ?? legacyTiming.requestStart;
-          domInteractive = domInteractive ?? legacyTiming.domInteractive;
-          fetchStart = fetchStart ?? legacyTiming.fetchStart;
-        }
-
-        if (responseStart !== undefined && requestStart !== undefined) {
-          vitals.ttfb = responseStart - requestStart;
-        }
-        if (domInteractive !== undefined && fetchStart !== undefined) {
-          vitals.tti = domInteractive - fetchStart;
-        }
-
-        // First Contentful Paint
-        const paint = performance.getEntriesByType('paint');
-        const fcp = paint.find((entry) => entry.name === 'first-contentful-paint');
-        if (fcp) {
-          vitals.fcp = fcp.startTime;
-        }
-
-        // Largest Contentful Paint
-        this.observeLCP((value) => {
-          vitals.lcp = value;
-        });
-
-        // First Input Delay
-        this.observeFID((value) => {
-          vitals.fid = value;
-        });
-
-        // Cumulative Layout Shift
-        this.observeCLS((value) => {
-          vitals.cls = value;
-        });
-      } catch (error) {
-        this.logger.error('Failed to get Web Vitals', error, 'PerformanceMonitor');
+    try {
+      const performance = this.platformService.getPerformance();
+      if (!performance) {
+        return vitals;
       }
+
+      // Time to First Byte
+      const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTimingExtended;
+      if (navigation) {
+        if (navigation.responseStart !== undefined && navigation.requestStart !== undefined) {
+          vitals.ttfb = navigation.responseStart - navigation.requestStart;
+        }
+        if (navigation.domInteractive !== undefined && navigation.fetchStart !== undefined) {
+          vitals.tti = navigation.domInteractive - navigation.fetchStart;
+        }
+      }
+
+      // First Contentful Paint
+      const paint = performance.getEntriesByType('paint');
+      const fcp = paint.find((entry) => entry.name === 'first-contentful-paint');
+      if (fcp) {
+        vitals.fcp = fcp.startTime;
+      }
+
+      // Largest Contentful Paint
+      this.observeLCP((value) => {
+        vitals.lcp = value;
+      });
+
+      // First Input Delay
+      this.observeFID((value) => {
+        vitals.fid = value;
+      });
+
+      // Cumulative Layout Shift
+      this.observeCLS((value) => {
+        vitals.cls = value;
+      });
+    } catch (error) {
+      this.logger.error('Failed to get Web Vitals', error, 'PerformanceMonitor');
     }
 
     return vitals;
@@ -225,6 +231,15 @@ export class PerformanceMonitorService {
    * Observe Largest Contentful Paint (LCP).
    */
   private observeLCP(callback: (value: number) => void): void {
+    if (!this.platformService.isBrowser) {
+      return;
+    }
+
+    const win = this.platformService.getWindow();
+    if (!win || !('PerformanceObserver' in win)) {
+      return;
+    }
+
     try {
       const observer = new PerformanceObserver((list) => {
         const entries = list.getEntries();
@@ -243,6 +258,15 @@ export class PerformanceMonitorService {
    * Observe First Input Delay (FID).
    */
   private observeFID(callback: (value: number) => void): void {
+    if (!this.platformService.isBrowser) {
+      return;
+    }
+
+    const win = this.platformService.getWindow();
+    if (!win || !('PerformanceObserver' in win)) {
+      return;
+    }
+
     try {
       const observer = new PerformanceObserver((list) => {
         list.getEntries().forEach((entry) => {
@@ -262,6 +286,15 @@ export class PerformanceMonitorService {
    * Observe Cumulative Layout Shift (CLS).
    */
   private observeCLS(callback: (value: number) => void): void {
+    if (!this.platformService.isBrowser) {
+      return;
+    }
+
+    const win = this.platformService.getWindow();
+    if (!win || !('PerformanceObserver' in win)) {
+      return;
+    }
+
     let clsValue = 0;
     let sessionValue = 0;
     let sessionEntries: PerformanceEntryWithProcessing[] = [];

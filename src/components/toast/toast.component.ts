@@ -1,5 +1,6 @@
-import { Component, signal, OnDestroy, OnInit } from '@angular/core';
+import { Component, signal, OnDestroy, OnInit, inject } from '@angular/core';
 import { UI_CONFIG } from '../../constants';
+import { PlatformService } from '../../services/platform.service';
 
 @Component({
   selector: 'app-toast',
@@ -8,6 +9,8 @@ import { UI_CONFIG } from '../../constants';
   imports: [],
 })
 export class ToastComponent implements OnInit, OnDestroy {
+  private platformService = inject(PlatformService);
+
   message = signal<string | null>(null);
   private timeoutId: number | undefined;
 
@@ -16,21 +19,33 @@ export class ToastComponent implements OnInit, OnDestroy {
     this.message.set(customEvent.detail);
 
     if (this.timeoutId) {
-      clearTimeout(this.timeoutId);
+      this.platformService.clearTimeout(this.timeoutId);
     }
-    this.timeoutId = window.setTimeout(() => {
+
+    this.timeoutId = this.platformService.setTimeout(() => {
       this.message.set(null);
     }, UI_CONFIG.TOAST_DURATION);
   };
 
   public ngOnInit(): void {
-    window.addEventListener('toast', this.handleToast);
+    if (!this.platformService.isBrowser) {
+      return;
+    }
+
+    const win = this.platformService.getWindow();
+    this.platformService.addEventListener(win, 'toast', this.handleToast);
   }
 
   public ngOnDestroy(): void {
-    window.removeEventListener('toast', this.handleToast);
+    if (!this.platformService.isBrowser) {
+      return;
+    }
+
+    const win = this.platformService.getWindow();
+    this.platformService.removeEventListener(win, 'toast', this.handleToast);
+
     if (this.timeoutId) {
-      clearTimeout(this.timeoutId);
+      this.platformService.clearTimeout(this.timeoutId);
     }
   }
 }

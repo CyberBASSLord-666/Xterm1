@@ -1,5 +1,7 @@
 import { Injectable, inject } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { LoggerService } from './logger.service';
+import { PlatformService } from './platform.service';
 import { environment } from '../environments/environment';
 import type { WindowWithAnalytics } from '../types/utility.types';
 import { PERFORMANCE_CONFIG, FEATURE_FLAGS } from '../constants';
@@ -30,6 +32,8 @@ export interface AnalyticsConfig {
 @Injectable({ providedIn: 'root' })
 export class AnalyticsService {
   private logger = inject(LoggerService);
+  private platformService = inject(PlatformService);
+  private document = inject(DOCUMENT);
   private enabled: boolean = environment.production && FEATURE_FLAGS.ENABLE_ANALYTICS;
   private eventQueue: AnalyticsEvent[] = [];
   private readonly maxQueueSize = PERFORMANCE_CONFIG.MAX_ANALYTICS_QUEUE;
@@ -43,6 +47,10 @@ export class AnalyticsService {
    * @param trackingId Google Analytics tracking ID or similar
    */
   public initialize(trackingId?: string): void {
+    if (!this.platformService.isBrowser) {
+      return; // Skip initialization in SSR
+    }
+
     if (!this.enabled) {
       this.logger.info('Analytics disabled in development mode', undefined, 'Analytics');
       return;
@@ -64,7 +72,14 @@ export class AnalyticsService {
    * @param measurementId GA4 Measurement ID (e.g., 'G-XXXXXXXXXX')
    */
   private loadGoogleAnalytics(measurementId: string): void {
-    const win = window as WindowWithAnalytics;
+    if (!this.platformService.isBrowser) {
+      return;
+    }
+
+    const win = this.platformService.getWindow() as WindowWithAnalytics | undefined;
+    if (!win) {
+      return;
+    }
 
     // Check if gtag is already loaded
     if (win.gtag) {
@@ -75,10 +90,10 @@ export class AnalyticsService {
     }
 
     // Create and load gtag script
-    const script = document.createElement('script');
+    const script = this.document.createElement('script');
     script.async = true;
     script.src = `https://www.googletagmanager.com/gtag/js?id=${measurementId}`;
-    document.head.appendChild(script);
+    this.document.head.appendChild(script);
 
     // Initialize gtag
     win.dataLayer = win.dataLayer || [];
@@ -108,12 +123,17 @@ export class AnalyticsService {
       label: path,
     });
 
-    const win = window as WindowWithAnalytics;
-    if (this.enabled && win.gtag) {
+    if (!this.platformService.isBrowser) {
+      return;
+    }
+
+    const win = this.platformService.getWindow() as WindowWithAnalytics | undefined;
+    if (this.enabled && win?.gtag) {
+      const location = this.platformService.getLocation();
       win.gtag('event', 'page_view', {
         page_path: path,
-        page_title: title || document.title,
-        page_location: window.location.href,
+        page_title: title || this.document.title,
+        page_location: location?.href || '',
       });
     }
   }
@@ -164,16 +184,22 @@ export class AnalyticsService {
    * @private
    */
   private startBatchTimer(): void {
+    if (!this.platformService.isBrowser) {
+      return;
+    }
+
     if (this.batchTimer !== null) {
       return; // Timer already running
     }
 
-    // Use window.setInterval for consistency (returns number in browser environment)
-    this.batchTimer = window.setInterval(() => {
+    // Use platform service for SSR-safe timer
+    // Ensure batchTimer is always number | null (never undefined)
+    const timerId = this.platformService.setInterval(() => {
       if (this.eventQueue.length > 0) {
         this.sendBatch();
       }
     }, this.batchInterval);
+    this.batchTimer = timerId ?? null;
 
     this.logger.debug('Batch timer started', { interval: this.batchInterval }, 'Analytics');
   }
@@ -184,7 +210,7 @@ export class AnalyticsService {
    */
   private stopBatchTimer(): void {
     if (this.batchTimer !== null) {
-      clearInterval(this.batchTimer);
+      this.platformService.clearInterval(this.batchTimer);
       this.batchTimer = null;
       this.logger.debug('Batch timer stopped', undefined, 'Analytics');
     }
@@ -197,6 +223,10 @@ export class AnalyticsService {
    * @private
    */
   private sendBatch(): void {
+    if (!this.platformService.isBrowser) {
+      return;
+    }
+
     // Prevent concurrent batch sends by setting flag immediately before any other operations
     if (this.isSendingBatch) {
       return;
@@ -209,8 +239,8 @@ export class AnalyticsService {
       return;
     }
 
-    const win = window as WindowWithAnalytics;
-    if (!this.enabled || !win.gtag) {
+    const win = this.platformService.getWindow() as WindowWithAnalytics | undefined;
+    if (!this.enabled || !win?.gtag) {
       this.isSendingBatch = false;
       return;
     }

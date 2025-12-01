@@ -1,6 +1,18 @@
 import { GoogleGenAI } from '@google/genai';
 import { API_CONFIG } from '../constants';
 
+// Simple logger utility for client module - can be mocked in tests
+const logger = {
+  warn: (message: string, ...args: unknown[]): void => {
+    // eslint-disable-next-line no-console
+    console.warn(message, ...args);
+  },
+  error: (message: string, ...args: unknown[]): void => {
+    // eslint-disable-next-line no-console
+    console.error(message, ...args);
+  },
+};
+
 export type DeviceInfo = { width: number; height: number; dpr: number };
 export type ExactFitTarget = {
   width: number;
@@ -36,7 +48,7 @@ const geminiModel = 'gemini-2.0-flash-exp';
  */
 export function initializeGeminiClient(apiKey: string): void {
   if (!apiKey || apiKey.trim().length === 0) {
-    console.warn('Gemini API key is empty. AI features will not be available.');
+    logger.warn('Gemini API key is empty. AI features will not be available.');
     return;
   }
   ai = new GoogleGenAI({ apiKey });
@@ -78,7 +90,7 @@ async function fetchWithRetries(url: string, options: { timeout: number; retries
       } else {
         // Handle other client errors (4xx) by attempting to parse a meaningful message
         const errorText = await response.text();
-        console.error('Raw API Error:', errorText);
+        logger.error('Raw API Error:', errorText);
 
         let errorMessage;
         try {
@@ -188,8 +200,7 @@ class RequestQueue {
       const result = await requestFn();
       resolve(result);
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Queue request failed:', error);
+      logger.error('Queue request failed:', error);
       reject(error as Error);
     } finally {
       setTimeout(() => {
@@ -318,7 +329,7 @@ export function listImageModels(): Promise<string[]> {
     const usableModels = allModels.filter((m) => USABLE_IMAGE_MODELS.includes(m));
 
     if (usableModels.length === 0 && allModels.length > 0) {
-      console.warn("Image model whitelist may be outdated. Falling back to default 'flux'.");
+      logger.warn("Image model whitelist may be outdated. Falling back to default 'flux'.");
       return allModels.includes('flux') ? ['flux'] : [];
     }
 

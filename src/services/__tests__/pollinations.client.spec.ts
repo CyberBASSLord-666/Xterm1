@@ -28,6 +28,10 @@ jest.mock('@google/genai', () => {
 const { GoogleGenAI, __mocks } = jest.requireMock('@google/genai');
 const generateContentMock: jest.Mock = __mocks.generateContentMock;
 
+// Mock console methods to suppress test output noise
+const originalConsoleWarn = console.warn;
+const originalConsoleError = console.error;
+
 describe('pollinations.client integration', () => {
   beforeEach(() => {
     generateContentMock.mockReset().mockResolvedValue({ text: 'Generated prompt' });
@@ -35,11 +39,19 @@ describe('pollinations.client integration', () => {
       (globalThis as any).fetch = jest.fn();
     }
     (globalThis.fetch as jest.Mock).mockReset();
+
+    // Suppress console noise during tests
+    console.warn = jest.fn();
+    console.error = jest.fn();
   });
 
   afterEach(() => {
     delete (window as any).speechSynthesis;
     delete (window as any).SpeechSynthesisUtterance;
+
+    // Restore console methods
+    console.warn = originalConsoleWarn;
+    console.error = originalConsoleError;
   });
 
   it('initializes the Gemini client and composes prompts', async () => {
