@@ -17,6 +17,7 @@
             "browser": "index.tsx",
             "tsConfig": "tsconfig.json",
             "inlineStyleLanguage": "css",
+            "allowedCommonJsDependencies": ["jszip"],
             "optimization": {
               "scripts": false,
               "styles": false,
