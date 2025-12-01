@@ -1,0 +1,444 @@
+# ============================================================================
+# Autonomous QoL (Quality of Life) Enhancements Workflow for PolliWall (Xterm1)
+# ============================================================================
+# This workflow applies quality of life improvements:
+# - Organize and sort imports
+# - Add/fix file headers
+# - Standardize naming conventions
+# - Add missing index.ts barrel exports
+# - Clean up console.log statements
+# - Standardize error messages
+#
+# Trigger: Manual dispatch or via @copilot enhance command
+# ============================================================================
+
+name: Autonomous QoL Enhancements
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply_fixes:
+        description: 'Apply enhancements automatically'
+        required: false
+        type: boolean
+        default: true
+      scope:
+        description: 'Enhancement scope'
+        required: false
+        type: choice
+        options:
+          - all
+          - imports
+          - headers
+          - naming
+          - barrels
+          - cleanup
+        default: 'all'
+      target_branch:
+        description: 'Target branch (leave empty for current)'
+        required: false
+        type: string
+
+  repository_dispatch:
+    types: [enhance-requested]
+
+# Security: Restrict permissions to minimum required
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+# Security: Prevent concurrent runs
+concurrency:
+  group: qol-${{ github.run_id }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '20'
+  FILE_HEADER: |
+    /**
+     * @fileoverview 
+     * @module 
+     * @license MIT
+     */
+
+jobs:
+  # ============ ANALYZE QOL OPPORTUNITIES ============
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      unsorted_imports: ${{ steps.imports.outputs.count }}
+      missing_headers: ${{ steps.headers.outputs.count }}
+      naming_issues: ${{ steps.naming.outputs.count }}
+      missing_barrels: ${{ steps.barrels.outputs.count }}
+      console_logs: ${{ steps.cleanup.outputs.console_count }}
+      debug_statements: ${{ steps.cleanup.outputs.debug_count }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_branch || github.ref }}
+          token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Analyze import organization
+        id: imports
+        run: |
+          echo "📦 Analyzing import organization..."
+          
+          # Count files that might have unsorted imports
+          UNSORTED=0
+          
+          for file in $(find src -name "*.ts" ! -name "*.spec.ts" ! -name "*.d.ts"); do
+            # Check if imports are sorted (simplified check)
+            if grep -q "^import" "$file" 2>/dev/null; then
+              # Count import blocks
+              IMPORT_LINES=$(grep -c "^import" "$file" 2>/dev/null || echo "0")
+              if [ "$IMPORT_LINES" -gt 3 ]; then
+                UNSORTED=$((UNSORTED + 1))
+              fi
+            fi
+          done
+          
+          echo "count=$UNSORTED" >> $GITHUB_OUTPUT
+          
+          echo "### Import Organization" >> $GITHUB_STEP_SUMMARY
+          echo "Files that may benefit from import sorting: $UNSORTED" >> $GITHUB_STEP_SUMMARY
+        continue-on-error: true
+
+      - name: Analyze file headers
+        id: headers
+        run: |
+          echo "📄 Analyzing file headers..."
+          
+          MISSING=0
+          
+          for file in $(find src -name "*.ts" ! -name "*.spec.ts" ! -name "*.d.ts"); do
+            # Check if file starts with a header comment
+            FIRST_CHARS=$(head -c 3 "$file" 2>/dev/null || echo "")
+            if [ "$FIRST_CHARS" != "/**" ] && [ "$FIRST_CHARS" != "// " ]; then
+              MISSING=$((MISSING + 1))
+            fi
+          done
+          
+          echo "count=$MISSING" >> $GITHUB_OUTPUT
+          
+          echo "### File Headers" >> $GITHUB_STEP_SUMMARY
+          echo "Files missing header comments: $MISSING" >> $GITHUB_STEP_SUMMARY
+        continue-on-error: true
+
+      - name: Analyze naming conventions
+        id: naming
+        run: |
+          echo "🏷️ Analyzing naming conventions..."
+          
+          ISSUES=0
+          
+          # Check for non-standard file names (should be kebab-case)
+          NON_KEBAB=$(find src -name "*.ts" | grep -E "[A-Z].*\.ts$" | wc -l || echo "0")
+          ISSUES=$((ISSUES + NON_KEBAB))
+          
+          # Check for inconsistent component naming
+          COMPONENT_ISSUES=$(find src -name "*component.ts" | grep -v ".component.ts$" | wc -l || echo "0")
+          ISSUES=$((ISSUES + COMPONENT_ISSUES))
+          
+          # Check for inconsistent service naming
+          SERVICE_ISSUES=$(find src -name "*service.ts" | grep -v ".service.ts$" | wc -l || echo "0")
+          ISSUES=$((ISSUES + SERVICE_ISSUES))
+          
+          echo "count=$ISSUES" >> $GITHUB_OUTPUT
+          echo "non_kebab=$NON_KEBAB" >> $GITHUB_OUTPUT
+          
+          echo "### Naming Conventions" >> $GITHUB_STEP_SUMMARY
+          echo "| Issue | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Non-kebab-case files | $NON_KEBAB |" >> $GITHUB_STEP_SUMMARY
+          echo "| Inconsistent naming | $((COMPONENT_ISSUES + SERVICE_ISSUES)) |" >> $GITHUB_STEP_SUMMARY
+        continue-on-error: true
+
+      - name: Analyze barrel exports
+        id: barrels
+        run: |
+          echo "📦 Analyzing barrel exports..."
+          
+          MISSING=0
+          
+          # Find directories that should have index.ts but don't
+          for dir in $(find src -type d ! -name "node_modules" ! -name ".git"); do
+            TS_FILES=$(find "$dir" -maxdepth 1 -name "*.ts" ! -name "index.ts" ! -name "*.spec.ts" | wc -l || echo "0")
+            if [ "$TS_FILES" -gt 2 ]; then
+              if [ ! -f "$dir/index.ts" ]; then
+                MISSING=$((MISSING + 1))
+                echo "$dir" >> missing-barrels.txt
+              fi
+            fi
+          done
+          
+          echo "count=$MISSING" >> $GITHUB_OUTPUT
+          
+          echo "### Barrel Exports" >> $GITHUB_STEP_SUMMARY
+          echo "Directories missing index.ts: $MISSING" >> $GITHUB_STEP_SUMMARY
+        continue-on-error: true
+
+      - name: Analyze cleanup opportunities
+        id: cleanup
+        run: |
+          echo "🧹 Analyzing cleanup opportunities..."
+          
+          # Count console.log statements
+          CONSOLE_COUNT=$(grep -rn "console\.log" src --include="*.ts" 2>/dev/null | wc -l || echo "0")
+          
+          # Count console.debug statements
+          DEBUG_COUNT=$(grep -rn "console\.debug\|debugger" src --include="*.ts" 2>/dev/null | wc -l || echo "0")
+          
+          # Count TODO/FIXME comments
+          TODO_COUNT=$(grep -rn "TODO\|FIXME\|HACK\|XXX" src --include="*.ts" 2>/dev/null | wc -l || echo "0")
+          
+          echo "console_count=$CONSOLE_COUNT" >> $GITHUB_OUTPUT
+          echo "debug_count=$DEBUG_COUNT" >> $GITHUB_OUTPUT
+          echo "todo_count=$TODO_COUNT" >> $GITHUB_OUTPUT
+          
+          echo "### Cleanup Opportunities" >> $GITHUB_STEP_SUMMARY
+          echo "| Item | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| console.log statements | $CONSOLE_COUNT |" >> $GITHUB_STEP_SUMMARY
+          echo "| Debug statements | $DEBUG_COUNT |" >> $GITHUB_STEP_SUMMARY
+          echo "| TODO/FIXME comments | $TODO_COUNT |" >> $GITHUB_STEP_SUMMARY
+        continue-on-error: true
+
+  # ============ APPLY QOL ENHANCEMENTS ============
+  enhance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: analyze
+    if: inputs.apply_fixes != false && needs.analyze.result == 'success'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_branch || github.ref }}
+          token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Organize imports with Prettier
+        id: organize_imports
+        if: inputs.scope == 'all' || inputs.scope == 'imports'
+        run: |
+          echo "📦 Organizing imports..."
+          
+          # Use Prettier to format and sort imports
+          npx prettier --write "src/**/*.ts" 2>&1 || true
+          
+          # ESLint import ordering if configured
+          npx eslint "src/**/*.ts" --fix --rule '{"import/order": "warn"}' 2>&1 || true
+        continue-on-error: true
+
+      - name: Remove console.log statements
+        id: remove_console
+        if: inputs.scope == 'all' || inputs.scope == 'cleanup'
+        run: |
+          echo "🧹 Removing console.log statements..."
+          
+          REMOVED=0
+          
+          for file in $(find src -name "*.ts" ! -name "*.spec.ts"); do
+            if grep -q "console\.log\|console\.debug" "$file" 2>/dev/null; then
+              # Comment out console statements instead of removing
+              sed -i 's/^\(\s*\)\(console\.log\)/\1\/\/ \2 \/\/ REMOVED/g' "$file"
+              sed -i 's/^\(\s*\)\(console\.debug\)/\1\/\/ \2 \/\/ REMOVED/g' "$file"
+              REMOVED=$((REMOVED + 1))
+            fi
+          done
+          
+          echo "removed=$REMOVED" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Remove debugger statements
+        id: remove_debugger
+        if: inputs.scope == 'all' || inputs.scope == 'cleanup'
+        run: |
+          echo "🐛 Removing debugger statements..."
+          
+          # Remove debugger statements
+          for file in $(find src -name "*.ts" ! -name "*.spec.ts"); do
+            sed -i '/^\s*debugger;$/d' "$file" 2>/dev/null || true
+          done
+        continue-on-error: true
+
+      - name: Create missing barrel exports
+        id: create_barrels
+        if: inputs.scope == 'all' || inputs.scope == 'barrels'
+        run: |
+          echo "📦 Creating missing barrel exports..."
+          
+          CREATED=0
+          
+          # Find directories with multiple TS files but no index.ts
+          for dir in $(find src -type d ! -name "node_modules" ! -name ".git" ! -name "__tests__"); do
+            TS_FILES=$(find "$dir" -maxdepth 1 -name "*.ts" ! -name "index.ts" ! -name "*.spec.ts" ! -name "*.d.ts" -printf "%f\n" 2>/dev/null || true)
+            FILE_COUNT=$(echo "$TS_FILES" | grep -c "\.ts$" 2>/dev/null || echo "0")
+            
+            if [ "$FILE_COUNT" -gt 2 ] && [ ! -f "$dir/index.ts" ]; then
+              echo "// Barrel export - auto-generated" > "$dir/index.ts"
+              echo "" >> "$dir/index.ts"
+              
+              for ts_file in $TS_FILES; do
+                basename="${ts_file%.ts}"
+                echo "export * from './${basename}';" >> "$dir/index.ts"
+              done
+              
+              CREATED=$((CREATED + 1))
+              echo "Created: $dir/index.ts"
+            fi
+          done
+          
+          echo "created=$CREATED" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Standardize error messages
+        id: standardize_errors
+        if: inputs.scope == 'all' || inputs.scope == 'cleanup'
+        run: |
+          echo "📝 Standardizing error messages..."
+          
+          # This is a simplified approach - real implementation would be more sophisticated
+          # Convert common error patterns to consistent format
+          for file in $(find src -name "*.ts" ! -name "*.spec.ts"); do
+            # Standardize "Error:" prefix
+            sed -i "s/throw new Error('/throw new Error('[ERROR] /g" "$file" 2>/dev/null || true
+            sed -i "s/console\.error('/console.error('[ERROR] /g" "$file" 2>/dev/null || true
+          done
+        continue-on-error: true
+
+      - name: Run final lint and format
+        run: |
+          echo "✨ Running final lint and format..."
+          npx eslint "src/**/*.{ts,html}" --fix || true
+          npx prettier --write "src/**/*.{ts,html,css,scss,json}" || true
+        continue-on-error: true
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if [[ -n $(git status --porcelain) ]]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            CHANGED_COUNT=$(git status --porcelain | wc -l)
+            echo "changed_count=$CHANGED_COUNT" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "changed_count=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit enhancements
+        if: steps.changes.outputs.has_changes == 'true'
+        id: commit
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add -A
+          
+          git commit -m "✨ QoL: Applied quality of life enhancements
+
+          Changes applied:
+          - Organized and sorted imports
+          - Removed/commented console.log statements
+          - Removed debugger statements
+          - Created missing barrel exports
+          - Standardized error message format
+          - Applied code formatting
+
+          Files changed: ${{ steps.changes.outputs.changed_count }}
+
+          This commit was automatically generated by the Autonomous QoL Enhancements workflow."
+          
+          git push
+          echo "committed=true" >> $GITHUB_OUTPUT
+          echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Generate enhancement report
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const hasChanges = '${{ steps.changes.outputs.has_changes }}' === 'true';
+            const committed = '${{ steps.commit.outputs.committed }}' === 'true';
+            const sha = '${{ steps.commit.outputs.sha }}';
+            const changedCount = '${{ steps.changes.outputs.changed_count }}';
+            
+            // Analysis results
+            const unsortedImports = '${{ needs.analyze.outputs.unsorted_imports }}' || '0';
+            const missingHeaders = '${{ needs.analyze.outputs.missing_headers }}' || '0';
+            const namingIssues = '${{ needs.analyze.outputs.naming_issues }}' || '0';
+            const missingBarrels = '${{ needs.analyze.outputs.missing_barrels }}' || '0';
+            const consoleLogs = '${{ needs.analyze.outputs.console_logs }}' || '0';
+            
+            let report = `## ✨ QoL Enhancement Report
+            
+            ### Analysis Summary
+            | Category | Items Found |
+            |----------|-------------|
+            | Import Organization | ${unsortedImports} files |
+            | Missing Headers | ${missingHeaders} files |
+            | Naming Issues | ${namingIssues} |
+            | Missing Barrels | ${missingBarrels} dirs |
+            | Console Logs | ${consoleLogs} |
+            
+            `;
+            
+            if (committed) {
+              report += `### ✅ Enhancements Applied
+            
+            | Metric | Value |
+            |--------|-------|
+            | Files Changed | ${changedCount} |
+            | Commit | \`${sha}\` |
+            
+            **Changes Applied:**
+            - ✅ Organized and sorted imports
+            - ✅ Removed/commented console.log statements
+            - ✅ Removed debugger statements
+            - ✅ Created missing barrel exports
+            - ✅ Standardized error messages
+            - ✅ Applied code formatting
+            `;
+            } else if (hasChanges) {
+              report += `### ⚠️ Changes Detected but Not Committed
+            
+            Changes were detected but could not be committed. Please review manually.
+            `;
+            } else {
+              report += `### ✨ No Changes Needed
+            
+            The code already meets QoL standards!
+            `;
+            }
+            
+            report += `
+            ---
+            *Generated by Autonomous QoL Enhancements Workflow*`;
+            
+            // Write to job summary
+            await core.summary
+              .addRaw(report)
+              .write();

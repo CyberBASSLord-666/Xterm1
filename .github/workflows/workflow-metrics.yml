@@ -1,0 +1,250 @@
+# ============================================================================
+# Workflow Metrics Tracking Workflow
+# ============================================================================
+# Tracks and reports workflow execution metrics to help optimize CI/CD
+# performance and identify bottlenecks.
+#
+# Features:
+# - Collects workflow run duration data
+# - Generates weekly summary reports
+# - Tracks success/failure rates
+# - Creates performance trend analysis
+#
+# Schedule: Runs weekly on Mondays at 6:00 AM UTC
+# ============================================================================
+
+name: 📊 Workflow Metrics
+
+on:
+  schedule:
+    # Run weekly on Mondays at 6:00 AM UTC
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+    inputs:
+      days:
+        description: 'Number of days to analyze'
+        required: false
+        default: '7'
+        type: string
+      detailed:
+        description: 'Include detailed breakdown'
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+
+concurrency:
+  group: workflow-metrics
+  cancel-in-progress: false
+
+jobs:
+  collect-metrics:
+    name: Collect Workflow Metrics
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Collect workflow run data
+        id: metrics
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const days = parseInt('${{ inputs.days }}' || '7');
+            const since = new Date();
+            since.setDate(since.getDate() - days);
+            
+            // Get all workflow runs
+            const { data: workflows } = await github.rest.actions.listRepoWorkflows({
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            });
+            
+            const metrics = {
+              period: `${days} days`,
+              startDate: since.toISOString().split('T')[0],
+              endDate: new Date().toISOString().split('T')[0],
+              workflows: [],
+              summary: {
+                totalRuns: 0,
+                successfulRuns: 0,
+                failedRuns: 0,
+                cancelledRuns: 0,
+                avgDurationMs: 0,
+                totalDurationMs: 0
+              }
+            };
+            
+            for (const workflow of workflows.workflows) {
+              const { data: runs } = await github.rest.actions.listWorkflowRuns({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: workflow.id,
+                created: `>=${since.toISOString()}`,
+                per_page: 100
+              });
+              
+              if (runs.workflow_runs.length === 0) continue;
+              
+              const workflowMetrics = {
+                name: workflow.name,
+                id: workflow.id,
+                runs: runs.workflow_runs.length,
+                successful: 0,
+                failed: 0,
+                cancelled: 0,
+                durations: [],
+                avgDuration: 0,
+                minDuration: Infinity,
+                maxDuration: 0
+              };
+              
+              for (const run of runs.workflow_runs) {
+                metrics.summary.totalRuns++;
+                
+                if (run.conclusion === 'success') {
+                  workflowMetrics.successful++;
+                  metrics.summary.successfulRuns++;
+                } else if (run.conclusion === 'failure') {
+                  workflowMetrics.failed++;
+                  metrics.summary.failedRuns++;
+                } else if (run.conclusion === 'cancelled') {
+                  workflowMetrics.cancelled++;
+                  metrics.summary.cancelledRuns++;
+                }
+                
+                if (run.updated_at && run.run_started_at) {
+                  const duration = new Date(run.updated_at) - new Date(run.run_started_at);
+                  workflowMetrics.durations.push(duration);
+                  metrics.summary.totalDurationMs += duration;
+                  
+                  if (duration < workflowMetrics.minDuration) {
+                    workflowMetrics.minDuration = duration;
+                  }
+                  if (duration > workflowMetrics.maxDuration) {
+                    workflowMetrics.maxDuration = duration;
+                  }
+                }
+              }
+              
+              if (workflowMetrics.durations.length > 0) {
+                const sum = workflowMetrics.durations.reduce((a, b) => a + b, 0);
+                workflowMetrics.avgDuration = Math.round(sum / workflowMetrics.durations.length);
+              }
+              
+              workflowMetrics.successRate = workflowMetrics.runs > 0 
+                ? Math.round((workflowMetrics.successful / workflowMetrics.runs) * 100) 
+                : 0;
+              
+              metrics.workflows.push(workflowMetrics);
+            }
+            
+            if (metrics.summary.totalRuns > 0) {
+              metrics.summary.avgDurationMs = Math.round(
+                metrics.summary.totalDurationMs / metrics.summary.totalRuns
+              );
+              metrics.summary.successRate = Math.round(
+                (metrics.summary.successfulRuns / metrics.summary.totalRuns) * 100
+              );
+            }
+            
+            // Sort by number of runs
+            metrics.workflows.sort((a, b) => b.runs - a.runs);
+            
+            return metrics;
+
+      - name: Generate metrics report
+        id: report
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const metrics = ${{ steps.metrics.outputs.result }};
+            
+            const formatDuration = (ms) => {
+              if (ms === Infinity || ms === 0) return 'N/A';
+              const seconds = Math.floor(ms / 1000);
+              const minutes = Math.floor(seconds / 60);
+              const remainingSeconds = seconds % 60;
+              if (minutes > 0) {
+                return `${minutes}m ${remainingSeconds}s`;
+              }
+              return `${seconds}s`;
+            };
+            
+            let report = `# 📊 Workflow Metrics Report\n\n`;
+            report += `**Period:** ${metrics.startDate} to ${metrics.endDate} (${metrics.period})\n\n`;
+            
+            report += `## Summary\n\n`;
+            report += `| Metric | Value |\n`;
+            report += `|--------|-------|\n`;
+            report += `| Total Runs | ${metrics.summary.totalRuns} |\n`;
+            report += `| Successful | ${metrics.summary.successfulRuns} (${metrics.summary.successRate || 0}%) |\n`;
+            report += `| Failed | ${metrics.summary.failedRuns} |\n`;
+            report += `| Cancelled | ${metrics.summary.cancelledRuns} |\n`;
+            report += `| Avg Duration | ${formatDuration(metrics.summary.avgDurationMs)} |\n`;
+            report += `\n`;
+            
+            if (metrics.workflows.length > 0) {
+              report += `## Workflow Breakdown\n\n`;
+              report += `| Workflow | Runs | Success Rate | Avg Duration | Min | Max |\n`;
+              report += `|----------|------|--------------|--------------|-----|-----|\n`;
+              
+              for (const wf of metrics.workflows) {
+                const successEmoji = wf.successRate >= 90 ? '🟢' : wf.successRate >= 70 ? '🟡' : '🔴';
+                report += `| ${wf.name} | ${wf.runs} | ${successEmoji} ${wf.successRate}% | ${formatDuration(wf.avgDuration)} | ${formatDuration(wf.minDuration)} | ${formatDuration(wf.maxDuration)} |\n`;
+              }
+              report += `\n`;
+            }
+            
+            // Performance recommendations
+            report += `## Recommendations\n\n`;
+            
+            const slowWorkflows = metrics.workflows.filter(wf => wf.avgDuration > 300000); // > 5 min
+            if (slowWorkflows.length > 0) {
+              report += `### ⚠️ Slow Workflows (>5 min avg)\n`;
+              for (const wf of slowWorkflows) {
+                report += `- **${wf.name}** - ${formatDuration(wf.avgDuration)} avg\n`;
+              }
+              report += `\n`;
+            }
+            
+            const failingWorkflows = metrics.workflows.filter(wf => wf.successRate < 80);
+            if (failingWorkflows.length > 0) {
+              report += `### ⚠️ Low Success Rate (<80%)\n`;
+              for (const wf of failingWorkflows) {
+                report += `- **${wf.name}** - ${wf.successRate}% success rate\n`;
+              }
+              report += `\n`;
+            }
+            
+            if (slowWorkflows.length === 0 && failingWorkflows.length === 0) {
+              report += `✅ All workflows are performing well!\n\n`;
+            }
+            
+            report += `---\n`;
+            report += `*Generated by Workflow Metrics • ${new Date().toISOString()}*\n`;
+            
+            return report;
+
+      - name: Post metrics summary
+        run: |
+          echo "${{ steps.report.outputs.result }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Create metrics artifact
+        run: |
+          mkdir -p metrics
+          echo '${{ steps.metrics.outputs.result }}' > metrics/workflow-metrics.json
+          echo "${{ steps.report.outputs.result }}" > metrics/workflow-metrics.md
+
+      - name: Upload metrics artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: workflow-metrics-${{ github.run_id }}
+          path: metrics/
+          retention-days: 90

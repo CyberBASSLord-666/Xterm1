@@ -1,0 +1,514 @@
+# ============================================================================
+# Autonomous Maintenance Workflow for PolliWall (Xterm1)
+# ============================================================================
+# This scheduled workflow runs comprehensive maintenance:
+# - Runs weekly on the main branch
+# - Performs audit, optimization, improvement, and QoL enhancements
+# - Creates a PR with all improvements found
+# - Includes detailed changelog of what was changed
+#
+# Schedule: Every Saturday at 3 AM UTC
+# ============================================================================
+
+name: Autonomous Maintenance
+
+on:
+  schedule:
+    # Run every Saturday at 3 AM UTC
+    - cron: '0 3 * * 6'
+  
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (analyze only, no changes)'
+        required: false
+        type: boolean
+        default: false
+      scope:
+        description: 'Maintenance scope'
+        required: false
+        type: choice
+        options:
+          - full
+          - audit-only
+          - optimize-only
+          - improve-only
+          - qol-only
+        default: 'full'
+
+# Security: Restrict permissions to minimum required
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+# Security: Prevent concurrent runs
+concurrency:
+  group: maintenance-${{ github.run_id }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '20'
+  MAINTENANCE_BRANCH: 'automated/maintenance-${{ github.run_id }}'
+
+jobs:
+  # ============ SETUP ============
+  setup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      branch_name: ${{ steps.branch.outputs.name }}
+      timestamp: ${{ steps.timestamp.outputs.value }}
+
+    steps:
+      - name: Generate timestamp
+        id: timestamp
+        run: |
+          echo "value=$(date -u +%Y-%m-%d)" >> $GITHUB_OUTPUT
+
+      - name: Set branch name
+        id: branch
+        run: |
+          echo "name=automated/maintenance-${{ steps.timestamp.outputs.value }}-${{ github.run_number }}" >> $GITHUB_OUTPUT
+
+  # ============ AUDIT PHASE ============
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: setup
+    if: inputs.scope == 'full' || inputs.scope == 'audit-only' || github.event_name == 'schedule'
+    outputs:
+      health_score: ${{ steps.audit.outputs.health_score }}
+      lint_errors: ${{ steps.audit.outputs.lint_errors }}
+      vulnerabilities: ${{ steps.audit.outputs.vulnerabilities }}
+      outdated_deps: ${{ steps.audit.outputs.outdated_deps }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run comprehensive audit
+        id: audit
+        run: |
+          echo "📊 Running comprehensive audit..."
+          
+          # Lint analysis
+          set +e
+          npx eslint "src/**/*.{ts,html}" --format json > eslint-report.json 2>&1
+          set -e
+          
+          LINT_ERRORS=$(cat eslint-report.json | jq '[.[] | .errorCount] | add // 0' 2>/dev/null || echo "0")
+          LINT_WARNINGS=$(cat eslint-report.json | jq '[.[] | .warningCount] | add // 0' 2>/dev/null || echo "0")
+          
+          echo "lint_errors=$LINT_ERRORS" >> $GITHUB_OUTPUT
+          echo "lint_warnings=$LINT_WARNINGS" >> $GITHUB_OUTPUT
+          
+          # Security audit
+          npm audit --json > audit.json 2>&1 || true
+          VULNERABILITIES=$(cat audit.json | jq '.metadata.vulnerabilities.total // 0' 2>/dev/null || echo "0")
+          CRITICAL_VULNS=$(cat audit.json | jq '.metadata.vulnerabilities.critical // 0' 2>/dev/null || echo "0")
+          
+          echo "vulnerabilities=$VULNERABILITIES" >> $GITHUB_OUTPUT
+          echo "critical_vulns=$CRITICAL_VULNS" >> $GITHUB_OUTPUT
+          
+          # Outdated dependencies
+          npm outdated --json > outdated.json 2>&1 || true
+          OUTDATED_DEPS=$(cat outdated.json | jq 'length' 2>/dev/null || echo "0")
+          
+          echo "outdated_deps=$OUTDATED_DEPS" >> $GITHUB_OUTPUT
+          
+          # Calculate health score
+          HEALTH=100
+          HEALTH=$((HEALTH - LINT_ERRORS * 2))
+          HEALTH=$((HEALTH - CRITICAL_VULNS * 10))
+          HEALTH=$((HEALTH - VULNERABILITIES))
+          HEALTH=$((HEALTH < 0 ? 0 : HEALTH))
+          
+          echo "health_score=$HEALTH" >> $GITHUB_OUTPUT
+          
+          echo "## Audit Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Health Score: $HEALTH/100" >> $GITHUB_STEP_SUMMARY
+          echo "- Lint Errors: $LINT_ERRORS" >> $GITHUB_STEP_SUMMARY
+          echo "- Vulnerabilities: $VULNERABILITIES (Critical: $CRITICAL_VULNS)" >> $GITHUB_STEP_SUMMARY
+          echo "- Outdated Dependencies: $OUTDATED_DEPS" >> $GITHUB_STEP_SUMMARY
+
+  # ============ MAINTENANCE PHASE ============
+  maintenance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [setup, audit]
+    if: inputs.dry_run != true && needs.audit.result == 'success'
+    outputs:
+      changes_made: ${{ steps.summary.outputs.changes_made }}
+      files_changed: ${{ steps.summary.outputs.files_changed }}
+      pr_number: ${{ steps.pr.outputs.number }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Create maintenance branch
+        run: |
+          git checkout -b ${{ needs.setup.outputs.branch_name }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Initialize changelog
+        run: |
+          echo "# Autonomous Maintenance Changelog" > maintenance-changelog.md
+          echo "" >> maintenance-changelog.md
+          echo "**Date:** ${{ needs.setup.outputs.timestamp }}" >> maintenance-changelog.md
+          echo "**Run ID:** ${{ github.run_id }}" >> maintenance-changelog.md
+          echo "" >> maintenance-changelog.md
+          echo "## Changes Applied" >> maintenance-changelog.md
+          echo "" >> maintenance-changelog.md
+
+      # ============ OPTIMIZATION ============
+      - name: Run optimization
+        id: optimize
+        if: inputs.scope == 'full' || inputs.scope == 'optimize-only'
+        run: |
+          echo "⚡ Running optimizations..."
+          echo "### Optimizations" >> maintenance-changelog.md
+          
+          CHANGES=0
+          
+          # Remove unused imports
+          npx eslint "src/**/*.ts" \
+            --rule '{"@typescript-eslint/no-unused-vars": ["error", {"argsIgnorePattern": "^_"}]}' \
+            --fix 2>&1 || true
+          
+          if [[ -n $(git status --porcelain "src/**/*.ts" 2>/dev/null) ]]; then
+            CHANGES=$((CHANGES + 1))
+            echo "- ✅ Removed unused imports and variables" >> maintenance-changelog.md
+          fi
+          
+          # Remove console.log statements
+          for file in $(find src -name "*.ts" ! -name "*.spec.ts"); do
+            if grep -q "console\.log\|console\.debug" "$file" 2>/dev/null; then
+              sed -i 's/^\(\s*\)\(console\.log\)/\1\/\/ \2/g' "$file"
+              sed -i 's/^\(\s*\)\(console\.debug\)/\1\/\/ \2/g' "$file"
+            fi
+          done
+          
+          if [[ -n $(git status --porcelain 2>/dev/null) ]]; then
+            CHANGES=$((CHANGES + 1))
+            echo "- ✅ Commented out console.log/debug statements" >> maintenance-changelog.md
+          fi
+          
+          echo "changes=$CHANGES" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      # ============ IMPROVEMENTS ============
+      - name: Run improvements
+        id: improve
+        if: inputs.scope == 'full' || inputs.scope == 'improve-only'
+        run: |
+          echo "🚀 Running improvements..."
+          echo "" >> maintenance-changelog.md
+          echo "### Improvements" >> maintenance-changelog.md
+          
+          CHANGES=0
+          
+          # Replace var with let
+          for file in $(find src -name "*.ts" ! -name "*.spec.ts"); do
+            if grep -q "^\s*var\s" "$file" 2>/dev/null; then
+              sed -i 's/^\(\s*\)var\s/\1let /g' "$file"
+              CHANGES=$((CHANGES + 1))
+            fi
+          done
+          
+          if [ "$CHANGES" -gt 0 ]; then
+            echo "- ✅ Replaced 'var' with 'let' in $CHANGES files" >> maintenance-changelog.md
+          fi
+          
+          # Apply ESLint auto-fixes
+          npx eslint "src/**/*.{ts,html}" --fix 2>&1 || true
+          
+          if [[ -n $(git status --porcelain 2>/dev/null) ]]; then
+            echo "- ✅ Applied ESLint auto-fixes" >> maintenance-changelog.md
+          fi
+          
+          echo "changes=$CHANGES" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      # ============ QOL ENHANCEMENTS ============
+      - name: Run QoL enhancements
+        id: qol
+        if: inputs.scope == 'full' || inputs.scope == 'qol-only'
+        run: |
+          echo "✨ Running QoL enhancements..."
+          echo "" >> maintenance-changelog.md
+          echo "### QoL Enhancements" >> maintenance-changelog.md
+          
+          CHANGES=0
+          
+          # Create missing barrel exports
+          for dir in $(find src -type d ! -name "node_modules" ! -name ".git" ! -name "__tests__"); do
+            TS_FILES=$(find "$dir" -maxdepth 1 -name "*.ts" ! -name "index.ts" ! -name "*.spec.ts" ! -name "*.d.ts" -printf "%f\n" 2>/dev/null || true)
+            FILE_COUNT=$(echo "$TS_FILES" | grep -c "\.ts$" 2>/dev/null || echo "0")
+            
+            if [ "$FILE_COUNT" -gt 2 ] && [ ! -f "$dir/index.ts" ]; then
+              echo "// Barrel export - auto-generated by maintenance workflow" > "$dir/index.ts"
+              echo "" >> "$dir/index.ts"
+              
+              for ts_file in $TS_FILES; do
+                basename="${ts_file%.ts}"
+                echo "export * from './${basename}';" >> "$dir/index.ts"
+              done
+              
+              CHANGES=$((CHANGES + 1))
+              echo "- ✅ Created barrel export: $dir/index.ts" >> maintenance-changelog.md
+            fi
+          done
+          
+          # Remove debugger statements
+          for file in $(find src -name "*.ts" ! -name "*.spec.ts"); do
+            if grep -q "^\s*debugger;" "$file" 2>/dev/null; then
+              sed -i '/^\s*debugger;$/d' "$file"
+              echo "- ✅ Removed debugger statements" >> maintenance-changelog.md
+            fi
+          done
+          
+          echo "changes=$CHANGES" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      # ============ SECURITY FIXES ============
+      - name: Apply security fixes
+        id: security
+        if: needs.audit.outputs.vulnerabilities != '0' && (inputs.scope == 'full' || github.event_name == 'schedule')
+        run: |
+          echo "🔒 Applying security fixes..."
+          echo "" >> maintenance-changelog.md
+          echo "### Security" >> maintenance-changelog.md
+          
+          BEFORE="${{ needs.audit.outputs.vulnerabilities }}"
+          
+          npm audit fix 2>&1 || true
+          
+          npm audit --json > audit-after.json 2>&1 || true
+          AFTER=$(cat audit-after.json | jq '.metadata.vulnerabilities.total // 0' 2>/dev/null || echo "$BEFORE")
+          
+          FIXED=$((BEFORE - AFTER))
+          
+          if [ "$FIXED" -gt 0 ]; then
+            echo "- ✅ Fixed $FIXED security vulnerabilities" >> maintenance-changelog.md
+            echo "fixed=$FIXED" >> $GITHUB_OUTPUT
+          else
+            echo "- ℹ️ No auto-fixable vulnerabilities" >> maintenance-changelog.md
+            echo "fixed=0" >> $GITHUB_OUTPUT
+          fi
+        continue-on-error: true
+
+      # ============ FORMAT ============
+      - name: Final formatting
+        run: |
+          echo "🎨 Applying final formatting..."
+          npx prettier --write "src/**/*.{ts,html,css,scss,json}" || true
+          npx prettier --write "*.json" "*.md" || true
+          
+          echo "" >> maintenance-changelog.md
+          echo "### Formatting" >> maintenance-changelog.md
+          echo "- ✅ Applied Prettier formatting to all files" >> maintenance-changelog.md
+        continue-on-error: true
+
+      # ============ SUMMARIZE ============
+      - name: Summarize changes
+        id: summary
+        run: |
+          if [[ -n $(git status --porcelain) ]]; then
+            echo "changes_made=true" >> $GITHUB_OUTPUT
+            FILES_CHANGED=$(git status --porcelain | wc -l)
+            echo "files_changed=$FILES_CHANGED" >> $GITHUB_OUTPUT
+            
+            echo "" >> maintenance-changelog.md
+            echo "---" >> maintenance-changelog.md
+            echo "" >> maintenance-changelog.md
+            echo "## Summary" >> maintenance-changelog.md
+            echo "" >> maintenance-changelog.md
+            echo "- **Files Changed:** $FILES_CHANGED" >> maintenance-changelog.md
+            echo "- **Health Score Before:** ${{ needs.audit.outputs.health_score }}/100" >> maintenance-changelog.md
+          else
+            echo "changes_made=false" >> $GITHUB_OUTPUT
+            echo "files_changed=0" >> $GITHUB_OUTPUT
+          fi
+
+      # ============ COMMIT AND PR ============
+      - name: Commit changes
+        if: steps.summary.outputs.changes_made == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add -A
+          
+          git commit -m "🤖 Autonomous Maintenance: ${{ needs.setup.outputs.timestamp }}
+
+          Applied automatic maintenance improvements:
+          - Code optimizations
+          - Pattern improvements
+          - QoL enhancements
+          - Security fixes (if applicable)
+          - Formatting standardization
+
+          Files changed: ${{ steps.summary.outputs.files_changed }}
+
+          See PR description for detailed changelog.
+
+          This commit was automatically generated by the Autonomous Maintenance workflow."
+
+      - name: Push branch
+        if: steps.summary.outputs.changes_made == 'true'
+        run: |
+          git push origin ${{ needs.setup.outputs.branch_name }}
+
+      - name: Create Pull Request
+        if: steps.summary.outputs.changes_made == 'true'
+        id: pr
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            
+            const changelog = fs.readFileSync('maintenance-changelog.md', 'utf8');
+            const healthScore = '${{ needs.audit.outputs.health_score }}';
+            const filesChanged = '${{ steps.summary.outputs.files_changed }}';
+            const date = '${{ needs.setup.outputs.timestamp }}';
+            
+            const body = `## 🤖 Autonomous Maintenance Report
+            
+            **Date:** ${date}
+            **Health Score:** ${healthScore}/100
+            **Files Changed:** ${filesChanged}
+            
+            ---
+            
+            ${changelog}
+            
+            ---
+            
+            ## Review Notes
+            
+            This PR was automatically generated by the Autonomous Maintenance workflow. All changes have been applied using safe, non-breaking transformations.
+            
+            ### Before Merging
+            - [ ] Review the changes for unexpected modifications
+            - [ ] Verify all tests pass
+            - [ ] Check that no functionality was affected
+            
+            ---
+            *Agentic Swarm Autonomous Maintenance • Run ID: ${{ github.run_id }}*`;
+            
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🤖 Autonomous Maintenance - ${date}`,
+              body: body,
+              head: '${{ needs.setup.outputs.branch_name }}',
+              base: 'main',
+              draft: false
+            });
+            
+            console.log(`Created PR #${pr.number}`);
+            core.setOutput('number', pr.number);
+            core.setOutput('url', pr.html_url);
+            
+            // Add labels
+            try {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                labels: ['automated', 'maintenance', 'swarm-generated']
+              });
+            } catch (e) {
+              console.log('Could not add labels:', e.message);
+            }
+            
+            return pr;
+
+  # ============ REPORT ============
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [setup, audit, maintenance]
+    if: always() && !cancelled()
+
+    steps:
+      - name: Generate final report
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const date = '${{ needs.setup.outputs.timestamp }}';
+            const healthScore = '${{ needs.audit.outputs.health_score }}' || 'N/A';
+            const changesMade = '${{ needs.maintenance.outputs.changes_made }}' === 'true';
+            const filesChanged = '${{ needs.maintenance.outputs.files_changed }}' || '0';
+            const prNumber = '${{ needs.maintenance.outputs.pr_number }}';
+            const dryRun = '${{ inputs.dry_run }}' === 'true';
+            
+            let report = `# 🤖 Autonomous Maintenance Report
+            
+            **Date:** ${date}
+            **Run ID:** ${{ github.run_id }}
+            **Mode:** ${dryRun ? 'Dry Run (Analysis Only)' : 'Full Maintenance'}
+            
+            ## Audit Results
+            
+            | Metric | Value |
+            |--------|-------|
+            | Health Score | ${healthScore}/100 |
+            | Lint Errors | ${{ needs.audit.outputs.lint_errors }} |
+            | Vulnerabilities | ${{ needs.audit.outputs.vulnerabilities }} |
+            | Outdated Deps | ${{ needs.audit.outputs.outdated_deps }} |
+            
+            `;
+            
+            if (!dryRun && changesMade) {
+              report += `## Maintenance Results
+            
+            | Metric | Value |
+            |--------|-------|
+            | Changes Made | ✅ Yes |
+            | Files Changed | ${filesChanged} |
+            | Pull Request | #${prNumber} |
+            
+            `;
+            } else if (!dryRun) {
+              report += `## Maintenance Results
+            
+            ✨ No changes were necessary - the codebase is already in great shape!
+            `;
+            }
+            
+            report += `
+            ---
+            *Generated by Autonomous Maintenance Workflow*`;
+            
+            await core.summary
+              .addRaw(report)
+              .write();

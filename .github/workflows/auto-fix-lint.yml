@@ -9,6 +9,12 @@
 # - Auto-formats code with Prettier
 # - Commits and pushes fixes automatically
 # - Only runs on non-main branches to avoid direct commits to protected branches
+#
+# Enterprise Features:
+# - npm caching for faster builds
+# - Path-based filtering for relevant files only
+# - Comprehensive step summaries
+# - Concurrency controls
 # ============================================================================
 
 name: Auto-Fix Lint Issues
@@ -22,14 +28,29 @@ on:
       - 'src/**/*.css'
       - 'src/**/*.scss'
       - '*.json'
+      - '!package-lock.json'
 
 permissions:
   contents: write
   pull-requests: write
 
+# Concurrency: Prevent multiple auto-fix runs from running simultaneously per PR
+concurrency:
+  group: auto-fix-lint-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
+  # ============================================================================
+  # AUTO-FIX JOB
+  # ============================================================================
+  # Purpose: Automatically fixes ESLint and Prettier issues and commits changes
+  # Timeout: 15 minutes (allows for fixes and commit operations)
+  # Security: Only runs on PRs from the same repository (not forks)
+  # Output: Commits and pushes fixes back to the PR branch
+  # ============================================================================
   auto-fix:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     # Don't run on PRs from forks (they don't have write access)
     if: github.event.pull_request.head.repo.full_name == github.repository
     
@@ -38,7 +59,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # Use GH_TOKEN to enable pushing commits and triggering other workflows
+          # Falls back to GITHUB_TOKEN if GH_TOKEN is not configured
+          token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
       - name: Setup Node.js

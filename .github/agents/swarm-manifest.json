@@ -1,10 +1,10 @@
 {
   "$schema": "./agent-schema.json",
   "swarm_name": "Xterm1 Agentic Swarm",
-  "version": "1.1.0",
-  "description": "Enterprise-grade Agentic Swarm for comprehensive Angular 20 + TypeScript repository lifecycle management with inter-agent communication",
+  "version": "1.2.0",
+  "description": "Enterprise-grade Agentic Swarm for comprehensive Angular 20 + TypeScript repository lifecycle management with inter-agent communication and autonomous fix capabilities",
   "repository": "CyberBASSLord-666/Xterm1",
-  "last_updated": "2025-11-25",
+  "last_updated": "2025-11-30",
   "total_agents": 26,
   "primary_interface": {
     "agent": "swarm-interface",

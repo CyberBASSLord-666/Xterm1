@@ -22,9 +22,24 @@ permissions:
   issues: write
   contents: read
 
+# Concurrency: Prevent multiple triage runs from running simultaneously per issue
+concurrency:
+  group: issue-triage-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
 jobs:
+  # ============================================================================
+  # TRIAGE JOB
+  # ============================================================================
+  # Purpose: Analyzes issue content and applies appropriate labels and responses
+  # Timeout: 10 minutes (content analysis is quick)
+  # Categories: Detects bugs, features, questions, security, performance, etc.
+  # Priority: Assigns critical, high, medium, or low based on keywords
+  # Output: Applies labels and posts helpful auto-response templates
+  # ============================================================================
   triage:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     
     steps:
       - name: Checkout code
@@ -221,8 +236,17 @@ jobs:
             
             console.log(`Issue #${issue.number} triaged with priority: ${priority}`);
 
+  # ============================================================================
+  # DETECT DUPLICATES JOB
+  # ============================================================================
+  # Purpose: Checks for potential duplicate issues based on title similarity
+  # Timeout: 10 minutes (searches through recent issues)
+  # Algorithm: Word-based similarity comparison (>50% match threshold)
+  # Output: Comments with potential duplicates and adds 'possible-duplicate' label
+  # ============================================================================
   detect-duplicates:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: triage
     
     steps:

@@ -2,12 +2,12 @@ import { Injectable, inject, SecurityContext } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { VALIDATION_RULES, ERROR_MESSAGES } from '../constants';
 // CJS/ESM interop shim for sanitize-html across build configs.
-import sanitizeHtml from 'sanitize-html';
+import * as sanitizeHtmlLib from 'sanitize-html';
 
 type SanitizeHtmlOptions = Record<string, unknown>;
 type SanitizeHtmlFn = (html: string, options: SanitizeHtmlOptions) => string;
-const sanitizeHtmlFn: SanitizeHtmlFn =
-  (sanitizeHtml as { default?: SanitizeHtmlFn } & SanitizeHtmlFn).default ?? (sanitizeHtml as SanitizeHtmlFn);
+const sanitizeHtmlFn: SanitizeHtmlFn = ((sanitizeHtmlLib as unknown as { default?: SanitizeHtmlFn }).default ??
+  sanitizeHtmlLib) as unknown as SanitizeHtmlFn;
 
 /** Single source of truth for base URL in URL parsing across CSR/SSR. */
 const DEFAULT_BASE_URL = 'http://localhost';
