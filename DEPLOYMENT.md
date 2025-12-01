@@ -96,7 +96,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+        run: npm ci
 
       - name: Build application
         run: npm run build -- --configuration=production --base-href=/Xterm1/
@@ -196,7 +196,7 @@ cat dist/app/browser/index.html | grep base
    Framework Preset: Angular
    Build Command: npm run build
    Output Directory: dist/app/browser
-   Install Command: npm ci --legacy-peer-deps
+   Install Command: npm ci
    ```
 
 3. **Environment Variables**:
@@ -327,7 +327,7 @@ vercel --prod
    ```
 4. **Advanced Build Settings**:
    ```bash
-   NPM_FLAGS=--legacy-peer-deps
+   NPM_FLAGS=""
    NODE_VERSION=20
    ```
 
@@ -361,7 +361,7 @@ netlify deploy --prod
 
 [build.environment]
   NODE_VERSION = "20"
-  NPM_FLAGS = "--legacy-peer-deps"
+  NPM_FLAGS = ""
 
 [[redirects]]
   from = "/*"
@@ -429,7 +429,7 @@ git clone https://github.com/CyberBASSLord-666/Xterm1.git
 cd Xterm1
 
 # Install dependencies
-npm ci --legacy-peer-deps
+npm ci
 
 # Build for production
 npm run build -- --configuration=production
@@ -544,7 +544,7 @@ echo "🚀 Deploying PolliWall..."
 git pull origin main
 
 # Install dependencies
-npm ci --legacy-peer-deps
+npm ci
 
 # Run tests
 npm test
@@ -676,8 +676,8 @@ sudo systemctl reload nginx
 
 **Issue**: `npm ci` fails
 ```bash
-# Solution: Use legacy peer deps
-npm ci --legacy-peer-deps
+# Solution: Reinstall dependencies cleanly
+npm ci
 ```
 
 **Issue**: Build timeout

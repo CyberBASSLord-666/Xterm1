@@ -167,7 +167,7 @@ e2e:
     - uses: actions/setup-node@v6
       with:
         node-version: '20'
-    - run: npm ci --legacy-peer-deps
+    - run: npm ci
     - run: npx playwright install --with-deps
     - run: npm run e2e:headless
     - uses: actions/upload-artifact@v5
@@ -917,14 +917,14 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
         with:
           node-version: '20'
       - run: npm ci
       - run: npx playwright install --with-deps
       - run: npm run e2e:headless
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         if: always()
         with:
           name: playwright-report

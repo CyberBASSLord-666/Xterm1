@@ -358,7 +358,7 @@ All user inputs sanitized before use.
 
 **Best Practices**:
 - ✅ All actions pinned to specific versions
-- ✅ Proper use of `npm ci --legacy-peer-deps`
+- ✅ Proper use of `npm ci`
 - ✅ Caching configured for npm and build artifacts
 - ✅ Appropriate timeouts set
 - ✅ Proper permissions (least privilege)
