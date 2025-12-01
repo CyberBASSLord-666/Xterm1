@@ -493,7 +493,7 @@ test:
   steps:
     - uses: actions/checkout@v5
     - uses: actions/setup-node@v6
-    - run: npm ci --legacy-peer-deps
+    - run: npm ci
     - run: npm test -- --coverage --watchAll=false
     - uses: codecov/codecov-action@v3
       with:
@@ -548,7 +548,7 @@ test:
 ```bash
 # Solution: Use same Node version as CI
 nvm use 20
-npm ci --legacy-peer-deps
+npm ci
 npm test
 ```
 
