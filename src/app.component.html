@@ -12,20 +12,38 @@
           </a>
         </div>
         <div class="flex items-center">
-          <nav class="hidden md:flex items-center space-x-1" aria-label="Primary navigation">
-            @for (item of navigationItems; track item.path) {
-              <a
-                [routerLink]="item.path"
-                routerLinkActive="font-bold text-accent"
-                #desktopLink="routerLinkActive"
-                [routerLinkActiveOptions]="item.exact ? exactMatchOptions : defaultMatchOptions"
-                [attr.data-analytics-id]="item.analyticsId || null"
-                [attr.aria-current]="desktopLink.isActive ? 'page' : null"
-                [ngClass]="desktopNavLinkClass"
-              >
-                {{ item.label }}
-              </a>
-            }
+          <nav class="hidden md:flex items-center space-x-1">
+            <a
+              routerLink="/"
+              routerLinkActive="font-bold text-accent"
+              [routerLinkActiveOptions]="{ exact: true }"
+              class="px-3 py-2 rounded-md text-sm font-medium text-secondary-text hover:text-accent transition-colors"
+              >Create</a
+            >
+            <a
+              routerLink="/gallery"
+              routerLinkActive="font-bold text-accent"
+              class="px-3 py-2 rounded-md text-sm font-medium text-secondary-text hover:text-accent transition-colors"
+              >Gallery</a
+            >
+            <a
+              routerLink="/collections"
+              routerLinkActive="font-bold text-accent"
+              class="px-3 py-2 rounded-md text-sm font-medium text-secondary-text hover:text-accent transition-colors"
+              >Collections</a
+            >
+            <a
+              routerLink="/feed"
+              routerLinkActive="font-bold text-accent"
+              class="px-3 py-2 rounded-md text-sm font-medium text-secondary-text hover:text-accent transition-colors"
+              >Feed</a
+            >
+            <a
+              routerLink="/settings"
+              routerLinkActive="font-bold text-accent"
+              class="px-3 py-2 rounded-md text-sm font-medium text-secondary-text hover:text-accent transition-colors"
+              >Settings</a
+            >
           </nav>
           <div class="flex items-center ml-4">
             <button

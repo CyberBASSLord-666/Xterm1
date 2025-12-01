@@ -1,11 +1,10 @@
-import { Component, ChangeDetectionStrategy, inject, effect, signal, Renderer2 } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, effect, signal } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { ToastComponent } from './components/toast/toast.component';
 import { ShortcutsHelpComponent } from './components/shortcuts-help/shortcuts-help.component';
 import { SettingsService } from './services/settings.service';
 import { ToastService } from './services/toast.service';
-import { PlatformService } from './services/platform.service';
 
 interface AppNavigationItem {
   readonly label: string;
@@ -29,14 +28,12 @@ const APP_NAVIGATION_ITEMS: readonly AppNavigationItem[] = [
   selector: 'app-root',
   templateUrl: './app.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, ToastComponent, ShortcutsHelpComponent, NgClass],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ToastComponent, ShortcutsHelpComponent],
 })
 export class AppComponent {
   private settingsService = inject(SettingsService);
   private toastService = inject(ToastService);
-  private renderer = inject(Renderer2);
-  private platformService = inject(PlatformService);
-  private document = inject(DOCUMENT);
+  private doc = inject(DOCUMENT, { optional: true });
 
   readonly navigationItems = APP_NAVIGATION_ITEMS;
   readonly exactMatchOptions = EXACT_MATCH_OPTIONS;
@@ -53,19 +50,6 @@ export class AppComponent {
 
   constructor() {
     effect(() => {
-      // This effect reacts to theme changes and applies the CSS class to the root <html> element.
-      // Only manipulate DOM in browser context for SSR safety
-      if (!this.platformService.isBrowser) {
-        return;
-      }
-
-      const isDark = this.settingsService.themeDark();
-      const documentElement = this.document.documentElement;
-
-      if (isDark) {
-        this.renderer.addClass(documentElement, 'dark');
-      } else {
-        this.renderer.removeClass(documentElement, 'dark');
       if (!this.isBrowser || !this.doc?.documentElement) {
         return;
       }

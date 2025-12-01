@@ -1,12 +1,10 @@
 import { Component, ChangeDetectionStrategy, inject, OnInit, OnDestroy, computed } from '@angular/core';
-import { DOCUMENT } from '@angular/common';
 import { GalleryService } from '../../services/gallery.service';
 import { ToastService } from '../../services/toast.service';
 import { SettingsService } from '../../services/settings.service';
 import { KeyboardShortcutsService } from '../../services/keyboard-shortcuts.service';
 import { LoggerService } from '../../services/logger.service';
-import { PlatformService } from '../../services/platform.service';
-import { zip, unzip, strToU8, strFromU8 } from 'fflate';
+import JSZip from 'jszip';
 import { FormsModule } from '@angular/forms';
 import { createLoadingState, createFormField } from '../../utils';
 
@@ -23,8 +21,6 @@ export class SettingsComponent implements OnInit, OnDestroy {
   private toastService = inject(ToastService);
   private keyboardShortcuts = inject(KeyboardShortcutsService);
   private logger = inject(LoggerService);
-  private platformService = inject(PlatformService);
-  private document = inject(DOCUMENT);
 
   // Professional loading states
   exportState = createLoadingState();
@@ -104,51 +100,29 @@ export class SettingsComponent implements OnInit, OnDestroy {
         return;
       }
 
-      // Prepare files for fflate
-      const files: Record<string, Uint8Array> = {};
+      const zip = new JSZip();
       const metadata = [];
 
       for (const item of items) {
         const { blob, thumb, ...meta } = item;
         metadata.push(meta);
-
-        // Convert blobs to Uint8Array
-        const imageBuffer = new Uint8Array(await blob.arrayBuffer());
-        const thumbBuffer = new Uint8Array(await thumb.arrayBuffer());
-
-        files[`images/${item.id}.jpg`] = imageBuffer;
-        files[`thumbnails/${item.id}.jpg`] = thumbBuffer;
+        zip.file(`images/${item.id}.jpg`, blob, { binary: true });
+        zip.file(`thumbnails/${item.id}.jpg`, thumb, { binary: true });
       }
 
-      // Add metadata as JSON
-      files['metadata.json'] = strToU8(JSON.stringify(metadata, null, 2));
+      zip.file('metadata.json', JSON.stringify(metadata, null, 2));
 
       this.toastService.show('Generating ZIP file...');
+      const content = await zip.generateAsync({ type: 'blob' });
 
-      // Create ZIP using fflate
-      const zipData = await new Promise<Uint8Array>((resolve, reject) => {
-        zip(files, { level: 6 }, (err, data) => {
-          if (err) reject(err);
-          else resolve(data);
-        });
-      });
-
-      if (!this.platformService.isBrowser) {
-        this.toastService.show('Export is not available in server-side rendering context.');
-        return;
-      }
-
-      // Create blob and download (type assertion needed for fflate Uint8Array compatibility)
-      const content = new Blob([zipData] as BlobPart[], { type: 'application/zip' });
-      const link = this.document.createElement('a');
-      const url = URL.createObjectURL(content);
-      link.href = url;
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(content);
       link.download = `PolliWall_Export_${new Date().toISOString().split('T')[0]}.zip`;
-      this.document.body.appendChild(link);
+      document.body.appendChild(link);
       link.click();
-      this.document.body.removeChild(link);
+      document.body.removeChild(link);
 
-      URL.revokeObjectURL(url);
+      URL.revokeObjectURL(link.href);
       this.toastService.show('Export complete!');
     });
 
@@ -179,24 +153,15 @@ export class SettingsComponent implements OnInit, OnDestroy {
       this.toastService.show('Reading ZIP file...');
 
       try {
-        // Read file as ArrayBuffer
-        const arrayBuffer = await file.arrayBuffer();
-        const zipData = new Uint8Array(arrayBuffer);
-
-        // Unzip using fflate
-        const unzipped = await new Promise<Record<string, Uint8Array>>((resolve, reject) => {
-          unzip(zipData, (err, data) => {
-            if (err) reject(err);
-            else resolve(data);
-          });
-        });
+        const zip = await JSZip.loadAsync(file);
 
         // Read metadata.json
-        if (!unzipped['metadata.json']) {
+        const metadataFile = zip.file('metadata.json');
+        if (!metadataFile) {
           throw new Error('Invalid format: metadata.json not found.');
         }
 
-        const metadataText = strFromU8(unzipped['metadata.json']);
+        const metadataText = await metadataFile.async('text');
         const metadata = JSON.parse(metadataText) as Array<{
           id: string;
           createdAt: string;
@@ -233,16 +198,15 @@ export class SettingsComponent implements OnInit, OnDestroy {
             }
 
             // Read image files
-            const imageData = unzipped[`images/${meta.id}.jpg`];
-            const thumbData = unzipped[`thumbnails/${meta.id}.jpg`];
+            const imageFile = zip.file(`images/${meta.id}.jpg`);
+            const thumbFile = zip.file(`thumbnails/${meta.id}.jpg`);
 
-            if (!imageData || !thumbData) {
+            if (!imageFile || !thumbFile) {
               throw new Error(`Missing image files for ${meta.id}`);
             }
 
-            // Convert Uint8Array to Blob (type assertion needed for fflate compatibility)
-            const imageBlob = new Blob([imageData] as BlobPart[], { type: 'image/jpeg' });
-            const thumbBlob = new Blob([thumbData] as BlobPart[], { type: 'image/jpeg' });
+            const imageBlob = await imageFile.async('blob');
+            const thumbBlob = await thumbFile.async('blob');
 
             // Add to gallery
             await this.galleryService.add({

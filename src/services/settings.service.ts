@@ -81,63 +81,44 @@ export class SettingsService implements OnDestroy {
     }
   }
 
-  private load(): void {
-    const localStorage = this.platformService.getLocalStorage();
-    if (!localStorage) {
-      this.loadDefaults();
-      return;
-    }
-
-    const saved = localStorage.getItem(this.settingsKey);
-    if (saved) {
-      try {
-        const settings: AppSettings = JSON.parse(saved);
-        const location = this.platformService.getLocation();
-        this.referrer.set(settings.referrer ?? (location?.origin || ''));
-        this.nologo.set(settings.nologo ?? true);
-        this.private.set(settings.private ?? true);
-        this.safe.set(settings.safe ?? true);
-        this.themeDark.set(settings.themeDark ?? false);
-      } catch (e) {
-        this.logger.error('Failed to parse settings from localStorage', e as Error, 'Settings');
-        this.loadDefaults();
-      }
-    } else {
-      this.loadDefaults();
+  ngOnDestroy(): void {
+    this.persistEffect?.destroy();
+    this.persistEffect = undefined;
+    if (this.isBrowser) {
+      window.removeEventListener('storage', this.handleStorageEvent);
     }
     this.systemThemeListenerCleanup?.();
     this.systemThemeListenerCleanup = null;
   }
 
-  private loadDefaults(): void {
-    const location = this.platformService.getLocation();
-    this.referrer.set(location?.origin || '');
-    this.nologo.set(true);
-    this.private.set(true);
-    this.safe.set(true);
-
-    // Detect dark mode preference in SSR-safe manner
-    const prefersDark = this.platformService.runInBrowserOrFallback(
-      () => this.platformService.matchMedia('(prefers-color-scheme: dark)')?.matches ?? false,
-      false
-    );
-    this.themeDark.set(prefersDark);
+  /**
+   * Toggles the theme between dark and light mode.
+   * Marks the theme as explicitly set by the user.
+   * @returns The new theme state (true for dark, false for light)
+   */
+  toggleTheme(): boolean {
+    const next = !this.themeDarkState();
+    this.setTheme(next);
+    return next;
   }
 
-  private save(): void {
-    const localStorage = this.platformService.getLocalStorage();
-    if (!localStorage) {
-      return; // Cannot save in non-browser context
-    }
+  /**
+   * Sets the theme to the specified mode.
+   * Marks the theme as explicitly set by the user.
+   * @param dark - True for dark mode, false for light mode
+   */
+  setTheme(dark: boolean): void {
+    this.hasExplicitThemePreference = true;
+    this.themeDarkState.set(dark);
+  }
 
-    const settings: AppSettings = {
-      referrer: this.referrer(),
-      nologo: this.nologo(),
-      private: this.private(),
-      safe: this.safe(),
-      themeDark: this.themeDark(),
-    };
-    localStorage.setItem(this.settingsKey, JSON.stringify(settings));
+  /**
+   * Resets the theme preference to follow the system setting.
+   * Clears any explicit user preference and re-applies system detection.
+   */
+  resetThemeToSystemPreference(): void {
+    this.hasExplicitThemePreference = false;
+    this.themeDarkState.set(this.detectSystemDarkMode());
   }
 
   getGenerationOptions(): Omit<AppSettings, 'themeDark'> {
