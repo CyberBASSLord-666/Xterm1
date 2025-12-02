@@ -47,7 +47,7 @@ export class AppInitializerService {
         // Initialize Gemini client if API key is available
         const apiKey = this.config.getGeminiApiKey();
         if (apiKey) {
-          initializeGeminiClient(apiKey);
+          await initializeGeminiClient(apiKey);
           this.logger.info('Gemini API client initialized', undefined, 'AppInitializer');
         } else {
           // Check if we should fail fast in production

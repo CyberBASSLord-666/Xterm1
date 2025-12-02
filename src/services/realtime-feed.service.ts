@@ -723,49 +723,59 @@ export class RealtimeFeedService implements OnDestroy {
   ): FeedHealth {
     const status = state.status();
 
+    // Handle critical statuses first
+    if (this.isCriticalStatus(status, diagnostics)) {
+      return 'critical';
+    }
+
+    // Handle idle status
     if (status === 'idle') {
       return diagnostics.lastConnectedAt ? 'good' : 'idle';
     }
 
-    if (status === 'error') {
-      return 'critical';
-    }
-
-    if (status === 'offline') {
-      return 'critical';
-    }
-
-    if (diagnostics.lastFailureReason === 'error') {
-      return 'critical';
-    }
-
-    if (diagnostics.lastFailureReason === 'offline') {
-      return 'critical';
-    }
-
+    // Handle reconnecting status
     if (status === 'reconnecting') {
       return diagnostics.consecutiveErrors > 0 ? 'critical' : 'degraded';
     }
 
+    // Handle stalled connection
     if (diagnostics.stalled) {
       return diagnostics.stallDurationMs >= this.criticalStallThreshold ? 'critical' : 'degraded';
     }
 
+    // Handle paused status
     if (state.paused() || status === 'paused') {
       return 'good';
     }
 
+    // Handle connecting status
     if (status === 'connecting') {
       return diagnostics.consecutiveErrors > 0 ? 'degraded' : 'good';
     }
 
+    // Handle connected status
     if (status === 'connected') {
-      if (diagnostics.uptimeMs >= this.excellentUptimeThreshold && diagnostics.consecutiveErrors === 0) {
-        return 'excellent';
-      }
-      return 'good';
+      return this.determineConnectedHealth(diagnostics);
     }
 
+    return 'good';
+  }
+
+  /** Check if status represents a critical failure. */
+  private isCriticalStatus(status: FeedStatus, diagnostics: FeedDiagnostics): boolean {
+    return (
+      status === 'error' ||
+      status === 'offline' ||
+      diagnostics.lastFailureReason === 'error' ||
+      diagnostics.lastFailureReason === 'offline'
+    );
+  }
+
+  /** Determine health for connected status. */
+  private determineConnectedHealth(diagnostics: FeedDiagnostics): FeedHealth {
+    if (diagnostics.uptimeMs >= this.excellentUptimeThreshold && diagnostics.consecutiveErrors === 0) {
+      return 'excellent';
+    }
     return 'good';
   }
 
