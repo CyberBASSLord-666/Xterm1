@@ -35,6 +35,24 @@ const geminiModel = 'gemini-2.0-flash-exp';
  * Initialize the Gemini AI client with an API key.
  * This must be called before using any Gemini-powered features.
  * The @google/genai package is loaded dynamically to reduce initial bundle size.
+ * 
+ * **BREAKING CHANGE (v0.1.0):** This function is now async and returns a Promise.
+ * Callers must await this function or handle the Promise appropriately.
+ * 
+ * @param apiKey - The Gemini API key for authentication
+ * @returns Promise that resolves when the client is initialized
+ * @throws {Error} If the SDK fails to load or initialization fails
+ * 
+ * @example
+ * ```typescript
+ * try {
+ *   await initializeGeminiClient('your-api-key');
+ *   console.log('Gemini client ready');
+ * } catch (error) {
+ *   console.error('Failed to initialize:', error);
+ *   // Handle graceful degradation - app can still function without AI features
+ * }
+ * ```
  */
 export async function initializeGeminiClient(apiKey: string): Promise<void> {
   if (!apiKey || apiKey.trim().length === 0) {
@@ -46,7 +64,9 @@ export async function initializeGeminiClient(apiKey: string): Promise<void> {
     ai = new GoogleGenAI({ apiKey });
   } catch (error) {
     console.error('Failed to load Gemini AI client:', error);
-    throw new Error('Failed to initialize AI features. Please try again.');
+    // Provide more specific error context for debugging
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to initialize AI features: ${errorMessage}. The application will continue to function, but AI-powered features will be unavailable.`);
   }
 }
 
@@ -95,30 +115,39 @@ function parseApiErrorMessage(errorText: string): string {
 
 /**
  * Handle HTTP response errors and return appropriate error message.
+ * Returns an Error object for server errors (5xx) and rate limiting (429).
+ * Returns an Error object for client errors (4xx) which should NOT be retried.
+ * 
+ * @param response - The HTTP response to handle
+ * @returns Promise<Error> for 5xx/429 (retryable) or 4xx (non-retryable)
  */
-async function handleHttpError(response: Response): Promise<Error> {
+async function handleHttpError(response: Response): Promise<{ error: Error; shouldRetry: boolean }> {
   if (response.status >= 500) {
-    return new Error(HTTP_ERROR_MESSAGES.SERVER_ERROR);
+    return { error: new Error(HTTP_ERROR_MESSAGES.SERVER_ERROR), shouldRetry: true };
   }
   if (response.status === 429) {
-    return new Error(HTTP_ERROR_MESSAGES.RATE_LIMIT);
+    return { error: new Error(HTTP_ERROR_MESSAGES.RATE_LIMIT), shouldRetry: true };
   }
 
   // Handle client errors (4xx) by parsing the response
+  // Client errors should NOT be retried as they indicate invalid requests
   const errorText = await response.text();
   console.error('Raw API Error:', errorText);
   const errorMessage = parseApiErrorMessage(errorText);
-  // Client-side errors should not be retried
-  return new Error(errorMessage);
+  return { error: new Error(errorMessage), shouldRetry: false };
 }
 
 /**
  * Perform a single fetch attempt with timeout.
+ * 
+ * @param url - The URL to fetch
+ * @param timeout - Timeout in milliseconds
+ * @returns Object containing either response or error, plus shouldRetry flag
  */
 async function fetchWithTimeout(
   url: string,
   timeout: number
-): Promise<{ response: Response | null; error: Error | null }> {
+): Promise<{ response: Response | null; error: Error | null; shouldRetry: boolean }> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort('timeout'), timeout);
 
@@ -127,18 +156,18 @@ async function fetchWithTimeout(
     clearTimeout(timeoutId);
 
     if (response.ok) {
-      return { response, error: null };
+      return { response, error: null, shouldRetry: false };
     }
 
-    const error = await handleHttpError(response);
-    return { response: null, error };
+    const { error, shouldRetry } = await handleHttpError(response);
+    return { response: null, error, shouldRetry };
   } catch (error: unknown) {
     clearTimeout(timeoutId);
     const err = error as Error;
     if (err.name === 'AbortError') {
-      return { response: null, error: new Error(HTTP_ERROR_MESSAGES.TIMEOUT) };
+      return { response: null, error: new Error(HTTP_ERROR_MESSAGES.TIMEOUT), shouldRetry: true };
     }
-    return { response: null, error: err };
+    return { response: null, error: err, shouldRetry: true };
   }
 }
 
@@ -149,12 +178,22 @@ function calculateBackoffDelay(attempt: number): number {
   return Math.pow(2, attempt) * 1000;
 }
 
+/**
+ * Fetch with automatic retries and exponential backoff.
+ * Only retries on transient failures (5xx, 429, network errors, timeouts).
+ * Client errors (4xx) are not retried as they indicate invalid requests.
+ * 
+ * @param url - The URL to fetch
+ * @param options - Configuration for timeout and retry attempts
+ * @returns Promise resolving to the successful Response
+ * @throws {Error} The last error encountered if all retries fail
+ */
 async function fetchWithRetries(url: string, options: { timeout: number; retries: number }): Promise<Response> {
   const { timeout, retries } = options;
   let lastError: Error | undefined;
 
   for (let attempt = 1; attempt <= retries; attempt++) {
-    const { response, error } = await fetchWithTimeout(url, timeout);
+    const { response, error, shouldRetry } = await fetchWithTimeout(url, timeout);
 
     if (response) {
       return response;
@@ -162,6 +201,12 @@ async function fetchWithRetries(url: string, options: { timeout: number; retries
 
     lastError = error ?? new Error(HTTP_ERROR_MESSAGES.UNEXPECTED_ERROR);
 
+    // Don't retry if this is a non-retryable error (e.g., 4xx client errors)
+    if (!shouldRetry) {
+      throw lastError;
+    }
+
+    // Apply exponential backoff before retry
     if (attempt < retries) {
       const delay = calculateBackoffDelay(attempt);
       await new Promise((resolve) => setTimeout(resolve, delay));

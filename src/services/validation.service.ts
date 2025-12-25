@@ -12,12 +12,57 @@ const sanitizeHtmlFn: SanitizeHtmlFn = ((sanitizeHtmlLib as unknown as { default
 /** Single source of truth for base URL in URL parsing across CSR/SSR. */
 const DEFAULT_BASE_URL = 'http://localhost';
 
-/** Attributes that are always forbidden in sanitized HTML. */
+/**
+ * SECURITY-CRITICAL: Attributes that are always forbidden in sanitized HTML.
+ * 
+ * These attributes are blocked to prevent XSS attacks and other security vulnerabilities:
+ * 
+ * - **'style'**: Prevents CSS injection attacks that could:
+ *   - Execute JavaScript via expression() in IE
+ *   - Overlay UI elements for phishing (position, z-index)
+ *   - Exfiltrate data via background-image URLs
+ *   - Hide malicious content or links
+ * 
+ * - **'srcdoc'**: Prevents embedded HTML documents in iframes that could:
+ *   - Execute arbitrary JavaScript in a sandboxed context
+ *   - Bypass Content Security Policy (CSP)
+ *   - Create recursive XSS vectors
+ * 
+ * **IMPORTANT**: This constant is immutable (readonly array). Any modification
+ * to this list must be accompanied by:
+ * 1. Security review and approval
+ * 2. Updated tests in validation.service.spec.ts
+ * 3. Documentation in XSS_PREVENTION.md
+ * 4. Review of all call sites to ensure consistent behavior
+ * 
+ * @see {@link shouldDropAttribute} for the function that enforces these rules
+ * @see docs/XSS_PREVENTION.md for comprehensive XSS prevention strategy
+ */
 const FORBIDDEN_ATTRS = ['style', 'srcdoc'] as const;
 
 /**
  * Check if an attribute should be dropped during sanitization.
- * Drops style, srcdoc, and all event handlers (on*).
+ * 
+ * **SECURITY-CRITICAL FUNCTION**: This function enforces XSS prevention by blocking:
+ * 1. 'style' and 'srcdoc' attributes (defined in FORBIDDEN_ATTRS)
+ * 2. All event handler attributes (those starting with 'on')
+ * 
+ * Event handlers blocked include but are not limited to:
+ * - onclick, onload, onerror, onmouseover, onfocus, onblur
+ * - onanimationstart, ontransitionend, onwheel, etc.
+ * 
+ * This prevents inline JavaScript execution which is a primary XSS vector.
+ * 
+ * @param name - The attribute name to check (case-insensitive)
+ * @returns true if the attribute should be dropped, false if it's safe
+ * 
+ * @example
+ * ```typescript
+ * shouldDropAttribute('onclick')  // true - event handler
+ * shouldDropAttribute('style')    // true - in FORBIDDEN_ATTRS
+ * shouldDropAttribute('href')     // false - safe (validated separately)
+ * shouldDropAttribute('ONclick')  // true - case-insensitive
+ * ```
  */
 function shouldDropAttribute(name: string): boolean {
   const lower = name.toLowerCase();
