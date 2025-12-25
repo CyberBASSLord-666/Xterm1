@@ -109,7 +109,7 @@ async function handleHttpError(response: Response): Promise<Error> {
   console.error('Raw API Error:', errorText);
   const errorMessage = parseApiErrorMessage(errorText);
   // Client-side errors should not be retried
-  throw new Error(errorMessage);
+  return new Error(errorMessage);
 }
 
 /**
