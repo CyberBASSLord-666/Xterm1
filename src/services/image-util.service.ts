@@ -23,6 +23,49 @@ export class ImageUtilService {
   private logger = inject(LoggerService);
 
   /**
+   * Create a canvas with image bitmap for processing.
+   * @param blob The source image blob
+   * @param width Target width
+   * @param height Target height
+   * @param alpha Whether to preserve alpha channel
+   * @returns Canvas, context, and bitmap for further processing
+   */
+  private async createCanvasWithBitmap(
+    blob: Blob,
+    width: number,
+    height: number,
+    alpha: boolean = false
+  ): Promise<{ canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D; bitmap: ImageBitmap }> {
+    const bitmap = await createImageBitmap(blob);
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+
+    const ctx = canvas.getContext('2d', { alpha })!;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    return { canvas, ctx, bitmap };
+  }
+
+  /**
+   * Convert canvas to blob with error handling.
+   * @param canvas The canvas to convert
+   * @param format The output format
+   * @param quality The quality (0-1)
+   * @returns Promise resolving to the blob
+   */
+  private canvasToBlob(
+    canvas: HTMLCanvasElement,
+    format: 'image/jpeg' | 'image/png' | 'image/webp',
+    quality: number
+  ): Promise<Blob> {
+    return new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Canvas toBlob failed'))), format, quality);
+    });
+  }
+
+  /**
    * Create a thumbnail from a blob with configurable size and quality.
    * @param blob The source image blob
    * @param options Thumbnail generation options
@@ -34,24 +77,15 @@ export class ImageUtilService {
 
     try {
       const bitmap = await createImageBitmap(blob);
-      const canvas = document.createElement('canvas');
       const scale = size / Math.max(bitmap.width, bitmap.height);
+      const targetWidth = Math.round(bitmap.width * scale);
+      const targetHeight = Math.round(bitmap.height * scale);
 
-      canvas.width = Math.round(bitmap.width * scale);
-      canvas.height = Math.round(bitmap.height * scale);
-
-      const ctx = canvas.getContext('2d', { alpha: false })!;
-
-      // Use high-quality image smoothing
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-
-      ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      const { canvas, ctx } = await this.createCanvasWithBitmap(blob, targetWidth, targetHeight, false);
+      ctx.drawImage(bitmap, 0, 0, targetWidth, targetHeight);
       bitmap.close();
 
-      const result = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Canvas toBlob failed'))), 'image/jpeg', quality);
-      });
+      const result = await this.canvasToBlob(canvas, 'image/jpeg', quality);
 
       const duration = performance.now() - startTime;
       this.logger.debug(
@@ -95,20 +129,11 @@ export class ImageUtilService {
         height = Math.round(height * scale);
       }
 
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-
-      const ctx = canvas.getContext('2d', { alpha: format !== 'image/jpeg' })!;
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-
+      const { canvas, ctx } = await this.createCanvasWithBitmap(blob, width, height, format !== 'image/jpeg');
       ctx.drawImage(bitmap, 0, 0, width, height);
       bitmap.close();
 
-      const result = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Canvas toBlob failed'))), format, quality);
-      });
+      const result = await this.canvasToBlob(canvas, format, quality);
 
       const duration = performance.now() - startTime;
       const compressionRatio = ((1 - result.size / blob.size) * 100).toFixed(1);
@@ -151,17 +176,16 @@ export class ImageUtilService {
     quality: number = 0.9
   ): Promise<Blob> {
     const bitmap = await createImageBitmap(blob);
-    const canvas = document.createElement('canvas');
-    canvas.width = bitmap.width;
-    canvas.height = bitmap.height;
-
-    const ctx = canvas.getContext('2d', { alpha: format !== 'image/jpeg' })!;
+    const { canvas, ctx } = await this.createCanvasWithBitmap(
+      blob,
+      bitmap.width,
+      bitmap.height,
+      format !== 'image/jpeg'
+    );
     ctx.drawImage(bitmap, 0, 0);
     bitmap.close();
 
-    return new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Canvas toBlob failed'))), format, quality);
-    });
+    return this.canvasToBlob(canvas, format, quality);
   }
 
   /**
@@ -171,20 +195,21 @@ export class ImageUtilService {
    */
   async createPlaceholder(blob: Blob): Promise<Blob> {
     const bitmap = await createImageBitmap(blob);
-    const canvas = document.createElement('canvas');
 
     // Create a very small preview (20px on the longest side)
     const scale = 20 / Math.max(bitmap.width, bitmap.height);
-    canvas.width = Math.round(bitmap.width * scale);
-    canvas.height = Math.round(bitmap.height * scale);
+    const width = Math.round(bitmap.width * scale);
+    const height = Math.round(bitmap.height * scale);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
 
     const ctx = canvas.getContext('2d')!;
     ctx.filter = 'blur(2px)';
-    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(bitmap, 0, 0, width, height);
     bitmap.close();
 
-    return new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Canvas toBlob failed'))), 'image/jpeg', 0.5);
-    });
+    return this.canvasToBlob(canvas, 'image/jpeg', 0.5);
   }
 }

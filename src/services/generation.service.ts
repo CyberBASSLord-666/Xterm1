@@ -2,6 +2,7 @@ import { Injectable, signal, inject } from '@angular/core';
 import { GalleryService } from './gallery.service';
 import { ToastService } from './toast.service';
 import { ImageUtilService } from './image-util.service';
+import { LoggerService } from './logger.service';
 import { createDeviceWallpaper, ImageOptions, DeviceInfo, SupportedResolutions } from './pollinations.client';
 import { GalleryItem } from './idb';
 import { UI_CONFIG, IMAGE_PRESETS, ERROR_MESSAGES } from '../constants';
@@ -11,6 +12,7 @@ export class GenerationService {
   private galleryService = inject(GalleryService);
   private imageUtilService = inject(ImageUtilService);
   private toastService = inject(ToastService);
+  private logger = inject(LoggerService);
 
   readonly status = signal<'idle' | 'generating' | 'saving' | 'error' | 'success'>('idle');
   readonly statusMessage = signal('');
@@ -93,6 +95,14 @@ export class GenerationService {
       const errorMessage = `Generation failed: ${error.message || String(e)}`;
       this.statusMessage.set(errorMessage);
       this.toastService.show(errorMessage);
+      this.logger.error('Wallpaper generation failed', error, 'GenerationService');
+      
+      // Clean up any blob URL that might have been created
+      const currentResult = this.currentGenerationResult();
+      if (currentResult) {
+        URL.revokeObjectURL(currentResult.blobUrl);
+        this.currentGenerationResult.set(null);
+      }
     } finally {
       if (this.messageInterval) {
         clearInterval(this.messageInterval);
