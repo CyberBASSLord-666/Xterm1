@@ -45,10 +45,18 @@ export class AppInitializerService {
         this.requestCache.startPeriodicCleanup(60000); // Every minute
 
         // Initialize Gemini client if API key is available
+        // Note: This is an async operation that may add ~100-200ms to app startup
+        // The dynamic import reduces initial bundle size by ~200KB
         const apiKey = this.config.getGeminiApiKey();
         if (apiKey) {
-          initializeGeminiClient(apiKey);
-          this.logger.info('Gemini API client initialized', undefined, 'AppInitializer');
+          try {
+            await initializeGeminiClient(apiKey);
+            this.logger.info('Gemini API client initialized', undefined, 'AppInitializer');
+          } catch (error) {
+            // Log but don't fail the app - AI features are optional
+            this.logger.error('Failed to initialize Gemini API client', error, 'AppInitializer');
+            this.logger.warn('AI-powered features will be unavailable. App continues with limited functionality.', undefined, 'AppInitializer');
+          }
         } else {
           // Check if we should fail fast in production
           const bootstrapConfig = this.getBootstrapConfig();
