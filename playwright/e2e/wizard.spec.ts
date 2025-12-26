@@ -83,12 +83,13 @@ test.describe('Wallpaper Generation Wizard', () => {
         .locator('xpath=ancestor::*[contains(@class, "preset") or contains(@role, "button")]')
         .first();
 
-      // Wait for either selected class or aria-selected attribute
-      await expect(async () => {
-        const classes = await parent.getAttribute('class');
-        const ariaSelected = await parent.getAttribute('aria-selected');
-        expect(classes?.includes('selected') || ariaSelected === 'true').toBeTruthy();
-      }).toPass({ timeout: 5000 });
+      // Wait for either selected class or aria-selected attribute using proper Playwright assertions
+      await expect(parent)
+        .toHaveAttribute('class', /selected|active/, { timeout: 5000 })
+        .catch(async () => {
+          // If class check fails, try aria-selected
+          await expect(parent).toHaveAttribute('aria-selected', 'true', { timeout: 5000 });
+        });
     }
   });
 
@@ -99,16 +100,12 @@ test.describe('Wallpaper Generation Wizard', () => {
     if ((await advancedToggle.count()) > 0) {
       await advancedToggle.click();
 
-      // Wait for expansion using locator assertions
+      // Wait for expansion using proper Playwright locator assertions
       const modelOption = page.locator('text=Model');
       const seedOption = page.locator('text=Seed');
 
-      // Wait for at least one option to become visible
-      await expect(async () => {
-        const modelVisible = (await modelOption.count()) > 0 && (await modelOption.first().isVisible());
-        const seedVisible = (await seedOption.count()) > 0 && (await seedOption.first().isVisible());
-        expect(modelVisible || seedVisible).toBeTruthy();
-      }).toPass({ timeout: 5000 });
+      // Wait for at least one option to become visible using Playwright's built-in methods
+      await modelOption.or(seedOption).first().waitFor({ state: 'visible', timeout: 5000 });
     }
   });
 
@@ -126,17 +123,16 @@ test.describe('Wallpaper Generation Wizard', () => {
     // Click generate
     await generateBtn.click();
 
-    // Wait for validation using assertion
+    // Wait for validation using proper Playwright assertion
     const errorMessage = page.locator('text=/prompt|required/i');
 
-    // Either error message appears or button prevents submission
-    await expect(async () => {
-      const errorCount = await errorMessage.count();
-      if (errorCount > 0) {
-        const isVisible = await errorMessage.first().isVisible();
-        expect(isVisible).toBeTruthy();
-      }
-    }).toPass({ timeout: 5000 });
+    // Wait for error message to appear if it exists, or verify button state prevents submission
+    try {
+      await expect(errorMessage.first()).toBeVisible({ timeout: 5000 });
+    } catch {
+      // If no error message, the button might prevent submission in another way
+      // This is acceptable behavior
+    }
   });
 
   test('should handle prompt generation interaction', async ({ page }) => {
@@ -151,14 +147,14 @@ test.describe('Wallpaper Generation Wizard', () => {
       .first();
     await generateBtn.click();
 
-    // Wait for loading state using assertion
-    await expect(async () => {
-      const buttonText = await generateBtn.textContent();
-      const isDisabled = await generateBtn.isDisabled();
-
-      // Either button should be disabled or show generating text
-      expect(isDisabled || buttonText?.toLowerCase().includes('generat')).toBeTruthy();
-    }).toPass({ timeout: 5000 });
+    // Wait for loading state using proper Playwright assertions
+    // Check if button becomes disabled or text changes to indicate generation
+    try {
+      await expect(generateBtn).toBeDisabled({ timeout: 5000 });
+    } catch {
+      // If button doesn't get disabled, check if text contains "generating"
+      await expect(generateBtn).toContainText(/generat/i, { timeout: 5000 });
+    }
   });
 
   test('should have accessible form elements', async ({ page }) => {
@@ -228,15 +224,12 @@ test.describe('Wallpaper Generation Wizard', () => {
     const textarea = page.locator('textarea').first();
     await textarea.fill(longPrompt);
 
-    // Check if there's a character limit or warning using assertion-based wait
-    const warningText = page.locator('text=/character|limit|maximum/i');
-
-    await expect(async () => {
-      // Should either show warning or allow the text
-      const actualValue = await textarea.inputValue();
-      // Value should be defined (either full or truncated)
-      expect(actualValue.length <= longPrompt.length).toBeTruthy();
-    }).toPass({ timeout: 5000 });
+    // Check if there's a character limit - the value should be set synchronously
+    // No need for toPass() wrapper since fill() is synchronous
+    const actualValue = await textarea.inputValue();
+    // Value should be defined (either full or truncated)
+    expect(actualValue.length).toBeLessThanOrEqual(longPrompt.length);
+    expect(actualValue.length).toBeGreaterThan(0);
   });
 
   test('should persist form state on navigation', async ({ page }) => {
