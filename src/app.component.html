@@ -12,16 +12,13 @@
           </a>
         </div>
         <div class="flex items-center">
-          <nav class="hidden md:flex items-center space-x-1" aria-label="Primary navigation">
+          <nav class="hidden md:flex items-center space-x-1">
             @for (item of navigationItems; track item.path) {
               <a
                 [routerLink]="item.path"
                 routerLinkActive="font-bold text-accent"
-                #desktopLink="routerLinkActive"
                 [routerLinkActiveOptions]="item.exact ? exactMatchOptions : defaultMatchOptions"
-                [attr.data-analytics-id]="item.analyticsId || null"
-                [attr.aria-current]="desktopLink.isActive ? 'page' : null"
-                [ngClass]="desktopNavLinkClass"
+                class="px-3 py-2 rounded-md text-sm font-medium text-secondary-text hover:text-accent transition-colors"
               >
                 {{ item.label }}
               </a>
@@ -108,21 +105,17 @@
 
     <!-- Mobile menu, show/hide based on menu state. -->
     @if (isMobileMenuOpen()) {
-      <div class="md:hidden animate-slide-down" id="mobile-menu">
-        <nav class="px-2 pt-2 pb-3 space-y-1 sm:px-3" aria-label="Mobile primary navigation">
+      <div class="md:hidden overflow-hidden animate-slide-down" id="mobile-menu">
+        <nav class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
           @for (item of navigationItems; track item.path) {
             <a
               (click)="handleMobileNavigation()"
               [routerLink]="item.path"
               routerLinkActive="bg-accent text-white"
-              #mobileLink="routerLinkActive"
               [routerLinkActiveOptions]="item.exact ? exactMatchOptions : defaultMatchOptions"
-              [attr.data-analytics-id]="item.analyticsId || null"
-              [attr.aria-current]="mobileLink.isActive ? 'page' : null"
-              [ngClass]="mobileNavLinkClass"
+              class="block px-3 py-2 rounded-md text-base font-medium text-secondary-text hover:text-accent hover:bg-secondary-bg transition-colors"
+              >{{ item.label }}</a
             >
-              {{ item.label }}
-            </a>
           }
         </nav>
       </div>

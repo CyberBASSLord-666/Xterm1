@@ -1,5 +1,5 @@
 import { Component, ChangeDetectionStrategy, inject, effect, signal } from '@angular/core';
-import { DOCUMENT, NgClass } from '@angular/common';
+import { DOCUMENT } from '@angular/common';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { ToastComponent } from './components/toast/toast.component';
 import { ShortcutsHelpComponent } from './components/shortcuts-help/shortcuts-help.component';
@@ -28,7 +28,7 @@ const APP_NAVIGATION_ITEMS: readonly AppNavigationItem[] = [
   selector: 'app-root',
   templateUrl: './app.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, ToastComponent, ShortcutsHelpComponent, NgClass],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ToastComponent, ShortcutsHelpComponent],
 })
 export class AppComponent {
   private settingsService = inject(SettingsService);

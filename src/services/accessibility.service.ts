@@ -1,5 +1,7 @@
 import { Injectable, inject } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { LoggerService } from './logger.service';
+import { PlatformService } from './platform.service';
 import { queryElements, hasAccessibleName, hasAssociatedLabel } from '../utils/dom-utils';
 
 export interface AccessibilityIssue {
@@ -17,6 +19,8 @@ export interface AccessibilityIssue {
 @Injectable({ providedIn: 'root' })
 export class AccessibilityService {
   private logger = inject(LoggerService);
+  private platformService = inject(PlatformService);
+  private document = inject(DOCUMENT);
   private issues: AccessibilityIssue[] = [];
 
   /**
@@ -24,6 +28,11 @@ export class AccessibilityService {
    * @returns Array of accessibility issues found
    */
   public audit(): AccessibilityIssue[] {
+    if (!this.platformService.isBrowser) {
+      this.logger.debug('Skipping accessibility audit in SSR context', undefined, 'Accessibility');
+      return [];
+    }
+
     this.issues = [];
 
     this.checkImages();
@@ -101,7 +110,7 @@ export class AccessibilityService {
    * Check heading hierarchy.
    */
   private checkHeadings(): void {
-    const headings = Array.from(document.querySelectorAll('h1, h2, h3, h4, h5, h6'));
+    const headings = Array.from(this.document.querySelectorAll('h1, h2, h3, h4, h5, h6'));
     let lastLevel = 0;
 
     headings.forEach((heading) => {
@@ -135,7 +144,7 @@ export class AccessibilityService {
    * Check links for meaningful text.
    */
   private checkLinks(): void {
-    const links = document.querySelectorAll('a');
+    const links = this.document.querySelectorAll('a');
     links.forEach((link) => {
       const text = link.textContent?.trim() || '';
       const hasAriaLabel = link.hasAttribute('aria-label');
@@ -169,7 +178,7 @@ export class AccessibilityService {
    */
   private checkColorContrast(): void {
     // Check text elements for contrast
-    const textElements = document.querySelectorAll('p, span, div, a, button, h1, h2, h3, h4, h5, h6, label, li');
+    const textElements = this.document.querySelectorAll('p, span, div, a, button, h1, h2, h3, h4, h5, h6, label, li');
 
     textElements.forEach((element) => {
       const htmlElement = element as HTMLElement;
@@ -179,7 +188,12 @@ export class AccessibilityService {
         return;
       }
 
-      const computedStyle = window.getComputedStyle(htmlElement);
+      const win = this.platformService.getWindow();
+      if (!win) {
+        return;
+      }
+
+      const computedStyle = win.getComputedStyle(htmlElement);
       const foreground = computedStyle.color;
       const background = this.getBackgroundColor(htmlElement);
 
@@ -215,9 +229,13 @@ export class AccessibilityService {
    */
   private getBackgroundColor(element: HTMLElement): string | null {
     let current: HTMLElement | null = element;
+    const win = this.platformService.getWindow();
+    if (!win) {
+      return null;
+    }
 
     while (current) {
-      const bg = window.getComputedStyle(current).backgroundColor;
+      const bg = win.getComputedStyle(current).backgroundColor;
 
       // If background is not transparent, use it
       if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
@@ -277,21 +295,31 @@ export class AccessibilityService {
       return [parseInt(hexMatch[1], 16), parseInt(hexMatch[2], 16), parseInt(hexMatch[3], 16)];
     }
 
-    // Handle named colors by creating a temporary element
-    const temp = document.createElement('div');
-    temp.style.color = color;
-    document.body.appendChild(temp);
-    const computed = window.getComputedStyle(temp).color;
-    document.body.removeChild(temp);
+    // Handle named colors by creating a temporary element (SSR guard)
+    if (!this.platformService.isBrowser) {
+      return null;
+    }
 
-    return this.parseColor(computed);
+    const temp = this.document.createElement('div');
+    temp.style.color = color;
+    this.document.body.appendChild(temp);
+    const win = this.platformService.getWindow();
+    const computed = win ? win.getComputedStyle(temp).color : null;
+    this.document.body.removeChild(temp);
+
+    if (computed) {
+      return this.parseColor(computed);
+    }
+    return null;
   }
 
   /**
    * Check for proper ARIA usage.
    */
   private checkAriaLabels(): void {
-    const elementsWithAria = document.querySelectorAll('[role], [aria-label], [aria-labelledby], [aria-describedby]');
+    const elementsWithAria = this.document.querySelectorAll(
+      '[role], [aria-label], [aria-labelledby], [aria-describedby]'
+    );
     elementsWithAria.forEach((element) => {
       // Check for empty aria-label
       const ariaLabel = element.getAttribute('aria-label');
@@ -308,7 +336,7 @@ export class AccessibilityService {
       // Check for invalid aria-labelledby reference
       const ariaLabelledBy = element.getAttribute('aria-labelledby');
       if (ariaLabelledBy) {
-        const referencedElement = document.getElementById(ariaLabelledBy);
+        const referencedElement = this.document.getElementById(ariaLabelledBy);
         if (!referencedElement) {
           this.issues.push({
             type: 'error',
@@ -348,18 +376,23 @@ export class AccessibilityService {
    * Provides multiple navigation shortcuts for improved accessibility.
    */
   addSkipLinks(): void {
+    if (!this.platformService.isBrowser) {
+      this.logger.debug('Skipping skip links creation in SSR context', undefined, 'Accessibility');
+      return;
+    }
+
     // Check if skip links already exist
-    const existingContainer = document.querySelector('.skip-links-container');
+    const existingContainer = this.document.querySelector('.skip-links-container');
     if (existingContainer) {
       this.logger.info('Skip links already exist', undefined, 'Accessibility');
       return;
     }
 
     // Create container for skip links
-    const container = document.createElement('nav');
+    const container = this.document.createElement('nav');
     container.className = 'skip-links-container';
     // Add a visible heading for screen readers and sighted users
-    const heading = document.createElement('h2');
+    const heading = this.document.createElement('h2');
     heading.id = 'skip-links-heading';
     heading.textContent = 'Skip navigation links';
     heading.style.cssText = `
@@ -388,7 +421,7 @@ export class AccessibilityService {
     ];
 
     links.forEach((linkData) => {
-      const skipLink = document.createElement('a');
+      const skipLink = this.document.createElement('a');
       skipLink.href = linkData.href;
       skipLink.textContent = linkData.text;
       skipLink.className = 'skip-link';
@@ -410,7 +443,7 @@ export class AccessibilityService {
 
       skipLink.addEventListener('click', (e) => {
         e.preventDefault();
-        const target = document.querySelector(linkData.href);
+        const target = this.document.querySelector(linkData.href);
         if (target) {
           (target as HTMLElement).focus();
           (target as HTMLElement).scrollIntoView({ behavior: 'smooth' });
@@ -420,10 +453,10 @@ export class AccessibilityService {
       container.appendChild(skipLink);
     });
 
-    document.body.insertBefore(container, document.body.firstChild);
+    this.document.body.insertBefore(container, this.document.body.firstChild);
 
     // Ensure main content has proper id
-    const mainContent = document.querySelector('main, [role="main"]');
+    const mainContent = this.document.querySelector('main, [role="main"]');
     if (mainContent && !mainContent.id) {
       mainContent.id = 'main-content';
       mainContent.setAttribute('tabindex', '-1'); // Make focusable
@@ -438,22 +471,26 @@ export class AccessibilityService {
    * @param priority 'polite' or 'assertive'
    */
   announce(message: string, priority: 'polite' | 'assertive' = 'polite'): void {
-    let announcer = document.getElementById('aria-live-announcer');
+    if (!this.platformService.isBrowser) {
+      return;
+    }
+
+    let announcer = this.document.getElementById('aria-live-announcer');
 
     if (!announcer) {
-      announcer = document.createElement('div');
+      announcer = this.document.createElement('div');
       announcer.id = 'aria-live-announcer';
       announcer.setAttribute('aria-live', priority);
       announcer.setAttribute('aria-atomic', 'true');
       announcer.className = 'sr-only';
-      document.body.appendChild(announcer);
+      this.document.body.appendChild(announcer);
     }
 
     // Clear previous announcement
     announcer.textContent = '';
 
     // Set new announcement (slight delay for screen readers)
-    setTimeout(() => {
+    this.platformService.setTimeout(() => {
       announcer!.textContent = message;
     }, 100);
 

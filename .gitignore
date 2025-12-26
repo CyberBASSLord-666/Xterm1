@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Environment variables
+.env
+.env.*
+!.env.example
+
 # Test coverage
 coverage
 *.lcov
@@ -45,7 +50,9 @@ test-results
 
 # Temporary build/audit files
 audit-*.json
+audit-*.txt
 audit-output.txt
+audit-fix-output.txt
 eslint-output.txt
 prettier-output.txt
 tsc-output.txt

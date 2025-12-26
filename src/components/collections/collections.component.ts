@@ -2,6 +2,7 @@ import { Component, ChangeDetectionStrategy, signal, OnInit, inject, computed } 
 import { GalleryService } from '../../services/gallery.service';
 import { Collection } from '../../services/idb';
 import { ToastService } from '../../services/toast.service';
+import { PlatformService } from '../../services/platform.service';
 import { FormsModule } from '@angular/forms';
 import { createLoadingState, createFormField } from '../../utils';
 
@@ -15,6 +16,7 @@ import { createLoadingState, createFormField } from '../../utils';
 export class CollectionsComponent implements OnInit {
   private galleryService = inject(GalleryService);
   private toastService = inject(ToastService);
+  private platformService = inject(PlatformService);
 
   collections = signal<Collection[]>([]);
 
@@ -67,7 +69,7 @@ export class CollectionsComponent implements OnInit {
 
   public async deleteCollection(collection: Collection): Promise<void> {
     if (
-      confirm(
+      this.platformService.confirm(
         `Are you sure you want to delete the "${collection.name}" collection? All wallpapers within it will be uncategorized.`
       )
     ) {

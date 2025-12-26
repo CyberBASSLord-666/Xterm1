@@ -1,10 +1,12 @@
 import { inject, Injectable } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { LoggerService, LogLevel } from './logger.service';
 import { ConfigService } from './config.service';
 import { RequestCacheService } from './request-cache.service';
 import { KeyboardShortcutsService } from './keyboard-shortcuts.service';
 import { PerformanceMonitorService } from './performance-monitor.service';
 import { AnalyticsService } from './analytics.service';
+import { PlatformService } from './platform.service';
 import { initializeGeminiClient } from './pollinations.client';
 import { environment } from '../environments/environment';
 import type { BootstrapConfig, Environment } from '../types/global';
@@ -21,6 +23,8 @@ export class AppInitializerService {
   private readonly keyboardShortcuts = inject(KeyboardShortcutsService);
   private readonly perfMonitor = inject(PerformanceMonitorService);
   private readonly analytics = inject(AnalyticsService);
+  private readonly platformService = inject(PlatformService);
+  private readonly document = inject(DOCUMENT);
 
   /**
    * Initialize the application.
@@ -106,8 +110,14 @@ export class AppInitializerService {
    * 3. Environment bootstrapConfig
    */
   private hydrateConfiguration(): void {
+    if (!this.platformService.isBrowser) {
+      this.logger.debug('Skipping configuration hydration in SSR context', undefined, 'AppInitializer');
+      return;
+    }
+
     // First, check for runtime config (highest priority)
-    const runtimeConfig = window.__POLLIWALL_RUNTIME_CONFIG__;
+    const win = this.platformService.getWindow();
+    const runtimeConfig = win && (win as typeof window).__POLLIWALL_RUNTIME_CONFIG__;
     if (runtimeConfig) {
       if (runtimeConfig.geminiApiKey) {
         this.config.setGeminiApiKey(runtimeConfig.geminiApiKey);
@@ -127,7 +137,7 @@ export class AppInitializerService {
       const analyticsIdMeta = bootstrapConfig.meta.analyticsMeasurementId;
 
       if (geminiKeyMeta) {
-        const geminiMeta = document.querySelector(`meta[name="${geminiKeyMeta}"]`) as HTMLMetaElement;
+        const geminiMeta = this.document.querySelector(`meta[name="${geminiKeyMeta}"]`) as HTMLMetaElement;
         if (geminiMeta) {
           const content = geminiMeta.getAttribute('content');
           if (content) {
@@ -138,7 +148,7 @@ export class AppInitializerService {
       }
 
       if (analyticsIdMeta) {
-        const analyticsMeta = document.querySelector(`meta[name="${analyticsIdMeta}"]`) as HTMLMetaElement;
+        const analyticsMeta = this.document.querySelector(`meta[name="${analyticsIdMeta}"]`) as HTMLMetaElement;
         if (analyticsMeta) {
           const content = analyticsMeta.getAttribute('content');
           if (content) {
