@@ -20,8 +20,8 @@ interface PendingRequest<T> {
 @Injectable({ providedIn: 'root' })
 export class RequestCacheService {
   private logger = inject(LoggerService);
-  private cache = new Map<string, CacheEntry<any>>(); // eslint-disable-line @typescript-eslint/no-explicit-any
-  private pendingRequests = new Map<string, PendingRequest<any>>(); // eslint-disable-line @typescript-eslint/no-explicit-any
+  private cache = new Map<string, CacheEntry<unknown>>();
+  private pendingRequests = new Map<string, PendingRequest<unknown>>();
   private readonly defaultTTL = 5 * 60 * 1000; // 5 minutes
 
   /**
@@ -47,22 +47,23 @@ export class RequestCacheService {
       return pending.promise;
     }
 
-    // Make new request
+    // Make new request using async IIFE to maintain deduplication semantics
+    // The promise is stored before awaiting to allow concurrent request deduplication
     this.logger.debug(`Cache MISS: ${key}`, undefined, 'RequestCache');
-    const promise = requestFn().then(
-      (data) => {
+    const promise = (async (): Promise<T> => {
+      try {
+        const data = await requestFn();
         // Store in cache
         this.set(key, data, ttl);
         // Remove from pending
         this.pendingRequests.delete(key);
         return data;
-      },
-      (error) => {
+      } catch (error) {
         // Remove from pending on error
         this.pendingRequests.delete(key);
         throw error;
       }
-    );
+    })();
 
     // Store as pending
     this.pendingRequests.set(key, {

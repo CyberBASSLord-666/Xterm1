@@ -35,14 +35,14 @@ const geminiModel = 'gemini-2.0-flash-exp';
  * Initialize the Gemini AI client with an API key.
  * This must be called before using any Gemini-powered features.
  * The @google/genai package is loaded dynamically to reduce initial bundle size.
- *
+ * 
  * **BREAKING CHANGE (v0.1.0):** This function is now async and returns a Promise.
  * Callers must await this function or handle the Promise appropriately.
- *
+ * 
  * @param apiKey - The Gemini API key for authentication
  * @returns Promise that resolves when the client is initialized
  * @throws {Error} If the SDK fails to load or initialization fails
- *
+ * 
  * @example
  * ```typescript
  * try {
@@ -66,9 +66,7 @@ export async function initializeGeminiClient(apiKey: string): Promise<void> {
     console.error('Failed to load Gemini AI client:', error);
     // Provide more specific error context for debugging
     const errorMessage = error instanceof Error ? error.message : String(error);
-    throw new Error(
-      `Failed to initialize AI features: ${errorMessage}. The application will continue to function, but AI-powered features will be unavailable.`
-    );
+    throw new Error(`Failed to initialize AI features: ${errorMessage}. The application will continue to function, but AI-powered features will be unavailable.`);
   }
 }
 
@@ -119,7 +117,7 @@ function parseApiErrorMessage(errorText: string): string {
  * Handle HTTP response errors and return appropriate error message.
  * Returns an Error object for server errors (5xx) and rate limiting (429).
  * Returns an Error object for client errors (4xx) which should NOT be retried.
- *
+ * 
  * @param response - The HTTP response to handle
  * @returns Promise<Error> for 5xx/429 (retryable) or 4xx (non-retryable)
  */
@@ -141,7 +139,7 @@ async function handleHttpError(response: Response): Promise<{ error: Error; shou
 
 /**
  * Perform a single fetch attempt with timeout.
- *
+ * 
  * @param url - The URL to fetch
  * @param timeout - Timeout in milliseconds
  * @returns Object containing either response or error, plus shouldRetry flag
@@ -184,7 +182,7 @@ function calculateBackoffDelay(attempt: number): number {
  * Fetch with automatic retries and exponential backoff.
  * Only retries on transient failures (5xx, 429, network errors, timeouts).
  * Client errors (4xx) are not retried as they indicate invalid requests.
- *
+ * 
  * @param url - The URL to fetch
  * @param options - Configuration for timeout and retry attempts
  * @returns Promise resolving to the successful Response
