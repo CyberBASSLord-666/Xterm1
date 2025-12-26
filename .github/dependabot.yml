@@ -37,9 +37,9 @@ updates:
     # Dependabot already has built-in security protections and sandboxing.
     
     reviewers:
-      - "CyberBASSLord-666"
+      - "Copilot"
     assignees:
-      - "CyberBASSLord-666"
+      - "Copilot"
     
     labels:
       - "dependencies"

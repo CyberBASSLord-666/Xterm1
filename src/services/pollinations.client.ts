@@ -1,4 +1,3 @@
-import { GoogleGenAI } from '@google/genai';
 import { API_CONFIG } from '../constants';
 
 export type DeviceInfo = { width: number; height: number; dpr: number };
@@ -27,25 +26,54 @@ const IMAGE_INTERVAL = API_CONFIG.IMAGE_INTERVAL;
 const TEXT_INTERVAL = API_CONFIG.TEXT_INTERVAL;
 
 // Gemini API Client - initialized lazily with API key
-let ai: GoogleGenAI | null = null;
+// Using dynamic import to reduce initial bundle size
+type GoogleGenAIType = InstanceType<typeof import('@google/genai').GoogleGenAI>;
+let ai: GoogleGenAIType | null = null;
 const geminiModel = 'gemini-2.0-flash-exp';
 
 /**
  * Initialize the Gemini AI client with an API key.
  * This must be called before using any Gemini-powered features.
+ * The @google/genai package is loaded dynamically to reduce initial bundle size.
+ * 
+ * **BREAKING CHANGE (v0.1.0):** This function is now async and returns a Promise.
+ * Callers must await this function or handle the Promise appropriately.
+ * 
+ * @param apiKey - The Gemini API key for authentication
+ * @returns Promise that resolves when the client is initialized
+ * @throws {Error} If the SDK fails to load or initialization fails
+ * 
+ * @example
+ * ```typescript
+ * try {
+ *   await initializeGeminiClient('your-api-key');
+ *   console.log('Gemini client ready');
+ * } catch (error) {
+ *   console.error('Failed to initialize:', error);
+ *   // Handle graceful degradation - app can still function without AI features
+ * }
+ * ```
  */
-export function initializeGeminiClient(apiKey: string): void {
+export async function initializeGeminiClient(apiKey: string): Promise<void> {
   if (!apiKey || apiKey.trim().length === 0) {
     console.warn('Gemini API key is empty. AI features will not be available.');
     return;
   }
-  ai = new GoogleGenAI({ apiKey });
+  try {
+    const { GoogleGenAI } = await import('@google/genai');
+    ai = new GoogleGenAI({ apiKey });
+  } catch (error) {
+    console.error('Failed to load Gemini AI client:', error);
+    // Provide more specific error context for debugging
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to initialize AI features: ${errorMessage}. The application will continue to function, but AI-powered features will be unavailable.`);
+  }
 }
 
 /**
  * Check if the Gemini client is initialized.
  */
-function ensureGeminiClient(): GoogleGenAI {
+function ensureGeminiClient(): GoogleGenAIType {
   if (!ai) {
     throw new Error('Gemini API client is not initialized. Please configure your API key in settings.');
   }
@@ -54,61 +82,133 @@ function ensureGeminiClient(): GoogleGenAI {
 
 type RequestFn<T> = () => Promise<T>;
 
+/** User-friendly error messages for common HTTP errors. */
+const HTTP_ERROR_MESSAGES = {
+  SERVER_ERROR: 'The AI service is temporarily unavailable. Please try again later.',
+  RATE_LIMIT: 'Too many requests. Please wait a moment before trying again.',
+  CONTENT_FILTER: 'Your prompt was blocked by the content safety filter. Please rephrase it.',
+  UNEXPECTED_ERROR: 'An unexpected API error occurred. Please try again.',
+  PARSE_ERROR: 'The server returned an unexpected response. Please try again.',
+  TIMEOUT: 'Request timed out',
+} as const;
+
+/**
+ * Parse error message from API response JSON.
+ */
+function parseApiErrorMessage(errorText: string): string {
+  try {
+    const errorJson = JSON.parse(errorText);
+    if (errorJson.details?.error?.code === 'content_filter') {
+      return HTTP_ERROR_MESSAGES.CONTENT_FILTER;
+    }
+    if (errorJson.details?.error?.message) {
+      return errorJson.details.error.message;
+    }
+    if (errorJson.error && typeof errorJson.error === 'string') {
+      return errorJson.error;
+    }
+    return HTTP_ERROR_MESSAGES.UNEXPECTED_ERROR;
+  } catch {
+    return HTTP_ERROR_MESSAGES.PARSE_ERROR;
+  }
+}
+
+/**
+ * Handle HTTP response errors and return appropriate error message.
+ * Returns an Error object for server errors (5xx) and rate limiting (429).
+ * Returns an Error object for client errors (4xx) which should NOT be retried.
+ * 
+ * @param response - The HTTP response to handle
+ * @returns Promise<Error> for 5xx/429 (retryable) or 4xx (non-retryable)
+ */
+async function handleHttpError(response: Response): Promise<{ error: Error; shouldRetry: boolean }> {
+  if (response.status >= 500) {
+    return { error: new Error(HTTP_ERROR_MESSAGES.SERVER_ERROR), shouldRetry: true };
+  }
+  if (response.status === 429) {
+    return { error: new Error(HTTP_ERROR_MESSAGES.RATE_LIMIT), shouldRetry: true };
+  }
+
+  // Handle client errors (4xx) by parsing the response
+  // Client errors should NOT be retried as they indicate invalid requests
+  const errorText = await response.text();
+  console.error('Raw API Error:', errorText);
+  const errorMessage = parseApiErrorMessage(errorText);
+  return { error: new Error(errorMessage), shouldRetry: false };
+}
+
+/**
+ * Perform a single fetch attempt with timeout.
+ * 
+ * @param url - The URL to fetch
+ * @param timeout - Timeout in milliseconds
+ * @returns Object containing either response or error, plus shouldRetry flag
+ */
+async function fetchWithTimeout(
+  url: string,
+  timeout: number
+): Promise<{ response: Response | null; error: Error | null; shouldRetry: boolean }> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort('timeout'), timeout);
+
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+
+    if (response.ok) {
+      return { response, error: null, shouldRetry: false };
+    }
+
+    const { error, shouldRetry } = await handleHttpError(response);
+    return { response: null, error, shouldRetry };
+  } catch (error: unknown) {
+    clearTimeout(timeoutId);
+    const err = error as Error;
+    if (err.name === 'AbortError') {
+      return { response: null, error: new Error(HTTP_ERROR_MESSAGES.TIMEOUT), shouldRetry: true };
+    }
+    return { response: null, error: err, shouldRetry: true };
+  }
+}
+
+/**
+ * Calculate exponential backoff delay.
+ */
+function calculateBackoffDelay(attempt: number): number {
+  return Math.pow(2, attempt) * 1000;
+}
+
+/**
+ * Fetch with automatic retries and exponential backoff.
+ * Only retries on transient failures (5xx, 429, network errors, timeouts).
+ * Client errors (4xx) are not retried as they indicate invalid requests.
+ * 
+ * @param url - The URL to fetch
+ * @param options - Configuration for timeout and retry attempts
+ * @returns Promise resolving to the successful Response
+ * @throws {Error} The last error encountered if all retries fail
+ */
 async function fetchWithRetries(url: string, options: { timeout: number; retries: number }): Promise<Response> {
   const { timeout, retries } = options;
   let lastError: Error | undefined;
 
   for (let attempt = 1; attempt <= retries; attempt++) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort('timeout'), timeout);
+    const { response, error, shouldRetry } = await fetchWithTimeout(url, timeout);
 
-    try {
-      const response = await fetch(url, { signal: controller.signal });
-      clearTimeout(timeoutId);
-
-      if (response.ok) {
-        return response;
-      }
-
-      // Special user-friendly handling for 5xx server errors and 429 rate limiting
-      if (response.status >= 500) {
-        lastError = new Error('The AI service is temporarily unavailable. Please try again later.');
-      } else if (response.status === 429) {
-        lastError = new Error('Too many requests. Please wait a moment before trying again.');
-      } else {
-        // Handle other client errors (4xx) by attempting to parse a meaningful message
-        const errorText = await response.text();
-        console.error('Raw API Error:', errorText);
-
-        let errorMessage;
-        try {
-          const errorJson = JSON.parse(errorText);
-          if (errorJson.details?.error?.code === 'content_filter') {
-            errorMessage = 'Your prompt was blocked by the content safety filter. Please rephrase it.';
-          } else if (errorJson.details?.error?.message) {
-            errorMessage = errorJson.details.error.message;
-          } else if (errorJson.error && typeof errorJson.error === 'string') {
-            errorMessage = errorJson.error;
-          } else {
-            errorMessage = 'An unexpected API error occurred. Please try again.';
-          }
-        } catch {
-          errorMessage = 'The server returned an unexpected response. Please try again.';
-        }
-        // Client-side errors should not be retried, so we throw immediately.
-        throw new Error(errorMessage);
-      }
-    } catch (error: unknown) {
-      clearTimeout(timeoutId);
-      lastError = error as Error;
-      if ((error as Error).name === 'AbortError') {
-        lastError = new Error('Request timed out');
-      }
+    if (response) {
+      return response;
     }
 
+    lastError = error ?? new Error(HTTP_ERROR_MESSAGES.UNEXPECTED_ERROR);
+
+    // Don't retry if this is a non-retryable error (e.g., 4xx client errors)
+    if (!shouldRetry) {
+      throw lastError;
+    }
+
+    // Apply exponential backoff before retry
     if (attempt < retries) {
-      // Exponential backoff: 1s, 2s, 4s...
-      const delay = Math.pow(2, attempt) * 1000;
+      const delay = calculateBackoffDelay(attempt);
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
