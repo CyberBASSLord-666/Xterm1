@@ -87,11 +87,14 @@ export async function initializeGeminiClient(apiKey: string): Promise<void> {
 
 // Ensure client is initialized before use
 async function ensureGeminiClient(): Promise<GoogleGenAI> {
-  if (!ai && !aiPromise) {
-    throw new Error('Gemini API client not initialized');
+  if (ai) return ai;
+  if (!aiPromise) {
+    throw new Error('Gemini API client not initialized. Call initializeGeminiClient first.');
   }
   await aiPromise;
-  if (!ai) throw new Error('Gemini initialization failed');
+  if (!ai) {
+    throw new Error('Gemini API client initialization failed');
+  }
   return ai;
 }
 ```

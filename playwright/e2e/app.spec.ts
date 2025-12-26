@@ -181,17 +181,14 @@ test.describe('PolliWall App', () => {
 
     expect(['A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA']).toContain(tagName);
 
-    // Tab through elements - use assertion waits instead of timeouts
+    // Tab through elements
     for (let i = 0; i < 5; i++) {
       await page.keyboard.press('Tab');
-      // Wait for focus to move by checking active element changed
-      await page.evaluate(() => document.activeElement !== null);
     }
 
     // Shift+Tab back
     for (let i = 0; i < 2; i++) {
       await page.keyboard.press('Shift+Tab');
-      await page.evaluate(() => document.activeElement !== null);
     }
   });
 
@@ -203,9 +200,9 @@ test.describe('PolliWall App', () => {
       .first();
     await themeButton.click();
 
-    // Wait for theme change
+    // Wait for theme change by checking for the 'dark' class
     const html = page.locator('html');
-    await expect(html).toHaveAttribute('class', /./);
+    await expect(html).toHaveClass(/dark/);
 
     // Get current theme
     const darkClass = await html.getAttribute('class');

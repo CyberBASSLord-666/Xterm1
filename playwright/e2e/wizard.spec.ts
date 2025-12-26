@@ -133,7 +133,8 @@ test.describe('Wallpaper Generation Wizard', () => {
     await expect(async () => {
       const errorCount = await errorMessage.count();
       if (errorCount > 0) {
-        await expect(errorMessage.first()).toBeVisible();
+        const isVisible = await errorMessage.first().isVisible();
+        expect(isVisible).toBeTruthy();
       }
     }).toPass({ timeout: 5000 });
   });
@@ -232,7 +233,6 @@ test.describe('Wallpaper Generation Wizard', () => {
 
     await expect(async () => {
       // Should either show warning or allow the text
-      const warningCount = await warningText.count();
       const actualValue = await textarea.inputValue();
       // Value should be defined (either full or truncated)
       expect(actualValue.length <= longPrompt.length).toBeTruthy();

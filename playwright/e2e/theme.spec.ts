@@ -45,9 +45,9 @@ test.describe('Theme Functionality', () => {
       // Set a specific theme
       await themeButton.click();
 
-      // Wait for theme change using assertion
+      // Wait for theme change by checking for the 'dark' class
       const htmlElement = page.locator('html');
-      await expect(htmlElement).toHaveAttribute('class', /./);
+      await expect(htmlElement).toHaveClass(/dark/);
 
       const themeAfterToggle = await htmlElement.evaluate((el) => el.classList.contains('dark'));
 
