@@ -77,9 +77,24 @@ Build artifacts will be stored in the `dist/` directory.
 
 ## 📚 Documentation
 
-- **[Architecture Guide](./ARCHITECTURE.md)** - Detailed system architecture and design decisions
-- **[Development Guide](./DEVELOPMENT.md)** - Complete developer setup and workflow guide
-- **[API Documentation](./API_DOCUMENTATION.md)** - Comprehensive API reference
+### Core Documentation
+
+- **[📖 Documentation Index](./DOCUMENTATION_INDEX.md)** - Complete documentation navigation and guide
+- **[🏗️ Architecture Guide](./ARCHITECTURE.md)** - System architecture and design decisions
+- **[💻 Development Guide](./DEVELOPMENT.md)** - Developer setup and workflow
+- **[📡 API Documentation](./API_DOCUMENTATION.md)** - Complete API reference
+- **[🚀 Deployment Guide](./DEPLOYMENT.md)** - Platform-specific deployment instructions
+- **[🔒 Security Guide](./SECURITY.md)** - Security configuration and best practices
+- **[🧪 Testing Guide](./TESTING.md)** - Unit and E2E testing documentation
+- **[✅ Production Readiness](./PRODUCTION_READINESS_GUIDE.md)** - Production deployment checklist
+
+### Additional Resources
+
+- **[Reference Documentation](./docs/reference/)** - Quality metrics, dependency management, security audits
+- **[Development Guides](./docs/guides/)** - Production line workflow, plan templates, examples
+- **[Historical Archive](./docs/archive/)** - Archived PR documentation and historical context
+
+> 💡 **New to the project?** Start with the [Documentation Index](./DOCUMENTATION_INDEX.md) for a guided tour of all available documentation.
 
 ## 🏗️ Technology Stack
 
