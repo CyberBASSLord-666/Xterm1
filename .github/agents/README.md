@@ -165,9 +165,9 @@ Continuous monitoring agents run on schedule:
 
 ## Documentation
 
-- **[AGENT_CAPABILITY_MATRIX.md](../AGENT_CAPABILITY_MATRIX.md)** - Complete swarm overview, workflows, metrics
 - **[AGENT_WORKFLOW.md](../AGENT_WORKFLOW.md)** - Production line workflow process
-- **[PRODUCTION_LINE_GUIDE.md](../../PRODUCTION_LINE_GUIDE.md)** - Feature development workflow
+- **[PRODUCTION_LINE_GUIDE.md](../../docs/guides/PRODUCTION_LINE_GUIDE.md)** - Feature development workflow
+- **[Copilot Instructions](../copilot-instructions.md)** - Swarm integration guide
 
 ---
 
@@ -213,7 +213,7 @@ To add a new agent to the swarm:
 2. **Follow schema**: Use existing agents as templates
 3. **Validate JSON**: `python3 -m json.tool agent_<name>.json`
 4. **Register in coordinator**: Add to `swarm-orchestration-coordinator` registry
-5. **Update documentation**: Add to `AGENT_CAPABILITY_MATRIX.md`
+5. **Update documentation**: Update this README with agent details
 6. **Test workflows**: Verify agent triggers and interactions
 
 ---
@@ -244,8 +244,8 @@ To add a new agent to the swarm:
 
 For issues with the Agentic Swarm:
 
-1. Check [AGENT_CAPABILITY_MATRIX.md](../AGENT_CAPABILITY_MATRIX.md)
-2. Review agent-specific documentation
+1. Check agent-specific documentation in this directory
+2. Review [AGENT_WORKFLOW.md](../AGENT_WORKFLOW.md) for workflows
 3. Open issue with label `swarm-management`
 4. Contact: @CyberBASSLord-666
 

@@ -92,7 +92,6 @@ Build artifacts will be stored in the `dist/` directory.
 
 - **[Reference Documentation](./docs/reference/)** - Quality metrics, dependency management, security audits
 - **[Development Guides](./docs/guides/)** - Production line workflow, plan templates, examples
-- **[Historical Archive](./docs/archive/)** - Archived PR documentation and historical context
 
 > 💡 **New to the project?** Start with the [Documentation Index](./DOCUMENTATION_INDEX.md) for a guided tour of all available documentation.
 
@@ -172,8 +171,8 @@ npm run security:check
 ```
 
 ### Deployment Security
-- **[DEPLOYMENT_SECURITY.md](./DEPLOYMENT_SECURITY.md)** - Comprehensive security guide
-- **[PRODUCTION_DEPLOYMENT_CHECKLIST.md](./PRODUCTION_DEPLOYMENT_CHECKLIST.md)** - Pre-deployment checklist
+- **[SECURITY.md](./SECURITY.md)** - Comprehensive security guide (includes deployment security)
+- **[PRODUCTION_READINESS_GUIDE.md](./PRODUCTION_READINESS_GUIDE.md)** - Production readiness & deployment checklist
 
 ### Platform-Specific Security Configuration
 - `_headers` - Netlify/Cloudflare Pages security headers

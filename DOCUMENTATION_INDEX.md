@@ -458,7 +458,6 @@ Before merging documentation updates:
 2. **Core topics**: Check root directory (Tier 1)
 3. **Technical details**: Check docs/reference/ (Tier 2)
 4. **Workflows**: Check docs/guides/ (Tier 3)
-5. **Historical**: Check docs/archive/ (Tier 4)
 
 ### Full-Text Search
 

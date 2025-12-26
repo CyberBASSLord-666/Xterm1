@@ -545,4 +545,4 @@ _Add any deployment-specific notes, issues, or special considerations here._
 - [SECURITY.md](./SECURITY.md) - Security configuration and best practices
 - [TESTING.md](./TESTING.md) - Testing strategy and guidelines
 - [ARCHITECTURE.md](./ARCHITECTURE.md) - System architecture documentation
-- [QUALITY_METRICS.md](./docs/reference/quality-metrics.md) - Detailed quality metrics
+- [QUALITY_METRICS.md](./docs/reference/QUALITY_METRICS.md) - Detailed quality metrics
