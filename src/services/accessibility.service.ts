@@ -295,7 +295,11 @@ export class AccessibilityService {
       return [parseInt(hexMatch[1], 16), parseInt(hexMatch[2], 16), parseInt(hexMatch[3], 16)];
     }
 
-    // Handle named colors by creating a temporary element
+    // Handle named colors by creating a temporary element (SSR guard)
+    if (!this.platformService.isBrowser) {
+      return null;
+    }
+
     const temp = this.document.createElement('div');
     temp.style.color = color;
     this.document.body.appendChild(temp);
