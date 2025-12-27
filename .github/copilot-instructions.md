@@ -380,8 +380,8 @@ The swarm configuration is defined in:
 - `.github/agents/` - All agent definitions (JSON + Markdown)
 - `.github/agents/swarm-manifest.json` - Complete agent inventory
 - `.github/agents/inter-agent-protocol.json` - Communication protocol
-- `.github/AGENTIC_SWARM_USAGE_GUIDE.md` - User documentation
-- `.github/AGENT_CAPABILITY_MATRIX.md` - Capability reference
+- `.github/agents/README.md` - Agent documentation and usage guide
+- `.github/AGENT_WORKFLOW.md` - Production line workflow process
 
 ### Example: Complex Task Handling
 

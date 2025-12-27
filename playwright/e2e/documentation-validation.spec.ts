@@ -13,7 +13,6 @@ import { join, dirname, resolve } from 'path';
  * 2. All cross-references between documents are valid
  * 3. All relative paths are correct after file moves
  * 4. No broken links to deleted/moved files
- * 5. Archive links point to correct historical documents
  */
 
 const REPO_ROOT = process.cwd();
@@ -229,18 +228,6 @@ test.describe('Documentation Validation', () => {
     }
   });
   
-  test('should have archive directory structure', () => {
-    const archiveFiles = [
-      'docs/archive/README.md',
-      'docs/archive/pr-106/README.md'
-    ];
-    
-    for (const file of archiveFiles) {
-      const filePath = join(REPO_ROOT, file);
-      expect(existsSync(filePath), `Archive file ${file} should exist`).toBeTruthy();
-    }
-  });
-  
   test('should have no broken internal markdown links', () => {
     const result = validateDocumentationLinks();
     
@@ -270,12 +257,11 @@ test.describe('Documentation Validation', () => {
   });
   
   test('should have proper documentation hierarchy', () => {
-    // Check tier structure
+    // Check tier structure (3-tier hierarchy)
     const tiers = {
       'Tier 1 (Root)': ['README.md', 'DOCUMENTATION_INDEX.md', 'ARCHITECTURE.md', 'DEVELOPMENT.md'],
       'Tier 2 (docs/reference/)': ['QUALITY_METRICS.md', 'dependency-management.md'],
-      'Tier 3 (docs/guides/)': ['PRODUCTION_LINE_GUIDE.md', 'plans-guide.md'],
-      'Tier 4 (docs/archive/)': ['README.md', 'pr-106/README.md']
+      'Tier 3 (docs/guides/)': ['PRODUCTION_LINE_GUIDE.md', 'plans-guide.md']
     };
     
     for (const [tier, files] of Object.entries(tiers)) {
@@ -288,8 +274,6 @@ test.describe('Documentation Validation', () => {
           fullPath = join(REPO_ROOT, 'docs/reference', file);
         } else if (tier.includes('guides')) {
           fullPath = join(REPO_ROOT, 'docs/guides', file);
-        } else {
-          fullPath = join(REPO_ROOT, 'docs/archive', file);
         }
         
         expect(existsSync(fullPath), 
@@ -371,25 +355,5 @@ test.describe('Documentation Validation', () => {
         expect(content, `${doc.file} should mention ${text}`).toContain(text);
       }
     }
-  });
-  
-  test('should have archive with proper README files', () => {
-    const archiveReadme = join(REPO_ROOT, 'docs/archive/README.md');
-    const pr106Readme = join(REPO_ROOT, 'docs/archive/pr-106/README.md');
-    
-    expect(existsSync(archiveReadme), 'Archive should have README.md').toBeTruthy();
-    expect(existsSync(pr106Readme), 'PR-106 archive should have README.md').toBeTruthy();
-    
-    // Check archive README content
-    const archiveContent = readFileSync(archiveReadme, 'utf-8');
-    expect(archiveContent).toContain('Historical Documentation Repository');
-    expect(archiveContent).toContain('Read-Only Archive');
-    expect(archiveContent).toContain('PR #106');
-    
-    // Check PR-106 README content
-    const pr106Content = readFileSync(pr106Readme, 'utf-8');
-    expect(pr106Content).toContain('Pull Request #106');
-    expect(pr106Content).toContain('Security Enhancement');
-    expect(pr106Content).toContain('SECURITY.md');
   });
 });

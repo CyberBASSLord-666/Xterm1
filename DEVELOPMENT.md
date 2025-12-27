@@ -740,7 +740,7 @@ NODE_OPTIONS=--max_old_space_size=4096 npm run build
 
 - [ARCHITECTURE.md](./ARCHITECTURE.md) - System architecture
 - [API_DOCUMENTATION.md](./API_DOCUMENTATION.md) - API reference
-- [E2E_TESTING.md](./E2E_TESTING.md) - E2E testing guide
+- [TESTING.md](./TESTING.md) - Testing guide (includes E2E testing)
 - [DEPLOYMENT.md](./DEPLOYMENT.md) - Deployment guide
 
 ### External Links
