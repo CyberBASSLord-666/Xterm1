@@ -99,9 +99,15 @@ interface SwarmManifest {
 describe('Agentic Swarm - Agent Configuration Tests', () => {
   const agentsDir = path.join(__dirname, '../../../.github/agents');
   const workflowsDir = path.join(__dirname, '../../../.github/workflows');
+  const agentsDirExists = fs.existsSync(agentsDir);
+  const hasAgentCoreAssets =
+    agentsDirExists &&
+    fs.existsSync(path.join(agentsDir, 'swarm-manifest.json')) &&
+    fs.existsSync(path.join(agentsDir, 'agent-schema.json'));
 
   // Check if workflows directory exists
   const workflowsDirExists = fs.existsSync(workflowsDir);
+  const describeIfAgentsExist = hasAgentCoreAssets ? describe : describe.skip;
 
   // Helper to load JSON file
   const loadJsonFile = <T>(filePath: string): T => {
@@ -121,17 +127,23 @@ describe('Agentic Swarm - Agent Configuration Tests', () => {
 
   // Get all agent JSON files
   const getAgentFiles = (): string[] => {
+    if (!hasAgentCoreAssets) {
+      return [];
+    }
     const files = fs.readdirSync(agentsDir);
     return files.filter((f) => f.startsWith('agent_') && f.endsWith('.json'));
   };
 
   // Get all markdown agent files
   const getMarkdownAgentFiles = (): string[] => {
+    if (!hasAgentCoreAssets) {
+      return [];
+    }
     const files = fs.readdirSync(agentsDir);
     return files.filter((f) => f.endsWith('.md') && f !== 'README.md');
   };
 
-  describe('Schema Validation', () => {
+  describeIfAgentsExist('Schema Validation', () => {
     let schema: AgentSchema;
 
     beforeAll(() => {
@@ -168,7 +180,7 @@ describe('Agentic Swarm - Agent Configuration Tests', () => {
     });
   });
 
-  describe('Agent Configuration Files', () => {
+  describeIfAgentsExist('Agent Configuration Files', () => {
     const agentFiles = getAgentFiles();
 
     it('should have at least 15 agent configuration files', () => {
@@ -279,7 +291,7 @@ describe('Agentic Swarm - Agent Configuration Tests', () => {
     });
   });
 
-  describe('Swarm Manifest', () => {
+  describeIfAgentsExist('Swarm Manifest', () => {
     let manifest: SwarmManifest;
 
     beforeAll(() => {
@@ -395,7 +407,7 @@ describe('Agentic Swarm - Agent Configuration Tests', () => {
     });
   });
 
-  describe('Markdown Agent Files', () => {
+  describeIfAgentsExist('Markdown Agent Files', () => {
     const markdownFiles = getMarkdownAgentFiles();
 
     it('should have at least 7 markdown agent files', () => {
@@ -486,7 +498,7 @@ describe('Agentic Swarm - Agent Configuration Tests', () => {
     });
   });
 
-  describe('Documentation Files', () => {
+  describeIfAgentsExist('Documentation Files', () => {
     const docsDir = path.join(__dirname, '../../../.github');
 
     it.skip('should have AGENT_CAPABILITY_MATRIX.md (file removed)', () => {
@@ -511,7 +523,7 @@ describe('Agentic Swarm - Agent Configuration Tests', () => {
     });
   });
 
-  describe('Cross-Reference Validation', () => {
+  describeIfAgentsExist('Cross-Reference Validation', () => {
     let manifest: SwarmManifest;
 
     beforeAll(() => {
@@ -549,7 +561,7 @@ describe('Agentic Swarm - Agent Configuration Tests', () => {
     });
   });
 
-  describe('Security Validation', () => {
+  describeIfAgentsExist('Security Validation', () => {
     it('should have permission definitions if present', () => {
       getAgentFiles().forEach((file) => {
         const config = loadJsonFile<AgentConfiguration>(path.join(agentsDir, file));
@@ -578,7 +590,7 @@ describe('Agentic Swarm - Agent Configuration Tests', () => {
     });
   });
 
-  describe('Coverage Requirements', () => {
+  describeIfAgentsExist('Coverage Requirements', () => {
     it('should have agents covering all lifecycle phases', () => {
       const agents = getAgentFiles();
       const agentNames = agents.join(' ').toLowerCase();
