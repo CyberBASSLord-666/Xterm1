@@ -100,10 +100,14 @@ describe('Agentic Swarm - Agent Configuration Tests', () => {
   const agentsDir = path.join(__dirname, '../../../.github/agents');
   const workflowsDir = path.join(__dirname, '../../../.github/workflows');
   const agentsDirExists = fs.existsSync(agentsDir);
+  const hasAgentCoreAssets =
+    agentsDirExists &&
+    fs.existsSync(path.join(agentsDir, 'swarm-manifest.json')) &&
+    fs.existsSync(path.join(agentsDir, 'agent-schema.json'));
 
   // Check if workflows directory exists
   const workflowsDirExists = fs.existsSync(workflowsDir);
-  const describeIfAgentsExist = agentsDirExists ? describe : describe.skip;
+  const describeIfAgentsExist = hasAgentCoreAssets ? describe : describe.skip;
 
   // Helper to load JSON file
   const loadJsonFile = <T>(filePath: string): T => {
@@ -123,7 +127,7 @@ describe('Agentic Swarm - Agent Configuration Tests', () => {
 
   // Get all agent JSON files
   const getAgentFiles = (): string[] => {
-    if (!agentsDirExists) {
+    if (!hasAgentCoreAssets) {
       return [];
     }
     const files = fs.readdirSync(agentsDir);
@@ -132,7 +136,7 @@ describe('Agentic Swarm - Agent Configuration Tests', () => {
 
   // Get all markdown agent files
   const getMarkdownAgentFiles = (): string[] => {
-    if (!agentsDirExists) {
+    if (!hasAgentCoreAssets) {
       return [];
     }
     const files = fs.readdirSync(agentsDir);

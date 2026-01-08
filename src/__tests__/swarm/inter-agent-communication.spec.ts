@@ -44,7 +44,8 @@ interface Protocol {
 
 const agentsDir = path.join(__dirname, '../../../.github/agents');
 const protocolPath = path.join(agentsDir, 'inter-agent-protocol.json');
-const protocolExists = fs.existsSync(protocolPath);
+const agentsDirExists = fs.existsSync(agentsDir);
+const protocolExists = agentsDirExists && fs.existsSync(protocolPath);
 const describeIfProtocolExists = protocolExists ? describe : describe.skip;
 
 describeIfProtocolExists('Agentic Swarm - Inter-Agent Communication Tests', () => {
