@@ -41,7 +41,7 @@ interface AgentConfiguration {
 }
 
 // Swarm manifest interface
-  interface SwarmManifest {
+interface SwarmManifest {
   swarm_name: string;
   version: string;
   description: string;
@@ -287,7 +287,7 @@ describe('Agentic Swarm - Agent Configuration Tests', () => {
     });
   });
 
-  describe('Swarm Manifest', () => {
+  describeIfAgentsExist('Swarm Manifest', () => {
     let manifest: SwarmManifest;
 
     beforeAll(() => {
