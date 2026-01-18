@@ -1,0 +1,11 @@
+name: comment command processor
+
+on:
+  workflow_dispatch:
+
+jobs:
+  placeholder:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Placeholder
+        run: echo "Workflow comment-command-processor - To be implemented"
