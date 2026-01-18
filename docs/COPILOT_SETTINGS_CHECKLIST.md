@@ -205,6 +205,33 @@ cat .vscode/settings.json | grep copilot
 
 ## Verification Steps
 
+### Automated Verification Script
+
+**Quick Start**: Run the automated verification script to check all local configurations:
+
+```bash
+# Run the verification script
+npm run verify:copilot
+
+# Or run directly
+./scripts/verify-copilot-settings.sh
+```
+
+This script will automatically check:
+- ✓ Local configuration files
+- ✓ Git configuration
+- ✓ Node.js/npm setup
+- ⚠ Provide reminders for manual GitHub settings verification
+- ⚠ Provide reminders for IDE configuration
+
+**Expected Result:** All automated checks pass, with reminders for manual verification
+
+---
+
+### Manual Verification Steps
+
+After running the automated script, complete these manual verification steps:
+
 ### Step 1: Verify Account Settings
 
 ```bash
@@ -308,6 +335,9 @@ cat .vscode/settings.json | grep copilot
 - [x] `.github/copilot-instructions.md` - Grants full repository access
 - [x] `.vscode/settings.json` - Copilot settings aligned
 - [x] `.vscode/extensions.json` - Copilot extensions recommended
+- [x] `scripts/verify-copilot-settings.sh` - Automated verification script
+- [x] `docs/COPILOT_SETTINGS_CHECKLIST.md` - Comprehensive settings checklist
+- [x] npm script `verify:copilot` - Easy verification command
 
 ### Requires Manual Verification ⚠️
 - [ ] GitHub account Copilot subscription active
@@ -319,10 +349,12 @@ cat .vscode/settings.json | grep copilot
 ### Action Items 📋
 
 **Repository Owner Should:**
-1. Visit `https://github.com/CyberBASSLord-666/Xterm1/settings/copilot` and verify settings
-2. Visit `https://github.com/CyberBASSLord-666/Xterm1/settings/actions` and enable full permissions
-3. Review any organization-level policies that might restrict Copilot
-4. Verify personal GitHub account has active Copilot subscription
+1. **Run verification script**: `npm run verify:copilot` to check local configuration
+2. Visit `https://github.com/CyberBASSLord-666/Xterm1/settings/copilot` and verify settings
+3. Visit `https://github.com/CyberBASSLord-666/Xterm1/settings/actions` and enable full permissions
+4. Review any organization-level policies that might restrict Copilot
+5. Verify personal GitHub account has active Copilot subscription
+6. Complete IDE setup (install Copilot extensions, sign in to GitHub)
 
 ---
 
