@@ -15,7 +15,8 @@
     "format": "prettier --write \"src/**/*.{ts,html,css,scss,json}\"",
     "format:check": "prettier --check \"src/**/*.{ts,html,css,scss,json}\"",
     "prepare": "husky",
-    "health-check": "node scripts/health-check.js"
+    "health-check": "node scripts/health-check.js",
+    "verify:copilot": "bash scripts/verify-copilot-settings.sh"
   },
   "dependencies": {
     "@angular/common": "^20.3.14",

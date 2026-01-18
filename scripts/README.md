@@ -1,10 +1,50 @@
-# Dependabot Validation Tool
+# Scripts Directory
 
 ## Overview
 
-This directory contains professional validation tooling for the Dependabot configuration.
+This directory contains professional validation and utility scripts for the Xterm1 repository.
 
 ## Scripts
+
+### verify-copilot-settings.sh
+
+**Purpose**: Verify that GitHub Copilot is properly configured for this repository.
+
+**Features**:
+- Local configuration file validation (.github/copilot-instructions.md, .vscode/settings.json)
+- Git configuration checks
+- Node.js/npm setup verification
+- Manual verification reminders for GitHub account settings
+- IDE configuration reminders
+- Color-coded output with status indicators
+
+**Usage**:
+```bash
+# Run directly
+./scripts/verify-copilot-settings.sh
+
+# Or via npm
+npm run verify:copilot
+```
+
+**Output**:
+- ✓ Green checkmark: Passed
+- ✗ Red cross: Failed
+- ⚠ Yellow warning: Requires attention
+- ℹ Blue info: Information
+
+**Exit codes**:
+- `0`: All automated checks passed
+- `1`: Some checks failed
+
+**What it checks**:
+1. **Local Files**: copilot-instructions.md, settings.json, extensions.json, checklist
+2. **Git Config**: .gitignore, repository URL
+3. **Node/npm**: Installation and package.json
+4. **Manual Reminders**: GitHub account and repository settings
+5. **IDE Reminders**: VS Code extension installation and sign-in
+
+---
 
 ### validate-dependabot.py
 
