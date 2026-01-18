@@ -2,7 +2,7 @@
 
 ## Repository Access and Permissions
 
-**Copilot has complete and unlimited access to this repository.** You are authorized and empowered to make any and all changes necessary to accomplish your tasks, including but not limited to:
+**These instructions configure Copilot to operate with broad authority when generating suggestions and code, limited only by quality and security guidelines.** You are authorized and empowered to suggest any and all changes necessary to accomplish your tasks, including but not limited to:
 
 ### Full Modification Rights
 
@@ -29,12 +29,14 @@ You have the authority to:
 
 ### Operational Freedom
 
-You are empowered to:
-- Execute any necessary commands via bash tools
-- Install or update development dependencies
-- Run linters, formatters, tests, and builds
-- Create temporary files and directories for testing
-- Access and modify any file in the repository without restriction
+You are empowered to **suggest and generate recommendations for**:
+- Any necessary commands to execute via bash or other tooling (you generate suggestions; the developer executes them)
+- Installing or updating development dependencies (you recommend changes; the developer applies them)
+- Running linters, formatters, tests, and builds (you suggest commands; the developer runs them)
+- Creating temporary files and directories for testing (you propose content; the developer creates files)
+- Accessing and modifying any file in the repository (you generate code suggestions; the developer reviews and accepts them)
+
+**Note**: GitHub Copilot operates as a suggestion engine. You generate code, commands, and recommendations, but developers must review and execute them. You cannot directly execute commands, install packages, or modify files without user approval.
 
 ### Security and Quality Guidelines
 
@@ -273,7 +275,7 @@ This repo has extensive security documentation and configuration. **You have ful
 - **Prefer improvements**: When modifying security configurations, maintain or strengthen existing protections
 - **No secrets in logs**: Never log secrets, tokens, or sensitive user data
 - **Strong defaults**: Prefer stronger CSP, stricter headers, and more robust validation
-- **Safe code patterns**: Validate and sanitize user input; avoid dynamic code execution (`eval`, `Function`) unless explicitly needed and secured
+- **Safe code patterns**: Validate and sanitize user input; **never** use dynamic code execution (`eval`, `Function`, `new Function`) in this codebase. If a maintainer believes such patterns are truly unavoidable, they must only be introduced after explicit human approval and a documented security review—you must never introduce them on your own
 - **Transparency**: Document any security-related changes clearly, especially if temporarily relaxing a constraint for a valid reason
 
 **Your authority**: You can modify, update, or restructure any security configuration. The goal is to improve security posture, not to prevent you from making necessary changes. When in doubt, **err on the side of stronger validation and stricter defaults**, but you have the authority to make informed decisions about security trade-offs when necessary.
@@ -309,9 +311,11 @@ Guidelines:
 - Add new automation workflows as needed
 - Refactor existing workflows for better maintainability
 
-**Best practices** (guidance, not restrictions):
-- Prefer pinned action versions for reproducibility
-- Maintain least-privilege permissions where practical
+**Mandatory practices**:
+- Actions **must** be pinned to specific versions for security and reproducibility. You may suggest updating actions to newer releases, but they must remain pinned to explicit versions (no floating tags like `@main` or `@latest`)
+- CI jobs **must** use least-privilege permissions: grant only the minimal permissions required for each job and avoid broad tokens (e.g., `contents: write`) unless strictly necessary
+
+**Best practices**:
 - Preserve or improve caching strategies
 - Document significant workflow changes
 
