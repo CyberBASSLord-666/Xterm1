@@ -4,7 +4,12 @@
 
 # PolliWall - AI Wallpaper Studio
 
+[![Deploy](https://github.com/CyberBASSLord-666/Xterm1/actions/workflows/deploy.yml/badge.svg)](https://github.com/CyberBASSLord-666/Xterm1/actions/workflows/deploy.yml)
+[![CI](https://github.com/CyberBASSLord-666/Xterm1/actions/workflows/ci.yml/badge.svg)](https://github.com/CyberBASSLord-666/Xterm1/actions/workflows/ci.yml)
+
 > 🎨 Professional AI-powered wallpaper generation application built with Angular 20
+
+**🌐 Live Demo**: [https://cyberbassLord-666.github.io/Xterm1/](https://cyberbassLord-666.github.io/Xterm1/) *(Coming soon after merge)*
 
 PolliWall is a cutting-edge web application that leverages AI to generate stunning, device-optimized wallpapers. Built with modern web technologies and following industry best practices for performance, security, and user experience.
 
