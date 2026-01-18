@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-PolliWall is a production-grade, AI-powered wallpaper generation application built with Angular 20.3.7. It leverages the Pollinations AI API for image generation and Google Gemini for prompt enhancement. The architecture follows strict Angular best practices with standalone components, OnPush change detection, Signal-based state management, and a comprehensive service infrastructure.
+PolliWall is a production-grade, AI-powered wallpaper generation application built with Angular 21.0. It leverages the Pollinations AI API for image generation and Google Gemini for prompt enhancement. The architecture follows strict Angular best practices with standalone components, OnPush change detection, Signal-based state management, and a comprehensive service infrastructure.
 
 **Key Architectural Principles:**
 - **Angular 20 Standalone Architecture**: 100% standalone components, no NgModules
@@ -25,7 +25,7 @@ PolliWall is a production-grade, AI-powered wallpaper generation application bui
 ### Core Framework
 | Technology | Version | Purpose |
 |------------|---------|---------|
-| **Angular** | 20.3.7 | Frontend framework with standalone components |
+| **Angular** | 21.0 | Frontend framework with standalone components |
 | **TypeScript** | 5.9.3 | Type-safe language with strict mode |
 | **RxJS** | 7.8.0 | Reactive programming (minimal use, Signals preferred) |
 | **Zone.js** | 0.15.0 | Change detection mechanism |
