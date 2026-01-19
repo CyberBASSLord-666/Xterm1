@@ -52,23 +52,25 @@ jobs:
           COMMAND="${{ steps.parse.outputs.command }}"
           echo "Executing command: $COMMAND"
           
-          # This is a placeholder for actual command execution
-          # In a real implementation, this would dispatch to appropriate workflows
+          # This is a placeholder for actual command execution.
+          # No workflows are currently triggered from this job.
+          # In a future implementation, this case statement should dispatch to appropriate workflows
+          # (for example via repository_dispatch or workflow_run triggers).
           case "$COMMAND" in
             fix-lint)
-              echo "Triggering lint fix workflow..."
+              echo "Received 'fix-lint' command. TODO: implement lint fix workflow dispatch. No workflow triggered yet."
               ;;
             run-tests)
-              echo "Triggering test workflow..."
+              echo "Received 'run-tests' command. TODO: implement test workflow dispatch. No workflow triggered yet."
               ;;
             check-security)
-              echo "Triggering security check workflow..."
+              echo "Received 'check-security' command. TODO: implement security check workflow dispatch. No workflow triggered yet."
               ;;
             refactor)
-              echo "Triggering refactor workflow..."
+              echo "Received 'refactor' command. TODO: implement refactor workflow dispatch. No workflow triggered yet."
               ;;
             *)
-              echo "Unknown command"
+              echo "Unknown command. No workflow triggered."
               ;;
           esac
       

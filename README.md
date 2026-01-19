@@ -2,28 +2,27 @@
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# PolliWall - AI Wallpaper Studio
+# Xterm1 - Browser-Based Terminal & Tooling Experience
 
 [![Deploy](https://github.com/CyberBASSLord-666/Xterm1/actions/workflows/deploy.yml/badge.svg)](https://github.com/CyberBASSLord-666/Xterm1/actions/workflows/deploy.yml)
 [![CI](https://github.com/CyberBASSLord-666/Xterm1/actions/workflows/ci.yml/badge.svg)](https://github.com/CyberBASSLord-666/Xterm1/actions/workflows/ci.yml)
 
-> 🎨 Professional AI-powered wallpaper generation application built with Angular 20
+> 💻 Modern browser-based terminal and development tooling experience built with TypeScript
 
-**🌐 Live Demo**: [https://cyberbassLord-666.github.io/Xterm1/](https://cyberbassLord-666.github.io/Xterm1/) *(Coming soon after merge)*
+**🌐 Live Demo**: [https://CyberBASSLord-666.github.io/Xterm1/](https://CyberBASSLord-666.github.io/Xterm1/) *(Coming soon after merge)*
 
-PolliWall is a cutting-edge web application that leverages AI to generate stunning, device-optimized wallpapers. Built with modern web technologies and following industry best practices for performance, security, and user experience.
+Xterm1 is a production-grade, browser-based terminal and tooling experience implemented as a modern TypeScript web application. Built with modern web technologies and following industry best practices for performance, security, and user experience.
 
 ## ✨ Features
 
-- **AI-Powered Generation**: Create photorealistic wallpapers using state-of-the-art AI models
-- **Prompt Enhancement**: Leverage Google Gemini AI to enhance your prompts for better results
-- **Device Optimization**: Automatically optimized for your device's exact resolution
-- **Gallery Management**: Organize wallpapers into collections with full CRUD operations
-- **Variants & Restyling**: Generate variations or restyle existing wallpapers
-- **Offline Support**: Progressive Web App with offline capabilities
-- **Community Feed**: Discover and get inspired by community creations
-- **Performance Optimized**: Lazy loading, caching, and optimized bundle sizes
+- **Browser-Based Terminal**: Full-featured terminal experience in your browser
+- **Modern Tooling**: Integrated development and system management tools
+- **TypeScript Core**: Strict TypeScript implementation with type safety
+- **PWA Support**: Progressive Web App with offline capabilities
+- **Performance Optimized**: Lazy loading, caching, and optimized bundle sizes (797KB → 193KB gzipped)
 - **Accessibility**: WCAG 2.1 AA compliant with full keyboard navigation
+- **Automated CI/CD**: Complete GitHub Actions workflow automation
+- **Security First**: Comprehensive security headers and CSP policies
 
 ## 🚀 Quick Start
 

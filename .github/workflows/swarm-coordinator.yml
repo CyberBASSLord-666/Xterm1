@@ -50,6 +50,14 @@ jobs:
           
           echo "🤖 Swarm Coordinator Initializing..."
           echo "Task Type: $TASK_TYPE"
+          echo ""
+          echo "⚠️  PLACEHOLDER IMPLEMENTATION"
+          echo "This workflow contains placeholder logic for demonstration and testing purposes."
+          echo "In a production implementation, this would:"
+          echo "  - Coordinate actual agent workflows via repository_dispatch or workflow_run"
+          echo "  - Track real agent execution status and progress"
+          echo "  - Aggregate results from multiple agent workflows"
+          echo ""
           
           # Placeholder for actual swarm coordination logic
           case "$TASK_TYPE" in
@@ -77,6 +85,7 @@ jobs:
       - name: Monitor agent execution
         run: |
           echo "Monitoring agent task execution..."
+          echo "⚠️  PLACEHOLDER: Using simulated monitoring for demonstration"
           echo "Status: All agents initialized"
           echo "Progress: 0% complete"
           
@@ -90,8 +99,9 @@ jobs:
         id: results
         run: |
           echo "Aggregating results from swarm agents..."
+          echo "⚠️  PLACEHOLDER: Using hardcoded values for demonstration"
           
-          # Placeholder for result aggregation
+          # Placeholder for result aggregation - hardcoded values
           SUCCESS_COUNT=3
           FAILED_COUNT=0
           TOTAL_AGENTS=3

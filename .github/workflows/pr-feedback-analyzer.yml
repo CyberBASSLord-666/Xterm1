@@ -1,12 +1,8 @@
 name: PR Feedback Analyzer
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
   pull_request_review:
     types: [submitted]
-  pull_request_review_comment:
-    types: [created]
   workflow_dispatch:
 
 # Prevent multiple analysis runs for same PR
@@ -17,6 +13,7 @@ concurrency:
 jobs:
   analyze-feedback:
     runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.pr_number
     permissions:
       pull-requests: write
       contents: read
@@ -30,20 +27,27 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const pr = context.payload.pull_request;
+            // Get PR number from context or workflow_dispatch input
+            const prNumber = context.payload.pull_request?.number || 
+                             (context.eventName === 'workflow_dispatch' ? context.payload.inputs.pr_number : null);
+            
+            if (!prNumber) {
+              core.setFailed('No PR number available in context');
+              return;
+            }
             
             // Get PR reviews
             const reviews = await github.rest.pulls.listReviews({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              pull_number: pr.number
+              pull_number: prNumber
             });
             
             // Get PR comments
             const comments = await github.rest.pulls.listReviewComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              pull_number: pr.number
+              pull_number: prNumber
             });
             
             // Analyze feedback sentiment
@@ -79,6 +83,13 @@ jobs:
             const approvals = '${{ steps.analyze.outputs.approvals }}';
             const changesRequested = '${{ steps.analyze.outputs.changes_requested }}';
             const commentCount = '${{ steps.analyze.outputs.comment_count }}';
+            const prNumber = context.payload.pull_request?.number || 
+                             (context.eventName === 'workflow_dispatch' ? context.payload.inputs.pr_number : null);
+            
+            if (!prNumber) {
+              core.setFailed('No PR number available for comment');
+              return;
+            }
             
             const statusEmoji = {
               'positive': '✅',
@@ -97,6 +108,6 @@ jobs:
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.payload.pull_request.number,
+              issue_number: prNumber,
               body: comment
             });

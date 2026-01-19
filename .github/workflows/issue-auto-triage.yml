@@ -2,7 +2,7 @@ name: Issue Auto-Triage
 
 on:
   issues:
-    types: [opened, edited, labeled, unlabeled]
+    types: [opened]
   workflow_dispatch:
 
 # Prevent duplicate triage for same issue
@@ -78,7 +78,7 @@ jobs:
             return { priority, labels };
       
       - name: Apply labels
-        if: steps.priority.outputs.labels != ''
+        if: steps.priority.outputs.labels != '' && github.event_name != 'workflow_dispatch'
         uses: actions/github-script@v7
         with:
           script: |
@@ -94,6 +94,7 @@ jobs:
             }
       
       - name: Add priority comment
+        if: github.event_name != 'workflow_dispatch'
         uses: actions/github-script@v7
         with:
           script: |

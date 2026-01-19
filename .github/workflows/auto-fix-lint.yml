@@ -25,6 +25,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Checkout the PR branch when triggered by PR events
+          ref: ${{ github.event.pull_request.head.ref || github.ref }}
+          # Use a token that can push to the PR branch
+          token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -37,10 +42,23 @@ jobs:
       - name: Run lint fix
         run: npm run lint:fix || true
       
-      - name: Commit changes
+      - name: Commit and push changes
         run: |
+          # Check if this is a fork PR
+          if [ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]; then
+            echo "⚠️ Cannot push to fork PR. Skipping auto-fix."
+            echo "Please run 'npm run lint:fix' locally and push the changes."
+            exit 0
+          fi
+          
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .
-          git diff --quiet && git diff --staged --quiet || git commit -m "chore: auto-fix lint issues"
-          git push
+          
+          if git diff --quiet && git diff --staged --quiet; then
+            echo "✅ No lint issues to fix"
+          else
+            git commit -m "chore: auto-fix lint issues"
+            git push
+            echo "✅ Lint fixes committed and pushed"
+          fi
