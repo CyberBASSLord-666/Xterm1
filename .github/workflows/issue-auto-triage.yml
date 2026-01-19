@@ -1,11 +1,108 @@
-name: issue auto triage
+name: Issue Auto-Triage
 
 on:
+  issues:
+    types: [opened, edited, labeled, unlabeled]
   workflow_dispatch:
 
+# Prevent duplicate triage for same issue
+concurrency:
+  group: issue-triage-${{ github.event.issue.number || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
-  placeholder:
+  triage:
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    
     steps:
-      - name: Placeholder
-        run: echo "Workflow issue-auto-triage - To be implemented"
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Analyze issue priority
+        id: priority
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const title = issue.title.toLowerCase();
+            const body = (issue.body || '').toLowerCase();
+            
+            // Priority determination logic
+            let priority = 'P3'; // Default priority
+            let labels = [];
+            
+            // P0 - Critical/Security issues
+            if (title.includes('security') || title.includes('critical') || 
+                body.includes('production down') || body.includes('data loss')) {
+              priority = 'P0';
+              labels.push('priority: critical', 'security');
+            }
+            // P1 - High priority bugs
+            else if (title.includes('bug') || title.includes('error') || 
+                     title.includes('broken') || body.includes('does not work')) {
+              priority = 'P1';
+              labels.push('priority: high', 'bug');
+            }
+            // P2 - Features and enhancements
+            else if (title.includes('feature') || title.includes('enhancement') ||
+                     title.includes('improvement')) {
+              priority = 'P2';
+              labels.push('priority: medium', 'enhancement');
+            }
+            // P3 - Low priority (documentation, questions, etc.)
+            else if (title.includes('documentation') || title.includes('question')) {
+              priority = 'P3';
+              labels.push('priority: low');
+            }
+            
+            // Add type labels
+            if (title.includes('bug') || body.includes('bug')) {
+              labels.push('bug');
+            }
+            if (title.includes('feature')) {
+              labels.push('feature');
+            }
+            if (title.includes('documentation') || title.includes('docs')) {
+              labels.push('documentation');
+            }
+            if (title.includes('test')) {
+              labels.push('testing');
+            }
+            
+            core.setOutput('priority', priority);
+            core.setOutput('labels', labels.join(','));
+            
+            return { priority, labels };
+      
+      - name: Apply labels
+        if: steps.priority.outputs.labels != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const labels = '${{ steps.priority.outputs.labels }}'.split(',').filter(l => l);
+            
+            if (labels.length > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.issue.number,
+                labels: labels
+              });
+            }
+      
+      - name: Add priority comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const priority = '${{ steps.priority.outputs.priority }}';
+            const comment = `🤖 Auto-triage: This issue has been classified as **${priority}**.`;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              body: comment
+            });

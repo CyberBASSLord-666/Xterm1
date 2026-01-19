@@ -1,14 +1,23 @@
 name: Auto Fix Lint
 
 on:
+  pull_request:
+    types: [opened, synchronize]
   issue_comment:
     types: [created]
   pull_request_review_comment:
     types: [created]
 
+# Prevent multiple runs for same PR to save minutes
+concurrency:
+  group: auto-fix-lint-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   auto-fix:
-    if: contains(github.event.comment.body, '@copilot fix lint')
+    if: |
+      github.event_name == 'pull_request' || 
+      contains(github.event.comment.body, '@copilot fix lint')
     runs-on: ubuntu-latest
     permissions:
       contents: write

@@ -1,11 +1,133 @@
-name: inter agent communication
+name: Inter-Agent Communication
 
 on:
+  issue_comment:
+    types: [created]
   workflow_dispatch:
+    inputs:
+      command:
+        description: 'Agent command to execute'
+        required: true
+        type: choice
+        options:
+          - delegate
+          - consult
+          - chain
+          - parallel
+
+# Prevent duplicate agent communication
+concurrency:
+  group: inter-agent-${{ github.event.comment.id || github.run_id }}
+  cancel-in-progress: true
 
 jobs:
-  placeholder:
+  process-agent-communication:
     runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' || 
+      (contains(github.event.comment.body, '@copilot delegate') || 
+       contains(github.event.comment.body, '@copilot consult') ||
+       contains(github.event.comment.body, '@copilot chain') ||
+       contains(github.event.comment.body, '@copilot parallel'))
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    
     steps:
-      - name: Placeholder
-        run: echo "Workflow inter-agent-communication - To be implemented"
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Parse agent command
+        id: parse
+        uses: actions/github-script@v7
+        with:
+          script: |
+            let command = 'unknown';
+            let targetAgent = '';
+            let task = '';
+            
+            if (context.eventName === 'workflow_dispatch') {
+              command = context.payload.inputs.command;
+            } else {
+              const comment = context.payload.comment.body;
+              
+              // Parse delegation command: @copilot delegate [task] to [agent]
+              const delegateMatch = comment.match(/@copilot delegate (.+?) to (.+)/i);
+              if (delegateMatch) {
+                command = 'delegate';
+                task = delegateMatch[1].trim();
+                targetAgent = delegateMatch[2].trim();
+              }
+              
+              // Parse consult command: @copilot consult [agent] about [topic]
+              const consultMatch = comment.match(/@copilot consult (.+?) about (.+)/i);
+              if (consultMatch) {
+                command = 'consult';
+                targetAgent = consultMatch[1].trim();
+                task = consultMatch[2].trim();
+              }
+              
+              // Parse chain command: @copilot chain [a1] → [a2] → [a3]
+              if (comment.includes('@copilot chain')) {
+                command = 'chain';
+                task = comment.replace(/@copilot chain/i, '').trim();
+              }
+              
+              // Parse parallel command: @copilot parallel [a1] + [a2]
+              if (comment.includes('@copilot parallel')) {
+                command = 'parallel';
+                task = comment.replace(/@copilot parallel/i, '').trim();
+              }
+            }
+            
+            core.setOutput('command', command);
+            core.setOutput('target_agent', targetAgent);
+            core.setOutput('task', task);
+            
+            return { command, targetAgent, task };
+      
+      - name: Execute agent communication
+        run: |
+          COMMAND="${{ steps.parse.outputs.command }}"
+          TARGET_AGENT="${{ steps.parse.outputs.target_agent }}"
+          TASK="${{ steps.parse.outputs.task }}"
+          
+          echo "Agent Communication:"
+          echo "  Command: $COMMAND"
+          echo "  Target Agent: $TARGET_AGENT"
+          echo "  Task: $TASK"
+          
+          # Placeholder for actual agent delegation logic
+          case "$COMMAND" in
+            delegate)
+              echo "Delegating task to $TARGET_AGENT..."
+              ;;
+            consult)
+              echo "Consulting with $TARGET_AGENT..."
+              ;;
+            chain)
+              echo "Chaining agents for sequential processing..."
+              ;;
+            parallel)
+              echo "Running agents in parallel..."
+              ;;
+            *)
+              echo "Unknown agent command"
+              ;;
+          esac
+      
+      - name: Report communication result
+        if: github.event_name == 'issue_comment'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const command = '${{ steps.parse.outputs.command }}';
+            const targetAgent = '${{ steps.parse.outputs.target_agent }}';
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              body: `🤖 Inter-agent communication initiated: **${command}** → ${targetAgent}`
+            });

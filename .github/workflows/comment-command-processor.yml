@@ -1,11 +1,85 @@
-name: comment command processor
+name: Comment Command Processor
 
 on:
+  issue_comment:
+    types: [created]
   workflow_dispatch:
 
+# Prevent duplicate command processing
+concurrency:
+  group: comment-command-${{ github.event.comment.id || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
-  placeholder:
+  process-command:
     runs-on: ubuntu-latest
+    if: contains(github.event.comment.body, '@copilot')
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    
     steps:
-      - name: Placeholder
-        run: echo "Workflow comment-command-processor - To be implemented"
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Parse command
+        id: parse
+        run: |
+          COMMENT="${{ github.event.comment.body }}"
+          echo "Processing @copilot command..."
+          
+          # Check for various commands
+          if echo "$COMMENT" | grep -q "@copilot fix lint"; then
+            echo "command=fix-lint" >> $GITHUB_OUTPUT
+          elif echo "$COMMENT" | grep -q "@copilot run tests"; then
+            echo "command=run-tests" >> $GITHUB_OUTPUT
+          elif echo "$COMMENT" | grep -q "@copilot check security"; then
+            echo "command=check-security" >> $GITHUB_OUTPUT
+          elif echo "$COMMENT" | grep -q "@copilot refactor"; then
+            echo "command=refactor" >> $GITHUB_OUTPUT
+          else
+            echo "command=unknown" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Execute command
+        run: |
+          COMMAND="${{ steps.parse.outputs.command }}"
+          echo "Executing command: $COMMAND"
+          
+          # This is a placeholder for actual command execution
+          # In a real implementation, this would dispatch to appropriate workflows
+          case "$COMMAND" in
+            fix-lint)
+              echo "Triggering lint fix workflow..."
+              ;;
+            run-tests)
+              echo "Triggering test workflow..."
+              ;;
+            check-security)
+              echo "Triggering security check workflow..."
+              ;;
+            refactor)
+              echo "Triggering refactor workflow..."
+              ;;
+            *)
+              echo "Unknown command"
+              ;;
+          esac
+      
+      - name: Add reaction to comment
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: '+1'
+            });

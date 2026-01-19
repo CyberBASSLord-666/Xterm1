@@ -1,11 +1,102 @@
-name: pr feedback analyzer
+name: PR Feedback Analyzer
 
 on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  pull_request_review:
+    types: [submitted]
+  pull_request_review_comment:
+    types: [created]
   workflow_dispatch:
 
+# Prevent multiple analysis runs for same PR
+concurrency:
+  group: pr-feedback-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
-  placeholder:
+  analyze-feedback:
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+    
     steps:
-      - name: Placeholder
-        run: echo "Workflow pr-feedback-analyzer - To be implemented"
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Analyze PR feedback and reviews
+        id: analyze
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            
+            // Get PR reviews
+            const reviews = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number
+            });
+            
+            // Get PR comments
+            const comments = await github.rest.pulls.listReviewComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number
+            });
+            
+            // Analyze feedback sentiment
+            const approvals = reviews.data.filter(r => r.state === 'APPROVED').length;
+            const changesRequested = reviews.data.filter(r => r.state === 'CHANGES_REQUESTED').length;
+            const totalComments = comments.data.length;
+            
+            // Determine feedback status
+            let status = 'neutral';
+            if (approvals > 0 && changesRequested === 0) {
+              status = 'positive';
+            } else if (changesRequested > 0) {
+              status = 'needs-work';
+            }
+            
+            core.setOutput('status', status);
+            core.setOutput('approvals', approvals);
+            core.setOutput('changes_requested', changesRequested);
+            core.setOutput('comment_count', totalComments);
+            
+            return {
+              status,
+              approvals,
+              changesRequested,
+              totalComments
+            };
+      
+      - name: Add feedback summary comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const status = '${{ steps.analyze.outputs.status }}';
+            const approvals = '${{ steps.analyze.outputs.approvals }}';
+            const changesRequested = '${{ steps.analyze.outputs.changes_requested }}';
+            const commentCount = '${{ steps.analyze.outputs.comment_count }}';
+            
+            const statusEmoji = {
+              'positive': '✅',
+              'needs-work': '⚠️',
+              'neutral': 'ℹ️'
+            };
+            
+            const comment = `${statusEmoji[status]} **PR Feedback Analysis**
+            
+            - Approvals: ${approvals}
+            - Changes Requested: ${changesRequested}
+            - Review Comments: ${commentCount}
+            - Status: ${status}
+            `;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: comment
+            });
