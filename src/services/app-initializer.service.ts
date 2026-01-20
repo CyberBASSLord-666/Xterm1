@@ -59,7 +59,11 @@ export class AppInitializerService {
           } catch (error) {
             // Log but don't fail the app - AI features are optional
             this.logger.error('Failed to initialize Gemini API client', error, 'AppInitializer');
-            this.logger.warn('AI-powered features will be unavailable. App continues with limited functionality.', undefined, 'AppInitializer');
+            this.logger.warn(
+              'AI-powered features will be unavailable. App continues with limited functionality.',
+              undefined,
+              'AppInitializer'
+            );
           }
         } else {
           // Check if we should fail fast in production

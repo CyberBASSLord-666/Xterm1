@@ -96,7 +96,7 @@ export class GenerationService {
       this.statusMessage.set(errorMessage);
       this.toastService.show(errorMessage);
       this.logger.error('Wallpaper generation failed', error, 'GenerationService');
-      
+
       // Clean up any blob URL that might have been created
       const currentResult = this.currentGenerationResult();
       if (currentResult) {

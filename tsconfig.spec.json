@@ -4,7 +4,13 @@
     "outDir": "./out-tsc/spec",
     "types": ["jest", "node"],
     "esModuleInterop": true,
-    "emitDecoratorMetadata": true
+    "emitDecoratorMetadata": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "paths": {
+      "@/*": ["./*"],
+      "@angular/core/testing": ["node_modules/@angular/core/types/testing.d.ts"]
+    }
   },
   "files": ["setup-jest.ts"],
   "include": ["**/*.spec.ts", "**/*.d.ts"]
