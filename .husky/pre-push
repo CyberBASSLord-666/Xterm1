@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 # ============================================================================
 # Pre-push Hook for PolliWall (Xterm1)
 # ============================================================================
@@ -11,8 +11,6 @@
 
 echo "🚀 Running pre-push checks..."
 
-set -o pipefail
-
 # Run unit tests
 echo "🧪 Running unit tests..."
 npm test -- --watchAll=false --passWithNoTests
@@ -24,8 +22,10 @@ echo "✅ Unit tests passed"
 
 # Verify build succeeds
 echo "🏗️  Verifying build..."
-npm run build -- --configuration=production 2>&1 | tail -5
-if [ ${PIPESTATUS[0]} -ne 0 ]; then
+BUILD_OUTPUT="$(npm run build -- --configuration=production 2>&1)"
+BUILD_STATUS=$?
+echo "$BUILD_OUTPUT" | tail -5
+if [ $BUILD_STATUS -ne 0 ]; then
   echo "❌ Build failed. Please fix before pushing."
   exit 1
 fi
