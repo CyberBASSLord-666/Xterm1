@@ -68,7 +68,6 @@ const config: Config = {
       {
         tsconfig: '<rootDir>/tsconfig.spec.json',
         stringifyContentPathRegex: '\\.html$',
-        isolatedModules: true,
         diagnostics: {
           ignoreCodes: [151002, 2307],
         },
