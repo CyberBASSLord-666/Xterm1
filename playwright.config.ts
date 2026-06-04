@@ -174,7 +174,7 @@ export default defineConfig({
    */
   webServer: isCI
     ? {
-        command: 'npx serve dist/app/browser -l 4200',
+        command: 'npx serve dist/app -l 4200',
         url: 'http://localhost:4200',
         reuseExistingServer: false,
         timeout: 30 * 1000,

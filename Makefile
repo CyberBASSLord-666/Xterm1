@@ -69,7 +69,7 @@ dev-open: ## Start development server and open browser
 
 serve: ## Serve production build locally
 	@echo "📡 Serving production build..."
-	npx serve dist/app/browser -l 8080
+	npx serve dist/app -l 8080
 
 # ============================================================================
 # BUILD
@@ -88,7 +88,7 @@ build-dev: ## Build for development
 build-analyze: ## Build with bundle analyzer
 	@echo "📊 Building with bundle analysis..."
 	npm run build -- --configuration=production --stats-json
-	npx webpack-bundle-analyzer dist/app/browser/stats.json
+	npx webpack-bundle-analyzer dist/app/stats.json
 	@echo "✅ Bundle analysis complete"
 
 # ============================================================================
@@ -237,11 +237,11 @@ outdated: ## Check for outdated dependencies
 
 size: ## Show bundle sizes
 	@echo "📊 Analyzing bundle sizes..."
-	@if [ -d "dist/app/browser" ]; then \
-		du -sh dist/app/browser; \
+	@if [ -d "dist/app" ]; then \
+		du -sh dist/app; \
 		echo ""; \
 		echo "Largest files:"; \
-		find dist/app/browser -type f -name "*.js" -exec du -h {} + | sort -rh | head -10; \
+		find dist/app -type f -name "*.js" -exec du -h {} + | sort -rh | head -10; \
 	else \
 		echo "❌ No build found. Run 'make build' first."; \
 	fi

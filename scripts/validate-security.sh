@@ -175,16 +175,16 @@ echo ""
 
 # 9. Check documentation
 echo "9. Checking security documentation..."
-if [ -f "$PROJECT_DIR/DEPLOYMENT_SECURITY.md" ]; then
-    pass "DEPLOYMENT_SECURITY.md exists"
+if [ -f "$PROJECT_DIR/SECURITY.md" ]; then
+    pass "SECURITY.md exists"
 else
-    warn "DEPLOYMENT_SECURITY.md not found"
+    warn "SECURITY.md not found"
 fi
 
-if [ -f "$PROJECT_DIR/PRODUCTION_DEPLOYMENT_CHECKLIST.md" ]; then
-    pass "PRODUCTION_DEPLOYMENT_CHECKLIST.md exists"
+if [ -f "$PROJECT_DIR/PRODUCTION_READINESS_GUIDE.md" ]; then
+    pass "PRODUCTION_READINESS_GUIDE.md exists"
 else
-    warn "PRODUCTION_DEPLOYMENT_CHECKLIST.md not found"
+    warn "PRODUCTION_READINESS_GUIDE.md not found"
 fi
 echo ""
 
@@ -205,7 +205,7 @@ if [ $FAIL_COUNT -eq 0 ]; then
         echo "- Review and address $WARN_COUNT warning(s)"
     fi
     echo "- Run 'npm audit' regularly"
-    echo "- Review DEPLOYMENT_SECURITY.md before deployment"
+    echo "- Review SECURITY.md before deployment"
     echo "- Test security headers using securityheaders.com"
     exit 0
 else

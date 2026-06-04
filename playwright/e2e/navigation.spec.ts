@@ -1,14 +1,12 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Navigation', () => {
-  test('should have working router outlet', async ({ page }) => {
+  test('should render the Angular app shell', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    const routerOutlet = page.locator('router-outlet');
-    // Router outlet might not be visible but should exist
-    const count = await routerOutlet.count();
-    expect(count).toBeGreaterThanOrEqual(0);
+    await expect(page.locator('app-root')).toBeVisible();
+    await expect(page.locator('router-outlet')).toHaveCount(1);
   });
 
   test('should handle hash-based routing', async ({ page }) => {
@@ -32,21 +30,13 @@ test.describe('Navigation', () => {
     const navLinks = page.locator('a[routerLink], a[href*="#"]');
     const count = await navLinks.count();
 
-    if (count > 0) {
-      // Click the first valid link
-      const firstLink = navLinks.first();
-      const isVisible = await firstLink.isVisible();
+    expect(count).toBeGreaterThan(0);
 
-      if (isVisible) {
-        await firstLink.click();
-        // Wait for navigation to complete
-        await page.waitForLoadState('domcontentloaded');
-
-        // Verify navigation occurred
-        const appRoot = page.locator('app-root');
-        await expect(appRoot).toBeVisible();
-      }
-    }
+    const firstLink = navLinks.first();
+    await expect(firstLink).toBeVisible();
+    await firstLink.click();
+    await page.waitForLoadState('domcontentloaded');
+    await expect(page.locator('app-root')).toBeVisible();
   });
 
   test('should maintain app state during navigation', async ({ page }) => {
@@ -78,14 +68,9 @@ test.describe('Navigation', () => {
       .filter({ hasText: /menu|☰/i })
       .first();
 
-    if (await menuButton.isVisible()) {
-      await menuButton.click();
-      // Wait for menu animation to complete
-      await page.waitForLoadState('domcontentloaded');
-
-      // Menu should be open - check for navigation items
-      const body = page.locator('body');
-      await expect(body).toBeVisible();
-    }
+    await expect(menuButton).toBeVisible();
+    await menuButton.click();
+    await page.waitForLoadState('domcontentloaded');
+    await expect(page.locator('body')).toBeVisible();
   });
 });

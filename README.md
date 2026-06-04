@@ -4,7 +4,7 @@
 
 # PolliWall - AI Wallpaper Studio
 
-> 🎨 Professional AI-powered wallpaper generation application built with Angular 20
+> 🎨 Professional AI-powered wallpaper generation application built with Angular 21
 
 PolliWall is a cutting-edge web application that leverages AI to generate stunning, device-optimized wallpapers. Built with modern web technologies and following industry best practices for performance, security, and user experience.
 
@@ -212,11 +212,9 @@ See [DEVELOPMENT.md](./DEVELOPMENT.md) for detailed development guidelines.
 
 ### GitHub Actions Workflows
 - `ci.yml` - Lint, test, build, and E2E tests
-- `security.yml` - CodeQL, dependency review, npm audit
+- `security.yml` - CodeQL and npm audit checks
 - `dependabot-auto-merge.yml` - Automated dependency management
 - `deploy.yml` - Production deployment
-- `codescan.yml` - Additional security scanning
-- `bundle-size.yml` - Bundle size tracking
 
 See [DEVELOPMENT.md](./DEVELOPMENT.md#dependency-management) for more details.
 

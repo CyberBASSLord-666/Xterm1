@@ -216,9 +216,8 @@ Xterm1/
 │   ├── workflows/          # CI/CD pipelines
 │   │   ├── ci.yml         # Continuous integration
 │   │   ├── deploy.yml     # Deployment automation
-│   │   ├── eslint.yml     # Linting checks
 │   │   ├── security.yml   # Security scanning
-│   │   └── bundle-size.yml # Bundle size monitoring
+│   │   └── dependabot-auto-merge.yml # Dependabot automation
 │   ├── dependabot.yml     # Dependency updates
 │   └── AGENT_WORKFLOW.md  # Development workflow
 │

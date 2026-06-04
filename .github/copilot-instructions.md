@@ -84,7 +84,7 @@ From `package.json`, `index.tsx`, `tsconfig.json`, `tailwind.config.js`, `playwr
 
 - **Language**: TypeScript (strict mode enabled, see `tsconfig.json`)
 - **Runtime / UI**:
-  - React + TypeScript SPA with entry in `index.tsx`
+  - Angular standalone SPA with entry in `index.tsx`
   - Browser-based application with PWA behavior (`manifest.webmanifest`, `ngsw-config.json`)
 - **Styling**:
   - Tailwind CSS (configured in `tailwind.config.js`)

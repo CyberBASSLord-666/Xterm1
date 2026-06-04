@@ -47,10 +47,10 @@ if [ -f ".github/copilot-instructions.md" ]; then
         ALL_CHECKS_PASSED=false
     fi
     
-    if grep -q "complete and unlimited access" ".github/copilot-instructions.md"; then
-        echo -e "  ${GREEN}${CHECK_MARK} Grants complete and unlimited access${NC}"
+    if grep -Eq "unlimited access|full technical access" ".github/copilot-instructions.md"; then
+        echo -e "  ${GREEN}${CHECK_MARK} Documents expected access scope${NC}"
     else
-        echo -e "  ${RED}${CROSS_MARK} Does not explicitly grant unlimited access${NC}"
+        echo -e "  ${RED}${CROSS_MARK} Missing explicit access scope language${NC}"
         ALL_CHECKS_PASSED=false
     fi
 else

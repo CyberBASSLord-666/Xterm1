@@ -23,6 +23,7 @@ export class RequestCacheService {
   private cache = new Map<string, CacheEntry<unknown>>();
   private pendingRequests = new Map<string, PendingRequest<unknown>>();
   private readonly defaultTTL = 5 * 60 * 1000; // 5 minutes
+  private cleanupIntervalId: ReturnType<typeof setInterval> | null = null;
 
   /**
    * Execute a request with caching and deduplication.
@@ -180,6 +181,17 @@ export class RequestCacheService {
    * Start periodic cleanup (call in app initialization).
    */
   startPeriodicCleanup(intervalMs: number = 60000): void {
-    setInterval(() => this.cleanup(), intervalMs);
+    this.stopPeriodicCleanup();
+    this.cleanupIntervalId = setInterval(() => this.cleanup(), intervalMs);
+  }
+
+  /**
+   * Stop periodic cleanup timer.
+   */
+  stopPeriodicCleanup(): void {
+    if (this.cleanupIntervalId !== null) {
+      clearInterval(this.cleanupIntervalId);
+      this.cleanupIntervalId = null;
+    }
   }
 }
