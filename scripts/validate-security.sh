@@ -137,6 +137,43 @@ if grep -q "Content-Security-Policy" "$PROJECT_DIR/index.html"; then
 else
     warn "Content-Security-Policy meta tag not found"
 fi
+
+if grep -q "name=\"csp-report-endpoint\"" "$PROJECT_DIR/index.html"; then
+    pass "CSP report endpoint meta tag found"
+else
+    fail "CSP report endpoint meta tag not found"
+fi
+
+if grep -q "report-uri /api/csp-report" "$PROJECT_DIR/index.html"; then
+    pass "CSP report-uri directive configured in index.html"
+else
+    fail "CSP report-uri directive missing in index.html"
+fi
+
+if grep -q "trusted-types angular" "$PROJECT_DIR/index.html"; then
+    pass "Trusted Types CSP directive configured in index.html"
+else
+    warn "Trusted Types directive not configured in index.html"
+fi
+echo ""
+
+# 6.1 Check CSP reporting in deployment headers
+echo "6.1 Checking CSP reporting in deployment headers..."
+if grep -q "report-uri /api/csp-report" "$PROJECT_DIR/vercel.json" \
+  && grep -q "report-uri /api/csp-report" "$PROJECT_DIR/_headers" \
+  && grep -q "report-uri /api/csp-report" "$PROJECT_DIR/security-headers.json"; then
+    pass "CSP report-uri configured across deployment header files"
+else
+    fail "CSP report-uri missing from one or more deployment header files"
+fi
+
+if grep -q "Reporting-Endpoints" "$PROJECT_DIR/vercel.json" \
+  && grep -q "Reporting-Endpoints" "$PROJECT_DIR/_headers" \
+  && grep -q "Reporting-Endpoints" "$PROJECT_DIR/security-headers.json"; then
+    pass "Reporting-Endpoints configured across deployment header files"
+else
+    fail "Reporting-Endpoints missing from one or more deployment header files"
+fi
 echo ""
 
 # 7. Check environment files
