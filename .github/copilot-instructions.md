@@ -97,7 +97,7 @@ From `package.json`, `index.tsx`, `tsconfig.json`, `tailwind.config.js`, `playwr
   - Git hooks via Husky (see `.husky/`)
 - **Security / Deployment**:
   - Security headers via `_headers`, `security-headers.json`, `vercel.json`, `.htaccess`, `nginx.conf.example`
-  - Multi-platform deployment options described in `DEPLOYMENT.md` & `DEPLOYMENT_SECURITY.md`
+  - Multi-platform deployment options described in `DEPLOYMENT.md` & `SECURITY.md`
 
 Copilot must align all suggestions with **this actual stack**, not with the older Angular-only wording that appears in some long-form docs.
 
@@ -113,7 +113,7 @@ Copilot must align all suggestions with **this actual stack**, not with the olde
    - `API_DOCUMENTATION.md` / `API_DOCUMENTATION_NEW.md` for services and APIs
    - `TEST_COVERAGE.md`, `E2E_TESTING.md` for testing standards
    - `PRODUCTION_READINESS_REPORT.md`, `QUALITY_METRICS.md` for quality targets
-   - `DEPLOYMENT*.md`, `DEPLOYMENT_SECURITY.md`, `docs/XSS_PREVENTION.md`, `docs/DEPENDABOT_STRATEGY.md` for operational & security constraints
+   - `DEPLOYMENT*.md`, `SECURITY.md`, `docs/DEPENDABOT_STRATEGY.md` for operational & security constraints
 
    **Documentation as guidance**: When code diverges from documentation, use your judgment. You have authority to update either the code to match documentation OR update the documentation to reflect a better approach. Document your reasoning for significant changes.
 
@@ -266,8 +266,7 @@ From `PRODUCTION_READINESS_REPORT.md`, `QUALITY_METRICS.md`, and `docs/XSS_PREVE
 
 This repo has extensive security documentation and configuration. **You have full authority to modify security configurations**, including:
 
-- `DEPLOYMENT_SECURITY.md`
-- `docs/XSS_PREVENTION.md`
+- `SECURITY.md`
 - `security-headers.json`, `_headers`, `.htaccess`, `nginx.conf.example`, `vercel.json`
 
 **Security Principles** (not restrictions on your authority):

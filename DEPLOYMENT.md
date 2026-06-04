@@ -131,7 +131,7 @@ npm run build -- --configuration=production --base-href=/Xterm1/
 npm install -g angular-cli-ghpages
 
 # Deploy
-npx angular-cli-ghpages --dir=dist/app/browser
+npx angular-cli-ghpages --dir=dist/app
 ```
 
 ### Configuration
@@ -165,7 +165,7 @@ npx angular-cli-ghpages --dir=dist/app/browser
 **Issue**: Assets not loading
 ```bash
 # Verify base-href is correct
-cat dist/app/browser/index.html | grep base
+cat dist/app/index.html | grep base
 # Should show: <base href="/Xterm1/">
 ```
 
@@ -195,7 +195,7 @@ cat dist/app/browser/index.html | grep base
    ```
    Framework Preset: Angular
    Build Command: npm run build
-   Output Directory: dist/app/browser
+   Output Directory: dist/app
    Install Command: npm ci
    ```
 
@@ -323,7 +323,7 @@ vercel --prod
    ```
    Base directory: (leave empty)
    Build command: npm run build
-   Publish directory: dist/app/browser
+   Publish directory: dist/app
    ```
 4. **Advanced Build Settings**:
    ```bash
@@ -357,7 +357,7 @@ netlify deploy --prod
 ```toml
 [build]
   command = "npm run build"
-  publish = "dist/app/browser"
+  publish = "dist/app"
 
 [build.environment]
   NODE_VERSION = "20"
@@ -385,7 +385,7 @@ netlify deploy --prod
     Cache-Control = "public, max-age=31536000, immutable"
 ```
 
-**Alternative**: `_headers` file (see DEPLOYMENT_SECURITY.md)
+**Alternative**: `_headers` file (see SECURITY.md)
 
 ---
 
@@ -436,7 +436,7 @@ npm run build -- --configuration=production
 
 # Create deployment directory
 sudo mkdir -p /var/www/polliwall
-sudo cp -r dist/app/browser/* /var/www/polliwall/
+sudo cp -r dist/app/* /var/www/polliwall/
 
 # Set permissions
 sudo chown -R www-data:www-data /var/www/polliwall
@@ -557,7 +557,7 @@ sudo cp -r /var/www/polliwall /var/www/polliwall.backup.$(date +%Y%m%d_%H%M%S)
 
 # Deploy new build
 sudo rm -rf /var/www/polliwall/*
-sudo cp -r dist/app/browser/* /var/www/polliwall/
+sudo cp -r dist/app/* /var/www/polliwall/
 
 # Set permissions
 sudo chown -R www-data:www-data /var/www/polliwall
@@ -698,7 +698,7 @@ NODE_OPTIONS=--max_old_space_size=4096 npm run build
 **Issue**: Assets 404
 ```bash
 # Verify output directory structure
-ls -la dist/app/browser/
+ls -la dist/app/
 ```
 
 ---
@@ -734,7 +734,7 @@ To manually trigger deployment:
 # Build for production
 npm run build
 
-# Output will be in dist/app/browser/
+# Output will be in dist/app/
 ```
 
 ### Build Configuration
@@ -749,7 +749,7 @@ The production build includes:
 ### Build Output
 
 ```
-dist/app/browser/
+dist/app/
 ├── index.html          # Main HTML file
 ├── main-*.js          # Main application bundle
 ├── chunk-*.js         # Lazy-loaded chunks
@@ -765,7 +765,7 @@ dist/app/browser/
 1. Connect your GitHub repository to Netlify
 2. Configure build settings:
    - **Build command**: `npm run build`
-   - **Publish directory**: `dist/app/browser`
+   - **Publish directory**: `dist/app`
 3. Deploy!
 
 ### Vercel
@@ -774,7 +774,7 @@ dist/app/browser/
 2. Configure:
    - **Framework Preset**: Angular
    - **Build Command**: `npm run build`
-   - **Output Directory**: `dist/app/browser`
+   - **Output Directory**: `dist/app`
 3. Deploy!
 
 ### Firebase Hosting
@@ -790,7 +790,7 @@ firebase login
 firebase init hosting
 
 # Configure:
-# - Public directory: dist/app/browser
+# - Public directory: dist/app
 # - Single-page app: Yes
 # - Automatic builds: Yes (optional)
 
@@ -807,10 +807,10 @@ npm run build
 
 # Serve with any static server
 # Example with serve:
-npx serve dist/app/browser -s
+npx serve dist/app -s
 
 # Example with nginx:
-# Copy dist/app/browser/* to /var/www/html/
+# Copy dist/app/* to /var/www/html/
 ```
 
 ## 🔧 Configuration for Different Base Paths
