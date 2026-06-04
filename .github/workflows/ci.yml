@@ -53,6 +53,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build -- --configuration=production
+      - run: npm run performance:assert
 
   e2e:
     runs-on: ubuntu-latest

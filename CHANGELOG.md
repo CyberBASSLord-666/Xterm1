@@ -19,6 +19,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 0.2.0 Quality & Security Hardening Kickoff ✅
+
+**Date**: 2026-06-04
+
+**Summary**: Started implementation of the 0.2.0 testing and quality-assurance phase with concrete CI, testing, and documentation hardening tasks.
+
+#### Added
+- `quality:gate` npm script for the core lint + typecheck + unit test + production build baseline.
+- `performance:assert` npm script and `scripts/assert-initial-bundle.mjs` to enforce initial-bundle budget checks after production builds.
+- CI performance assertion step in `.github/workflows/ci.yml` build job.
+- Unit test suite for CSP monitoring (`src/services/__tests__/csp-monitoring.service.spec.ts`) to strengthen security telemetry coverage.
+
+#### Updated
+- `README.md` technology versions and security command references to match current repository scripts and dependency versions.
+- `TESTING.md` coverage-threshold documentation to match enforced Jest configuration.
+
+---
+
 ### Documentation Consolidation ✅
 
 **Date**: 2025-11-30
@@ -1779,4 +1797,3 @@ This project leverages:
 ---
 
 *For detailed information about specific changes, please refer to the commit history and pull requests.*
-

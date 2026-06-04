@@ -72,6 +72,7 @@ The `pre-deploy` script runs:
 2. Type checking
 3. Unit tests
 4. Production build
+5. Security gate (`security:validate` + `npm audit --audit-level=high`)
 
 Build artifacts will be stored in the `dist/` directory.
 
@@ -97,8 +98,8 @@ Build artifacts will be stored in the `dist/` directory.
 
 ## 🏗️ Technology Stack
 
-- **Frontend Framework**: Angular 20.x
-- **Language**: TypeScript 5.8.x
+- **Frontend Framework**: Angular 21.x
+- **Language**: TypeScript 5.9.x
 - **Styling**: Tailwind CSS 4.x
 - **State Management**: Angular Signals
 - **Storage**: IndexedDB (via idb)
@@ -167,7 +168,9 @@ Build artifacts will be stored in the `dist/` directory.
 ### Security Validation
 Run comprehensive security checks before deployment:
 ```bash
-npm run security:check
+npm run security:validate
+# or run the full gate:
+npm run security:gate
 ```
 
 ### Deployment Security
