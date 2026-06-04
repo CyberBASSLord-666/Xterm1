@@ -69,9 +69,9 @@ npm run pre-deploy
 
 The `pre-deploy` script runs:
 1. Linting checks
-2. Unit tests with coverage
-3. Production build
-4. Security validation
+2. Type checking
+3. Unit tests
+4. Production build
 
 Build artifacts will be stored in the `dist/` directory.
 

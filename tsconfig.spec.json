@@ -2,6 +2,8 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "./out-tsc/spec",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "types": ["jest", "node"],
     "esModuleInterop": true,
     "emitDecoratorMetadata": true
