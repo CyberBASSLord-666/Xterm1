@@ -50,52 +50,46 @@ test.describe('PolliWall App', () => {
   });
 
   test('should toggle theme between light and dark', async ({ page }) => {
-    // Check initial state (should be light mode)
+    // Check initial state via the explicit theme marker maintained by the app.
     const html = page.locator('html');
-    const initialClass = await html.getAttribute('class');
+    const initialTheme = await html.getAttribute('data-theme');
 
     // Find and click theme toggle button
-    const themeButton = page
-      .locator('button')
-      .filter({ hasText: /dark|light/i })
-      .first();
+    const themeButton = page.getByRole('button', { name: /switch to (dark|light) theme/i });
     await themeButton.click();
 
-    // Wait for theme change by checking class attribute changes
-    await expect(html).not.toHaveAttribute('class', initialClass ?? '');
+    // Wait for theme change by checking the data-theme attribute.
+    await expect(html).not.toHaveAttribute('data-theme', initialTheme ?? '');
 
     // Verify theme changed
-    const newClass = await html.getAttribute('class');
-    expect(newClass).not.toBe(initialClass);
+    const newTheme = await html.getAttribute('data-theme');
+    expect(newTheme).not.toBe(initialTheme);
 
     // Toggle back
     await themeButton.click();
 
     // Wait for theme to toggle back
-    await expect(html).toHaveAttribute('class', initialClass ?? '');
+    await expect(html).toHaveAttribute('data-theme', initialTheme ?? '');
 
     // Verify it toggles back
-    const finalClass = await html.getAttribute('class');
-    expect(finalClass).toBe(initialClass);
+    const finalTheme = await html.getAttribute('data-theme');
+    expect(finalTheme).toBe(initialTheme);
   });
 
   test('should navigate to wizard', async ({ page }) => {
-    // Click Generate button/link
-    await page.locator('text=Generate').first().click();
+    // The Create navigation item opens the wizard/create experience.
+    await page.getByRole('link', { name: 'Create' }).click();
 
-    // Wait for navigation
-    await page.waitForURL('**/wizard', { timeout: 5000 });
-
-    // Verify we're on wizard page
-    expect(page.url()).toContain('/wizard');
+    // Verify the wizard form is visible.
+    await expect(page.locator('textarea#prompt')).toBeVisible({ timeout: 5000 });
   });
 
   test('should navigate to gallery', async ({ page }) => {
     // Click Gallery link
-    await page.locator('text=Gallery').first().click();
+    await page.getByRole('link', { name: 'Gallery' }).click();
 
     // Wait for navigation
-    await page.waitForURL('**/gallery', { timeout: 5000 });
+    await page.waitForURL('**/#/gallery', { timeout: 5000 });
 
     // Verify we're on gallery page
     expect(page.url()).toContain('/gallery');
@@ -103,10 +97,10 @@ test.describe('PolliWall App', () => {
 
   test('should navigate to settings', async ({ page }) => {
     // Click Settings link
-    await page.locator('text=Settings').first().click();
+    await page.getByRole('link', { name: 'Settings' }).click();
 
     // Wait for navigation
-    await page.waitForURL('**/settings', { timeout: 5000 });
+    await page.waitForURL('**/#/settings', { timeout: 5000 });
 
     // Verify we're on settings page
     expect(page.url()).toContain('/settings');
@@ -122,9 +116,9 @@ test.describe('PolliWall App', () => {
     });
 
     // Navigate and interact
-    await page.locator('text=Gallery').first().click();
+    await page.getByRole('link', { name: 'Gallery' }).click();
     // Wait for navigation to complete
-    await page.waitForURL('**/gallery', { timeout: 5000 });
+    await page.waitForURL('**/#/gallery', { timeout: 5000 });
 
     // Check for errors (excluding expected errors like network timeouts)
     const criticalErrors = errors.filter((err) => !err.includes('net::') && !err.includes('favicon'));
@@ -162,8 +156,9 @@ test.describe('PolliWall App', () => {
       const text = await btn.textContent();
       const ariaLabel = await btn.getAttribute('aria-label');
       const ariaLabelledBy = await btn.getAttribute('aria-labelledby');
+      const title = await btn.getAttribute('title');
 
-      expect(text?.trim() || ariaLabel || ariaLabelledBy, 'Button must have accessible name').toBeTruthy();
+      expect(text?.trim() || ariaLabel || ariaLabelledBy || title, 'Button must have accessible name').toBeTruthy();
     }
 
     // Check heading hierarchy
@@ -192,27 +187,19 @@ test.describe('PolliWall App', () => {
     }
   });
 
-  test('should persist theme preference', async ({ page, context }) => {
-    // Set dark theme
-    const themeButton = page
-      .locator('button')
-      .filter({ hasText: /dark|light/i })
-      .first();
-    await themeButton.click();
-
-    // Wait for theme change by checking for the 'dark' class
+  test('should persist theme preference', async ({ page }) => {
+    const themeButton = page.getByRole('button', { name: /switch to (dark|light) theme/i });
     const html = page.locator('html');
-    await expect(html).toHaveClass(/dark/);
+    const initialTheme = await html.getAttribute('data-theme');
 
-    // Get current theme
-    const darkClass = await html.getAttribute('class');
+    await themeButton.click();
+    await expect(html).not.toHaveAttribute('data-theme', initialTheme ?? '');
 
-    // Reload page
+    const selectedTheme = await html.getAttribute('data-theme');
+
     await page.reload();
     await page.waitForSelector('app-root', { state: 'visible' });
 
-    // Check theme persisted
-    const persistedClass = await page.locator('html').getAttribute('class');
-    expect(persistedClass).toBe(darkClass);
+    await expect(page.locator('html')).toHaveAttribute('data-theme', selectedTheme ?? '');
   });
 });

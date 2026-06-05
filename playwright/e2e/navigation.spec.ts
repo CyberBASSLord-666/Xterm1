@@ -62,11 +62,9 @@ test.describe('Navigation', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    // Look for mobile menu button (hamburger icon, menu button, etc.)
-    const menuButton = page
-      .locator('button')
-      .filter({ hasText: /menu|☰/i })
-      .first();
+    // The menu toggle is intentionally mobile-only; locate it by its accessible
+    // name after forcing a mobile viewport so desktop CI widths do not affect it.
+    const menuButton = page.getByRole('button', { name: 'Open main menu' });
 
     await expect(menuButton).toBeVisible();
     await menuButton.click();

@@ -26,8 +26,18 @@ describe('CspMonitoringService', () => {
   let logger: LoggerServiceStub;
   let platform: PlatformServiceStub;
   let analytics: AnalyticsServiceStub;
+  let fetchWasDefined = false;
 
   beforeEach(() => {
+    fetchWasDefined = 'fetch' in globalThis;
+    if (!fetchWasDefined) {
+      Object.defineProperty(globalThis, 'fetch', {
+        configurable: true,
+        writable: true,
+        value: jest.fn(),
+      });
+    }
+
     TestBed.configureTestingModule({
       providers: [
         CspMonitoringService,
@@ -47,6 +57,9 @@ describe('CspMonitoringService', () => {
   afterEach(() => {
     document.head.querySelector('meta[name="csp-report-endpoint"]')?.remove();
     jest.restoreAllMocks();
+    if (!fetchWasDefined) {
+      delete (globalThis as Partial<typeof globalThis>).fetch;
+    }
   });
 
   function createViolationEvent(overrides: Partial<SecurityPolicyViolationEvent> = {}): Event {
@@ -107,8 +120,7 @@ describe('CspMonitoringService', () => {
   });
 
   it('falls back to fetch when sendBeacon is unavailable', async () => {
-    const fetchMock = jest.fn().mockResolvedValue({ ok: true });
-    global.fetch = fetchMock as unknown as typeof fetch;
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: true } as Response);
 
     platform.getWindow.mockReturnValue({
       navigator: {},
@@ -136,6 +148,35 @@ describe('CspMonitoringService', () => {
       expect.objectContaining({
         label: 'style-src',
       })
+    );
+  });
+
+  it('falls back to fetch when sendBeacon cannot queue the report', async () => {
+    const sendBeacon = jest.fn(() => false);
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: true } as Response);
+
+    platform.getWindow.mockReturnValue({
+      navigator: { sendBeacon },
+    } as unknown as Window);
+
+    service.initialize();
+    const violationListener = platform.addEventListener.mock.calls[0][2] as (event: Event) => void;
+    violationListener(createViolationEvent());
+
+    await Promise.resolve();
+
+    expect(sendBeacon).toHaveBeenCalledWith('/api/csp-report', expect.any(Blob));
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/csp-report',
+      expect.objectContaining({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/csp-report' },
+      })
+    );
+    expect(logger.warn).toHaveBeenCalledWith(
+      'sendBeacon could not queue CSP violation report; falling back to fetch',
+      { endpoint: '/api/csp-report' },
+      'CspMonitoring'
     );
   });
 });

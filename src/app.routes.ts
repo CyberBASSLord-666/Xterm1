@@ -3,6 +3,12 @@ import { Routes } from '@angular/router';
 export const routes: Routes = [
   {
     path: '',
+    pathMatch: 'full',
+    loadComponent: () => import('./components/wizard/wizard.component').then((m) => m.WizardComponent),
+    title: 'PolliWall – Create',
+  },
+  {
+    path: 'wizard',
     loadComponent: () => import('./components/wizard/wizard.component').then((m) => m.WizardComponent),
     title: 'PolliWall – Create',
   },

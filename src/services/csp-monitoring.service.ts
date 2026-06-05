@@ -85,8 +85,15 @@ export class CspMonitoringService {
 
     if (typeof win.navigator.sendBeacon === 'function') {
       const blob = new Blob([body], { type: 'application/csp-report' });
-      win.navigator.sendBeacon(endpoint, blob);
-      return;
+      if (win.navigator.sendBeacon(endpoint, blob)) {
+        return;
+      }
+
+      this.logger.warn(
+        'sendBeacon could not queue CSP violation report; falling back to fetch',
+        { endpoint },
+        'CspMonitoring'
+      );
     }
 
     void fetch(endpoint, {

@@ -85,11 +85,11 @@ build-dev: ## Build for development
 	npm run build -- --configuration=development
 	@echo "✅ Development build complete"
 
-build-analyze: ## Build with bundle analyzer
-	@echo "📊 Building with bundle analysis..."
-	npm run build -- --configuration=production --stats-json
-	npx webpack-bundle-analyzer dist/app/stats.json
-	@echo "✅ Bundle analysis complete"
+build-analyze: ## Build with Vite bundle visualizer
+	@echo "📊 Building with Vite bundle analysis..."
+	npm run build -- --configuration=production
+	npx vite-bundle-visualizer --output dist/app/stats.html --open false
+	@echo "✅ Bundle analysis complete: dist/app/stats.html"
 
 # ============================================================================
 # TESTING

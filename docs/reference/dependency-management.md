@@ -650,7 +650,6 @@ npm update <package-name>
 - [TESTING.md](../../TESTING.md) - Testing procedures for dependency updates
 - [DEPLOYMENT.md](../../DEPLOYMENT.md) - Deployment procedures
 - [.github/dependabot.yml](../../.github/dependabot.yml) - Actual configuration file
-- DEPENDABOT_STRATEGY.md - Comprehensive Dependabot strategy and configuration guide
 
 ---
 

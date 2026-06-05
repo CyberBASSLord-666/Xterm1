@@ -22,15 +22,25 @@ const localAssets = [...new Set(assetMatches.map((match) => match[1]))]
 
 let totalBytes = 0;
 const measuredAssets = [];
+const missingAssets = [];
 
 for (const asset of localAssets) {
   const fullPath = path.join(buildRoot ?? distDir, asset);
   if (!fs.existsSync(fullPath)) {
+    missingAssets.push(asset);
     continue;
   }
   const size = fs.statSync(fullPath).size;
   measuredAssets.push({ asset, size });
   totalBytes += size;
+}
+
+if (missingAssets.length > 0) {
+  console.error('❌ Initial bundle references assets that were not found on disk:');
+  for (const asset of missingAssets) {
+    console.error(`- ${asset}`);
+  }
+  process.exit(1);
 }
 
 for (const { asset, size } of measuredAssets) {
@@ -41,9 +51,7 @@ console.log(`Initial bundle total: ${(totalBytes / 1024).toFixed(2)} kB`);
 console.log(`Budget: ${(maxInitialBundleBytes / 1024).toFixed(2)} kB`);
 
 if (totalBytes > maxInitialBundleBytes) {
-  console.error(
-    `❌ Initial bundle budget exceeded by ${((totalBytes - maxInitialBundleBytes) / 1024).toFixed(2)} kB.`
-  );
+  console.error(`❌ Initial bundle budget exceeded by ${((totalBytes - maxInitialBundleBytes) / 1024).toFixed(2)} kB.`);
   process.exit(1);
 }
 

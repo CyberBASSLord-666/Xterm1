@@ -5,60 +5,35 @@ test.describe('Theme Functionality', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    // Look for theme toggle button (may have different text or icon)
-    const themeButton = page
-      .locator('button')
-      .filter({ hasText: /theme|dark|light/i })
-      .first();
+    const themeButton = page.getByRole('button', { name: /switch to (dark|light) theme/i });
+    const htmlElement = page.locator('html');
+    const initialTheme = await htmlElement.getAttribute('data-theme');
 
-    if (await themeButton.isVisible()) {
-      // Get initial theme state
-      const htmlElement = page.locator('html');
-      const initialHasClass = await htmlElement.evaluate((el) => el.classList.contains('dark'));
+    await themeButton.click();
 
-      // Click theme toggle
-      await themeButton.click();
+    await expect(htmlElement).not.toHaveAttribute('data-theme', initialTheme ?? '');
 
-      // Wait for class to change using assertion
-      if (initialHasClass) {
-        await expect(htmlElement).not.toHaveClass(/dark/);
-      } else {
-        await expect(htmlElement).toHaveClass(/dark/);
-      }
-
-      // Check if theme changed
-      const finalHasClass = await htmlElement.evaluate((el) => el.classList.contains('dark'));
-      expect(finalHasClass).not.toBe(initialHasClass);
-    }
+    const finalTheme = await htmlElement.getAttribute('data-theme');
+    expect(finalTheme).not.toBe(initialTheme);
   });
 
   test('should persist theme preference across page reloads', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    const themeButton = page
-      .locator('button')
-      .filter({ hasText: /theme|dark|light/i })
-      .first();
+    const themeButton = page.getByRole('button', { name: /switch to (dark|light) theme/i });
+    const htmlElement = page.locator('html');
+    const initialTheme = await htmlElement.getAttribute('data-theme');
 
-    if (await themeButton.isVisible()) {
-      // Set a specific theme
-      await themeButton.click();
+    await themeButton.click();
+    await expect(htmlElement).not.toHaveAttribute('data-theme', initialTheme ?? '');
 
-      // Wait for theme change by checking for the 'dark' class
-      const htmlElement = page.locator('html');
-      await expect(htmlElement).toHaveClass(/dark/);
+    const themeAfterToggle = await htmlElement.getAttribute('data-theme');
 
-      const themeAfterToggle = await htmlElement.evaluate((el) => el.classList.contains('dark'));
+    await page.reload();
+    await page.waitForLoadState('networkidle');
 
-      // Reload the page
-      await page.reload();
-      await page.waitForLoadState('networkidle');
-
-      // Check if theme persisted
-      const themeAfterReload = await htmlElement.evaluate((el) => el.classList.contains('dark'));
-      expect(themeAfterReload).toBe(themeAfterToggle);
-    }
+    await expect(htmlElement).toHaveAttribute('data-theme', themeAfterToggle ?? '');
   });
 
   test('should apply correct CSS variables for theme', async ({ page }) => {

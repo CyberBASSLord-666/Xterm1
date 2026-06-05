@@ -81,7 +81,7 @@ test.describe('Accessibility', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    const inputs = page.locator('input');
+    const inputs = page.locator('input:visible');
     const inputCount = await inputs.count();
 
     for (let i = 0; i < Math.min(inputCount, 5); i++) {

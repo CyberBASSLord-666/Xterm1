@@ -42,9 +42,10 @@ test.describe('Wallpaper Generation Wizard', () => {
     const textarea = page.locator('textarea').first();
     await expect(textarea).toBeVisible({ timeout: 5000 });
 
-    // Verify form is interactive
+    // Verify form is interactive. The generate button remains disabled until
+    // a prompt or source image is provided.
     await expect(textarea).toBeEnabled();
-    await expect(generateBtn).toBeEnabled();
+    await expect(generateBtn).toBeDisabled();
   });
 
   test('should accept prompt input', async ({ page }) => {
@@ -79,17 +80,9 @@ test.describe('Wallpaper Generation Wizard', () => {
       await darkMoody.click();
 
       // Wait for selection to be applied using locator assertion
-      const parent = darkMoody
-        .locator('xpath=ancestor::*[contains(@class, "preset") or contains(@role, "button")]')
-        .first();
+      const presetButton = page.getByRole('button', { name: /Dark & Moody/ }).first();
 
-      // Wait for either selected class or aria-selected attribute using proper Playwright assertions
-      await expect(parent)
-        .toHaveAttribute('class', /selected|active/, { timeout: 5000 })
-        .catch(async () => {
-          // If class check fails, try aria-selected
-          await expect(parent).toHaveAttribute('aria-selected', 'true', { timeout: 5000 });
-        });
+      await expect(presetButton).toHaveAttribute('aria-pressed', 'true', { timeout: 5000 });
     }
   });
 
@@ -120,19 +113,8 @@ test.describe('Wallpaper Generation Wizard', () => {
     const textarea = page.locator('textarea').first();
     await textarea.clear();
 
-    // Click generate
-    await generateBtn.click();
-
-    // Wait for validation using proper Playwright assertion
-    const errorMessage = page.locator('text=/prompt|required/i');
-
-    // Wait for error message to appear if it exists, or verify button state prevents submission
-    try {
-      await expect(errorMessage.first()).toBeVisible({ timeout: 5000 });
-    } catch {
-      // If no error message, the button might prevent submission in another way
-      // This is acceptable behavior
-    }
+    // Empty prompts are prevented by disabling submission.
+    await expect(generateBtn).toBeDisabled();
   });
 
   test('should handle prompt generation interaction', async ({ page }) => {
@@ -239,8 +221,8 @@ test.describe('Wallpaper Generation Wizard', () => {
     await textarea.fill(testPrompt);
 
     // Navigate away
-    await page.locator('text=Gallery').first().click();
-    await page.waitForURL('**/gallery', { timeout: 5000 });
+    await page.getByRole('link', { name: 'Gallery' }).click();
+    await page.waitForURL('**/#/gallery', { timeout: 5000 });
 
     // Navigate back
     await page.goto('/#/wizard');
