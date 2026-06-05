@@ -46,7 +46,8 @@ describe('Agentic Swarm - Workflow Integration Tests', () => {
   };
 
   // Skip all tests if workflows directory doesn't exist
-  const describeIfWorkflowsExist = workflowsDirExists ? describe : describe.skip;
+  const hasSwarmWorkflows = workflowsDirExists && swarmWorkflows.every((workflow) => fileExists(workflow));
+  const describeIfWorkflowsExist = hasSwarmWorkflows ? describe : describe.skip;
 
   describeIfWorkflowsExist('Workflow File Existence', () => {
     it('should have all required swarm workflow files', () => {

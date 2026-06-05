@@ -974,8 +974,17 @@ document.head.appendChild(script);
 **Schedule**:
 - **Weekly**: Automated security scans
 - **Monthly**: Dependency updates and patches
-- **Quarterly**: Manual security review
+- **Quarterly**: Manual security review + documentation audit (`.github/workflows/security-docs-audit.yml`)
 - **Annually**: External security audit (recommended)
+
+### Quarterly Security Documentation Audit
+
+- Scheduled workflow: `.github/workflows/security-docs-audit.yml` (runs quarterly and on demand)
+- Validation scope:
+  - Security control checks via `npm run security:validate`
+  - Security documentation cadence markers
+  - Security changelog integrity
+- Audit evidence location: [docs/reference/SECURITY_CHANGELOG.md](./docs/reference/SECURITY_CHANGELOG.md)
 
 ---
 
@@ -1036,6 +1045,7 @@ document.head.appendChild(script);
 - **OWASP Top 10**: https://owasp.org/www-project-top-ten/
 - **MDN Security**: https://developer.mozilla.org/en-US/docs/Web/Security
 - **CSP Guide**: https://content-security-policy.com/
+- **Security Changelog**: [docs/reference/SECURITY_CHANGELOG.md](./docs/reference/SECURITY_CHANGELOG.md)
 
 **Standards**:
 - **WCAG 2.1**: https://www.w3.org/WAI/WCAG21/quickref/
@@ -1045,5 +1055,5 @@ document.head.appendChild(script);
 ---
 
 *This security documentation is the definitive reference for all security in Xterm1.*  
-*Last Updated: 2025-12-26 | Documentation Consolidation Complete*  
-*Next Security Review: 2025-02-15 (Quarterly)*
+*Last Updated: 2026-06-04 | CSP monitoring and audit cadence updated*  
+*Next Security Review: 2026-07-01 (Quarterly)*

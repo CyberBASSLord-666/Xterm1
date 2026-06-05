@@ -272,7 +272,18 @@ Technical deep-dives and detailed reference materials:
   - Remediation guidelines
 - **Read Time**: 8-10 minutes
 
----
+  ### Security Changelog
+
+  **[docs/reference/SECURITY_CHANGELOG.md](./docs/reference/SECURITY_CHANGELOG.md)** - Security Change History
+  - **Purpose**: Append-only record of security control updates and audit evidence
+  - **Audience**: Security team, maintainers, compliance reviewers
+  - **Content**:
+    - Quarterly security change entries
+    - CSP and header hardening history
+    - CI/security gate updates
+  - **Read Time**: 5-7 minutes
+
+  ---
 
 ## 🔧 Tier 3: Development Guides (docs/guides/)
 

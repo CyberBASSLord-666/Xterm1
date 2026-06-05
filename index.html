@@ -12,13 +12,14 @@
     <link rel="alternate icon" type="image/x-icon" href="favicon.ico" />
     <link rel="manifest" href="manifest.webmanifest" />
     <meta name="theme-color" content="#f9fafb" />
+    <meta name="csp-report-endpoint" content="/api/csp-report" />
 
     <!-- Security: Content Security Policy -->
     <!-- Note: CSP is configured via HTTP headers for production (see _headers, vercel.json, nginx.conf.example) -->
     <!-- This meta tag serves as a fallback and for local development -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' https://www.googletagmanager.com https://aistudiocdn.com https://next.esm.sh https://esm.sh; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://image.pollinations.ai; connect-src 'self' https://image.pollinations.ai https://text.pollinations.ai https://generativelanguage.googleapis.com https://www.google-analytics.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      content="default-src 'self'; script-src 'self' https://www.googletagmanager.com https://aistudiocdn.com https://next.esm.sh https://esm.sh; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://image.pollinations.ai; connect-src 'self' https://image.pollinations.ai https://text.pollinations.ai https://generativelanguage.googleapis.com https://www.google-analytics.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; report-uri /api/csp-report; report-to csp-endpoint; trusted-types angular"
     />
     <!-- Preconnect to external font resources for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />

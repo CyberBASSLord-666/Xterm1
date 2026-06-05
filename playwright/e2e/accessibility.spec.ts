@@ -1,16 +1,13 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Accessibility', () => {
-  test('should have proper heading hierarchy', async ({ page }) => {
+  test('should have at least one semantic heading', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    // Check for h1 elements
-    const h1Elements = page.locator('h1');
-    const h1Count = await h1Elements.count();
+    const headingCount = await page.locator('h1, h2, h3, h4, h5, h6').count();
 
-    // A page should typically have at least one h1
-    expect(h1Count).toBeGreaterThanOrEqual(0);
+    expect(headingCount).toBeGreaterThan(0);
   });
 
   test('should have proper ARIA labels on interactive elements', async ({ page }) => {
@@ -70,10 +67,7 @@ test.describe('Accessibility', () => {
 
     // Check if text is visible (basic contrast check)
     const textElements = page.locator('p, span, div, h1, h2, h3, h4, h5, h6').first();
-    if ((await textElements.count()) > 0) {
-      const isVisible = await textElements.isVisible();
-      expect(isVisible).toBe(true);
-    }
+    await expect(textElements).toBeVisible();
   });
 
   test('should have lang attribute on html element', async ({ page }) => {
@@ -87,7 +81,7 @@ test.describe('Accessibility', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    const inputs = page.locator('input');
+    const inputs = page.locator('input:visible');
     const inputCount = await inputs.count();
 
     for (let i = 0; i < Math.min(inputCount, 5); i++) {

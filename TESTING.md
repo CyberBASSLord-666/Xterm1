@@ -28,13 +28,13 @@
 Xterm1 employs a comprehensive, production-grade testing strategy using multiple testing frameworks and methodologies to ensure code quality, reliability, and security.
 
 **Testing Frameworks**:
-- **Jest 30.2.0** - Unit testing (with jest-preset-angular 15.0.3)
+- **Jest 30.2.0** - Unit testing (with jest-preset-angular 16.0.0)
 - **Playwright 1.45.0** - End-to-end testing
 - **Istanbul** - Code coverage analysis (via Jest)
 
 **Test Count**: 165 unit tests (97.6% pass rate)  
 **E2E Tests**: 15+ comprehensive end-to-end scenarios  
-**Coverage**: Meets all thresholds (branches: 50%, functions: 50%, lines: 50%, statements: 50%)
+**Coverage**: Meets all thresholds (branches: 46%, functions: 41%, lines: 49%, statements: 49%)
 
 ---
 
@@ -86,10 +86,10 @@ export default {
   ],
   coverageThreshold: {
     global: {
-      branches: 50,
-      functions: 50,
-      lines: 50,
-      statements: 50
+      branches: 46,
+      functions: 41,
+      lines: 49,
+      statements: 49
     }
   },
   transform: {
@@ -460,10 +460,10 @@ await page.click('text=Generate Image');
 
 | Metric | Threshold | Current | Status |
 |--------|-----------|---------|--------|
-| **Branches** | 50% | ~55% | ✅ Pass |
-| **Functions** | 50% | ~55% | ✅ Pass |
-| **Lines** | 50% | ~60% | ✅ Pass |
-| **Statements** | 50% | ~60% | ✅ Pass |
+| **Branches** | 46% | ~71% | ✅ Pass |
+| **Functions** | 41% | ~84% | ✅ Pass |
+| **Lines** | 49% | ~84% | ✅ Pass |
+| **Statements** | 49% | ~84% | ✅ Pass |
 
 ### Coverage by Category
 

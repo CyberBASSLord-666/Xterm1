@@ -4,7 +4,7 @@
 
 # PolliWall - AI Wallpaper Studio
 
-> 🎨 Professional AI-powered wallpaper generation application built with Angular 20
+> 🎨 Professional AI-powered wallpaper generation application built with Angular 21
 
 PolliWall is a cutting-edge web application that leverages AI to generate stunning, device-optimized wallpapers. Built with modern web technologies and following industry best practices for performance, security, and user experience.
 
@@ -69,9 +69,10 @@ npm run pre-deploy
 
 The `pre-deploy` script runs:
 1. Linting checks
-2. Unit tests with coverage
-3. Production build
-4. Security validation
+2. Type checking
+3. Unit tests
+4. Production build
+5. Security gate (`security:validate` + `npm audit --audit-level=high`)
 
 Build artifacts will be stored in the `dist/` directory.
 
@@ -97,8 +98,8 @@ Build artifacts will be stored in the `dist/` directory.
 
 ## 🏗️ Technology Stack
 
-- **Frontend Framework**: Angular 20.x
-- **Language**: TypeScript 5.8.x
+- **Frontend Framework**: Angular 21.x
+- **Language**: TypeScript 5.9.x
 - **Styling**: Tailwind CSS 4.x
 - **State Management**: Angular Signals
 - **Storage**: IndexedDB (via idb)
@@ -167,7 +168,9 @@ Build artifacts will be stored in the `dist/` directory.
 ### Security Validation
 Run comprehensive security checks before deployment:
 ```bash
-npm run security:check
+npm run security:validate
+# or run the full gate:
+npm run security:gate
 ```
 
 ### Deployment Security
@@ -212,11 +215,9 @@ See [DEVELOPMENT.md](./DEVELOPMENT.md) for detailed development guidelines.
 
 ### GitHub Actions Workflows
 - `ci.yml` - Lint, test, build, and E2E tests
-- `security.yml` - CodeQL, dependency review, npm audit
+- `security.yml` - CodeQL and npm audit checks
 - `dependabot-auto-merge.yml` - Automated dependency management
 - `deploy.yml` - Production deployment
-- `codescan.yml` - Additional security scanning
-- `bundle-size.yml` - Bundle size tracking
 
 See [DEVELOPMENT.md](./DEVELOPMENT.md#dependency-management) for more details.
 

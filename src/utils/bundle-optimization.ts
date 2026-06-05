@@ -110,13 +110,22 @@ export function setPriority(url: string, priority: 'high' | 'low'): void {
   }
 }
 
+type OptionalProcessGlobal = typeof globalThis & {
+  process?: {
+    env?: Record<string, string | undefined>;
+  };
+};
+
+const runtimeEnv = (globalThis as OptionalProcessGlobal).process?.env ?? {};
+const nodeEnv = runtimeEnv['NODE_ENV'];
+
 /**
  * Tree-shakeable feature flags
  */
 export const FEATURES = {
-  ANALYTICS: process.env['NG_ANALYTICS'] !== 'false',
-  PERFORMANCE_MONITORING: process.env['NG_PERF_MONITORING'] !== 'false',
-  DEBUG_MODE: process.env['NG_DEBUG'] === 'true',
+  ANALYTICS: runtimeEnv['NG_ANALYTICS'] !== 'false',
+  PERFORMANCE_MONITORING: runtimeEnv['NG_PERF_MONITORING'] !== 'false',
+  DEBUG_MODE: runtimeEnv['NG_DEBUG'] === 'true',
 } as const;
 
 /**
@@ -124,7 +133,7 @@ export const FEATURES = {
  * Wraps code that should be removed in production
  */
 export function devOnly<T>(fn: () => T): T | undefined {
-  if (process.env['NODE_ENV'] === 'development') {
+  if (nodeEnv === 'development') {
     return fn();
   }
   return undefined;
@@ -134,7 +143,7 @@ export function devOnly<T>(fn: () => T): T | undefined {
  * Production-only code
  */
 export function prodOnly<T>(fn: () => T): T | undefined {
-  if (process.env['NODE_ENV'] === 'production') {
+  if (nodeEnv === 'production') {
     return fn();
   }
   return undefined;
@@ -144,7 +153,7 @@ export function prodOnly<T>(fn: () => T): T | undefined {
  * Module size analyzer (development only)
  */
 export function analyzeModuleSize(moduleName: string): void {
-  if (process.env['NODE_ENV'] === 'development') {
+  if (nodeEnv === 'development') {
     // eslint-disable-next-line no-console
     console.log(`📦 Module loaded: ${moduleName}`);
     // In real implementation, this would track actual sizes
@@ -182,7 +191,7 @@ export interface BundleStats {
 }
 
 export function logBundleStats(stats: BundleStats): void {
-  if (process.env['NODE_ENV'] === 'development') {
+  if (nodeEnv === 'development') {
     // eslint-disable-next-line no-console
     console.table(stats);
   }

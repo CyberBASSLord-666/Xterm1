@@ -17,6 +17,13 @@ describe('App Routes', () => {
       const rootRoute = routes.find((r) => r.path === '');
       expect(rootRoute).toBeDefined();
       expect(rootRoute?.title).toBe('PolliWall – Create');
+      expect(rootRoute?.pathMatch).toBe('full');
+    });
+
+    it('should have wizard alias route', () => {
+      const wizardRoute = routes.find((r) => r.path === 'wizard');
+      expect(wizardRoute).toBeDefined();
+      expect(wizardRoute?.title).toBe('PolliWall – Create');
     });
 
     it('should have gallery route', () => {
@@ -55,8 +62,8 @@ describe('App Routes', () => {
       expect(wildcardRoute?.redirectTo).toBe('');
     });
 
-    it('should have 7 routes total', () => {
-      expect(routes.length).toBe(7);
+    it('should have 8 routes total', () => {
+      expect(routes.length).toBe(8);
     });
   });
 
@@ -65,6 +72,12 @@ describe('App Routes', () => {
       const rootRoute = routes.find((r) => r.path === '');
       expect(rootRoute?.loadComponent).toBeDefined();
       expect(typeof rootRoute?.loadComponent).toBe('function');
+    });
+
+    it('should have loadComponent for wizard alias route', () => {
+      const wizardRoute = routes.find((r) => r.path === 'wizard');
+      expect(wizardRoute?.loadComponent).toBeDefined();
+      expect(typeof wizardRoute?.loadComponent).toBe('function');
     });
 
     it('should have loadComponent for gallery route', () => {

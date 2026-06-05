@@ -1,0 +1,26 @@
+name: Security Docs Audit
+
+on:
+  schedule:
+    - cron: '0 7 1 1,4,7,10 *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quarterly-security-doc-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run security:validate
+      - name: Verify security documentation cadence markers
+        run: |
+          grep -q "Quarterly Security Documentation Audit" SECURITY.md
+          grep -q "SECURITY_CHANGELOG.md" SECURITY.md
+          grep -q "## Quarterly Audit Entries" docs/reference/SECURITY_CHANGELOG.md

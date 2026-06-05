@@ -681,10 +681,10 @@ try {
 
 ## Related Patterns
 
-- **[Response Validation](./response-validation.md)** - Validate with external rules (complementary)
-- **[Retry](./retry.md)** - Retry with exponential backoff
-- **[Cost Tracking](./cost-tracking.md)** - Monitor AI spending
-- **[Human-in-the-Loop](./human-in-the-loop.md)** - Escalate to humans when needed
+- **Response Validation** - Validate with external rules (complementary)
+- **Retry** - Retry with exponential backoff
+- **Cost Tracking** - Monitor AI spending
+- **Human-in-the-Loop** - Escalate to humans when needed
 
 ---
 

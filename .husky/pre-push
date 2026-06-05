@@ -22,8 +22,10 @@ echo "✅ Unit tests passed"
 
 # Verify build succeeds
 echo "🏗️  Verifying build..."
-npm run build -- --configuration=production 2>&1 | tail -5
-if [ $? -ne 0 ]; then
+BUILD_OUTPUT="$(npm run build -- --configuration=production 2>&1)"
+BUILD_STATUS=$?
+echo "$BUILD_OUTPUT" | tail -5
+if [ $BUILD_STATUS -ne 0 ]; then
   echo "❌ Build failed. Please fix before pushing."
   exit 1
 fi

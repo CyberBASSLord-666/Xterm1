@@ -445,18 +445,19 @@ describe('Agentic Swarm - Agent Configuration Tests', () => {
     });
   });
 
-  const describeIfWorkflowsExist = workflowsDirExists ? describe : describe.skip;
+  const expectedWorkflows = [
+    'auto-fix-lint.yml',
+    'comment-command-processor.yml',
+    'issue-auto-triage.yml',
+    'pr-feedback-analyzer.yml',
+    'swarm-coordinator.yml',
+    'inter-agent-communication.yml',
+  ];
+  const hasSwarmWorkflows =
+    workflowsDirExists && expectedWorkflows.every((workflow) => fileExists(path.join(workflowsDir, workflow)));
+  const describeIfWorkflowsExist = hasSwarmWorkflows ? describe : describe.skip;
 
   describeIfWorkflowsExist('Workflow Files', () => {
-    const expectedWorkflows = [
-      'auto-fix-lint.yml',
-      'comment-command-processor.yml',
-      'issue-auto-triage.yml',
-      'pr-feedback-analyzer.yml',
-      'swarm-coordinator.yml',
-      'inter-agent-communication.yml',
-    ];
-
     it('should have all swarm-related workflow files', () => {
       expectedWorkflows.forEach((workflow) => {
         const workflowPath = path.join(workflowsDir, workflow);

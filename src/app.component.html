@@ -129,5 +129,9 @@
   </main>
 </div>
 
-<app-toast></app-toast>
-<app-shortcuts-help></app-shortcuts-help>
+@defer (on idle) {
+  <app-toast></app-toast>
+}
+@defer (on idle) {
+  <app-shortcuts-help></app-shortcuts-help>
+}

@@ -68,6 +68,11 @@ const config: Config = {
       {
         tsconfig: '<rootDir>/tsconfig.spec.json',
         stringifyContentPathRegex: '\\.html$',
+        diagnostics: {
+          // Keep module resolution errors (TS2307) as hard failures; only suppress known
+          // jest-preset-angular template-transform noise for this repository.
+          ignoreCodes: [151002],
+        },
       },
     ],
   },

@@ -7,6 +7,7 @@ import { KeyboardShortcutsService } from './keyboard-shortcuts.service';
 import { PerformanceMonitorService } from './performance-monitor.service';
 import { AnalyticsService } from './analytics.service';
 import { PlatformService } from './platform.service';
+import { CspMonitoringService } from './csp-monitoring.service';
 import { initializeGeminiClient } from './pollinations.client';
 import { environment } from '../environments/environment';
 import type { BootstrapConfig, Environment } from '../types/global';
@@ -23,6 +24,7 @@ export class AppInitializerService {
   private readonly keyboardShortcuts = inject(KeyboardShortcutsService);
   private readonly perfMonitor = inject(PerformanceMonitorService);
   private readonly analytics = inject(AnalyticsService);
+  private readonly cspMonitoring = inject(CspMonitoringService);
   private readonly platformService = inject(PlatformService);
   private readonly document = inject(DOCUMENT);
 
@@ -59,7 +61,11 @@ export class AppInitializerService {
           } catch (error) {
             // Log but don't fail the app - AI features are optional
             this.logger.error('Failed to initialize Gemini API client', error, 'AppInitializer');
-            this.logger.warn('AI-powered features will be unavailable. App continues with limited functionality.', undefined, 'AppInitializer');
+            this.logger.warn(
+              'AI-powered features will be unavailable. App continues with limited functionality.',
+              undefined,
+              'AppInitializer'
+            );
           }
         } else {
           // Check if we should fail fast in production
@@ -79,6 +85,9 @@ export class AppInitializerService {
         } else {
           this.logger.debug('Analytics not configured', undefined, 'AppInitializer');
         }
+
+        // Initialize CSP violation monitoring and reporting
+        this.cspMonitoring.initialize();
 
         // Setup default keyboard shortcuts
         this.setupKeyboardShortcuts();
