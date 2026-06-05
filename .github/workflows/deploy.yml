@@ -27,7 +27,7 @@ jobs:
       - run: npm run build -- --configuration=production
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist/app
+          path: dist/app/browser
 
   deploy:
     environment:
