@@ -5,7 +5,7 @@
   "scripts": {
     "start": "ng serve",
     "build": "ng build",
-    "quality:gate": "npm run lint && npm run typecheck && npm test -- --watchAll=false --passWithNoTests && npm run build -- --configuration=production",
+    "quality:gate": "npm run lint && npm run typecheck && npm run test:coverage -- --watchAll=false --passWithNoTests && npm run build -- --configuration=production",
     "performance:assert": "node scripts/assert-initial-bundle.mjs",
     "typecheck": "tsc --noEmit",
     "test": "jest",

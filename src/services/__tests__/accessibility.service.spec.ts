@@ -4,7 +4,7 @@ import { LoggerService } from '../logger.service';
 
 describe('AccessibilityService', () => {
   let service: AccessibilityService;
-  let loggerService: jest.Mocked<LoggerService>;
+  let _loggerService: jest.Mocked<LoggerService>;
 
   beforeEach(() => {
     const loggerSpy = {
@@ -18,7 +18,7 @@ describe('AccessibilityService', () => {
     });
 
     service = TestBed.inject(AccessibilityService);
-    loggerService = TestBed.inject(LoggerService) as jest.Mocked<LoggerService>;
+    _loggerService = TestBed.inject(LoggerService) as jest.Mocked<LoggerService>;
   });
 
   afterEach(() => {

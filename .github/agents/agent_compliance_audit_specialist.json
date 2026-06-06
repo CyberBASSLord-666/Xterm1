@@ -24,16 +24,7 @@
     "license_compliance": {
       "enabled": true,
       "project_license": "MIT",
-      "allowed_licenses": [
-        "MIT",
-        "Apache-2.0",
-        "BSD-2-Clause",
-        "BSD-3-Clause",
-        "ISC",
-        "0BSD",
-        "CC0-1.0",
-        "Unlicense"
-      ],
+      "allowed_licenses": ["MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "ISC", "0BSD", "CC0-1.0", "Unlicense"],
       "conditional_licenses": {
         "LGPL-2.1": {
           "allowed": false,
@@ -46,15 +37,7 @@
           "requires_review": false
         }
       },
-      "forbidden_licenses": [
-        "GPL-2.0",
-        "GPL-3.0",
-        "AGPL-3.0",
-        "SSPL-1.0",
-        "Commons Clause",
-        "BUSL-1.1",
-        "Proprietary"
-      ],
+      "forbidden_licenses": ["GPL-2.0", "GPL-3.0", "AGPL-3.0", "SSPL-1.0", "Commons Clause", "BUSL-1.1", "Proprietary"],
       "license_scanning": {
         "scan_dependencies": true,
         "scan_transitive": true,

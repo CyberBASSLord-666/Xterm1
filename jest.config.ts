@@ -30,8 +30,8 @@ const config: Config = {
   // Exclude E2E tests (Playwright), build artifacts, and legacy Cypress tests
   testPathIgnorePatterns: ['/node_modules/', '/dist/', '/playwright/', '/cypress/'],
 
-  // Enable coverage collection for all test runs
-  collectCoverage: true,
+  // Keep default test runs fast; CI and release gates enable coverage explicitly.
+  collectCoverage: process.env['CI'] === 'true' || process.argv.includes('--coverage'),
   coverageDirectory: 'coverage',
 
   // Multiple report formats for different consumers:
@@ -49,10 +49,10 @@ const config: Config = {
   // Thresholds are set conservatively and should be increased over time
   coverageThreshold: {
     global: {
-      branches: 46, // Target: 70% (increase with each milestone)
-      functions: 41, // Target: 70%
-      lines: 49, // Target: 70%
-      statements: 49, // Target: 70%
+      branches: 46, // TODO: ratchet to 80%+ after legacy gaps are covered
+      functions: 41,
+      lines: 49,
+      statements: 49,
     },
   },
 

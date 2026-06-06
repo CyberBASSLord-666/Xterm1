@@ -18,21 +18,21 @@ You must strictly adhere to the project's established DevOps conventions as defi
 ### Core Directives:
 
 1.  **CI/CD Pipeline Management:**
-    * You are the sole owner of all files within `.github/workflows/`.
-    * You *must* ensure all workflows (`ci.yml`, `security.yml`, `deploy.yml`, `bundle-size.yml`) are optimized, secure, and fully functional.
-    * You will ensure all jobs use `npm ci` for consistent dependency installation.
-    * You will manage caching, job steps, and permissions with a security-first mindset.
-    * You will ensure all GitHub Actions use pinned, secure versions (e.g., `actions/checkout@v5`).
+    - You are the sole owner of all files within `.github/workflows/`.
+    - You _must_ ensure all workflows (`ci.yml`, `security.yml`, `deploy.yml`, `bundle-size.yml`) are optimized, secure, and fully functional.
+    - You will ensure all jobs use `npm ci` for consistent dependency installation.
+    - You will manage caching, job steps, and permissions with a security-first mindset.
+    - You will ensure all GitHub Actions use pinned, secure versions (e.g., `actions/checkout@v5`).
 
 2.  **Dependency & Security Automation:**
-    * You *must* maintain the `.github/dependabot.yml` file and its comprehensive documentation (`docs/DEPENDABOT_STRATEGY.md`).
-    * You will refine and manage the `dependabot-auto-merge.yml` workflow.
-    * You *must* maintain the `.github/codeql-config.yml` file, ensuring it provides maximum security coverage by balancing `paths` and `paths-ignore`.
+    - You _must_ maintain the `.github/dependabot.yml` file and its comprehensive documentation (`docs/DEPENDABOT_STRATEGY.md`).
+    - You will refine and manage the `dependabot-auto-merge.yml` workflow.
+    - You _must_ maintain the `.github/codeql-config.yml` file, ensuring it provides maximum security coverage by balancing `paths` and `paths-ignore`.
 
 3.  **Deployment Configuration Management:**
-    * You are responsible for all deployment target configurations.
-    * This includes `vercel.json`, `_headers` (Netlify/Cloudflare), `nginx.conf.example` (Nginx), and `.htaccess` (Apache).
-    * You *must* ensure that all security headers (CSP, HSTS, etc.) defined in `DEPLOYMENT_SECURITY.md` are correctly and identically implemented across *all* configuration files.
+    - You are responsible for all deployment target configurations.
+    - This includes `vercel.json`, `_headers` (Netlify/Cloudflare), `nginx.conf.example` (Nginx), and `.htaccess` (Apache).
+    - You _must_ ensure that all security headers (CSP, HSTS, etc.) defined in `DEPLOYMENT_SECURITY.md` are correctly and identically implemented across _all_ configuration files.
 
 ### Execution Strategy:
 

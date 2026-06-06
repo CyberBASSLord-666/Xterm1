@@ -1,5 +1,6 @@
 import { Injectable, OnDestroy, WritableSignal, EffectRef, computed, effect, signal, inject } from '@angular/core';
 import { LoggerService } from './logger.service';
+import { PlatformService } from './platform.service';
 
 export interface AppSettings {
   referrer: string;
@@ -14,8 +15,9 @@ type StoredSettings = Partial<AppSettings> | null;
 @Injectable({ providedIn: 'root' })
 export class SettingsService implements OnDestroy {
   private readonly logger = inject(LoggerService);
+  private readonly platformService = inject(PlatformService);
   private readonly settingsKey = 'polliwall_settings';
-  private readonly isBrowser = typeof window !== 'undefined' && typeof document !== 'undefined';
+  private readonly isBrowser = this.platformService.isBrowser;
 
   private readonly defaultSettings: AppSettings = {
     referrer: 'https://pollinations.ai',
@@ -77,7 +79,7 @@ export class SettingsService implements OnDestroy {
         const snapshot = this.settings();
         this.writePersistedSettings(snapshot);
       });
-      window.addEventListener('storage', this.handleStorageEvent);
+      this.platformService.getWindow()?.addEventListener('storage', this.handleStorageEvent);
     }
   }
 
@@ -85,7 +87,7 @@ export class SettingsService implements OnDestroy {
     this.persistEffect?.destroy();
     this.persistEffect = undefined;
     if (this.isBrowser) {
-      window.removeEventListener('storage', this.handleStorageEvent);
+      this.platformService.getWindow()?.removeEventListener('storage', this.handleStorageEvent);
     }
     this.systemThemeListenerCleanup?.();
     this.systemThemeListenerCleanup = null;
@@ -126,11 +128,14 @@ export class SettingsService implements OnDestroy {
   }
 
   private detectSystemDarkMode(): boolean {
-    if (!this.isBrowser || typeof window.matchMedia !== 'function') {
+    if (!this.isBrowser || typeof this.platformService.getWindow()?.matchMedia !== 'function') {
       return this.defaultSettings.themeDark;
     }
     try {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+      return (
+        this.platformService.getWindow()?.matchMedia('(prefers-color-scheme: dark)').matches ??
+        this.defaultSettings.themeDark
+      );
     } catch {
       return this.defaultSettings.themeDark;
     }
@@ -142,7 +147,7 @@ export class SettingsService implements OnDestroy {
     }
 
     try {
-      return window.location?.origin ?? this.defaultSettings.referrer;
+      return this.platformService.getWindow()?.location?.origin ?? this.defaultSettings.referrer;
     } catch {
       return this.defaultSettings.referrer;
     }
@@ -154,13 +159,14 @@ export class SettingsService implements OnDestroy {
     }
 
     try {
-      const saved = window.localStorage.getItem(this.settingsKey);
+      const storage = this.platformService.getLocalStorage();
+      const saved = storage?.getItem(this.settingsKey);
       if (!saved) {
         return null;
       }
-      const parsed = JSON.parse(saved) as StoredSettings;
-      if (!parsed || typeof parsed !== 'object') {
-        return null;
+      const parsed = this.parseStoredSettings(saved);
+      if (!parsed) {
+        storage?.removeItem(this.settingsKey);
       }
       return parsed;
     } catch (error) {
@@ -175,9 +181,61 @@ export class SettingsService implements OnDestroy {
     }
 
     try {
-      window.localStorage.setItem(this.settingsKey, JSON.stringify(settings));
+      this.platformService.getLocalStorage()?.setItem(this.settingsKey, JSON.stringify(settings));
     } catch (error) {
       this.logger.error('Failed to persist settings', error, 'Settings');
+    }
+  }
+
+  private parseStoredSettings(serialized: string): StoredSettings {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(serialized);
+    } catch (error) {
+      this.logger.error('Failed to parse persisted settings', error, 'Settings');
+      return null;
+    }
+
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      this.logger.warn('Ignoring persisted settings with an invalid shape', parsed, 'Settings');
+      return null;
+    }
+
+    const candidate = parsed as Record<string, unknown>;
+    const settings: Partial<AppSettings> = {};
+
+    if ('referrer' in candidate) {
+      const referrer = this.normalizeReferrer(candidate['referrer']);
+      if (referrer) {
+        settings.referrer = referrer;
+      }
+    }
+
+    for (const key of ['nologo', 'private', 'safe', 'themeDark'] as const) {
+      if (key in candidate && typeof candidate[key] === 'boolean') {
+        settings[key] = candidate[key];
+      }
+    }
+
+    return settings;
+  }
+
+  private normalizeReferrer(value: unknown): string | null {
+    if (typeof value !== 'string') {
+      return null;
+    }
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+    try {
+      const url = new URL(trimmed, this.detectDefaultReferrer());
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+        return null;
+      }
+      return url.origin;
+    } catch {
+      return null;
     }
   }
 
@@ -195,8 +253,9 @@ export class SettingsService implements OnDestroy {
       return;
     }
     try {
-      const parsed = JSON.parse(event.newValue) as StoredSettings;
+      const parsed = this.parseStoredSettings(event.newValue);
       if (!parsed) {
+        this.platformService.getLocalStorage()?.removeItem(this.settingsKey);
         return;
       }
       this.suppressPersistence = true;
@@ -209,11 +268,14 @@ export class SettingsService implements OnDestroy {
   };
 
   private observeSystemTheme(): void {
-    if (!this.isBrowser || typeof window.matchMedia !== 'function') {
+    if (!this.isBrowser || typeof this.platformService.getWindow()?.matchMedia !== 'function') {
       return;
     }
 
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const mediaQuery = this.platformService.getWindow()?.matchMedia('(prefers-color-scheme: dark)');
+    if (!mediaQuery) {
+      return;
+    }
     const updateFromSystem = (matches: boolean): void => {
       if (this.hasExplicitThemePreference) {
         return;

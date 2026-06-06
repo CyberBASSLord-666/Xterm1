@@ -31,30 +31,34 @@ PolliWall is a cutting-edge web application that leverages AI to generate stunni
 ### Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/CyberBASSLord-666/Xterm1.git
    cd Xterm1
    ```
 
 2. **Install dependencies**
+
    ```bash
    npm install
    ```
 
 3. **Configure API key**
-   
+
    Create a `.env.local` file in the root directory:
+
    ```env
    GEMINI_API_KEY=your_api_key_here
    ```
-   
+
    Or configure it later through the settings UI.
 
 4. **Start development server**
+
    ```bash
    npm start
    ```
-   
+
    Navigate to `http://localhost:4200/`
 
 ### Building for Production
@@ -68,6 +72,7 @@ npm run pre-deploy
 ```
 
 The `pre-deploy` script runs:
+
 1. Linting checks
 2. Type checking
 3. Unit tests
@@ -111,12 +116,14 @@ Build artifacts will be stored in the `dist/` directory.
 ## 🎯 Key Features & Improvements
 
 ### Phase 1: Build & Dependency Fixes ✅
+
 - Fixed all TypeScript compilation errors
 - Updated dependencies to compatible versions
 - Implemented proper environment configuration
 - Added comprehensive type safety
 
 ### Phase 2: Architecture & Code Quality ✅
+
 - **ErrorHandlerService**: Centralized error handling with user-friendly messages
 - **LoggerService**: Configurable logging with history tracking
 - **ValidationService**: Input validation and sanitization
@@ -124,6 +131,7 @@ Build artifacts will be stored in the `dist/` directory.
 - **RequestQueue**: Request cancellation and rate limiting
 
 ### Phase 3: Performance Optimizations ✅
+
 - **Enhanced ImageUtilService**: Compression, format conversion, placeholders
 - **LazyImageDirective**: Intersection Observer-based lazy loading
 - **Service Worker**: Optimized caching strategies for different resource types
@@ -131,6 +139,7 @@ Build artifacts will be stored in the `dist/` directory.
 - **RequestCacheService**: Request deduplication and caching
 
 ### Phase 4: UX Enhancements 🚧
+
 - **SkeletonComponent**: Loading screens for better perceived performance
 - **KeyboardShortcutsService**: Application-wide keyboard shortcuts
 - More improvements in progress...
@@ -156,6 +165,7 @@ Build artifacts will be stored in the `dist/` directory.
 ## 🔒 Security Features
 
 ### Production-Grade Security
+
 - **Input Validation**: Comprehensive validation for all user inputs
 - **XSS Prevention**: Multi-layer HTML sanitization and Angular's built-in protection
 - **API Key Security**: Secure storage, environment-based configuration, never logged
@@ -166,7 +176,9 @@ Build artifacts will be stored in the `dist/` directory.
 - **Environment Validation**: Startup validation of all configuration
 
 ### Security Validation
+
 Run comprehensive security checks before deployment:
+
 ```bash
 npm run security:validate
 # or run the full gate:
@@ -174,10 +186,12 @@ npm run security:gate
 ```
 
 ### Deployment Security
+
 - **[SECURITY.md](./SECURITY.md)** - Comprehensive security guide (includes deployment security)
 - **[PRODUCTION_READINESS_GUIDE.md](./PRODUCTION_READINESS_GUIDE.md)** - Production readiness & deployment checklist
 
 ### Platform-Specific Security Configuration
+
 - `_headers` - Netlify/Cloudflare Pages security headers
 - `vercel.json` - Vercel security configuration
 - `nginx.conf.example` - Nginx configuration template
@@ -206,6 +220,7 @@ See [DEVELOPMENT.md](./DEVELOPMENT.md) for detailed development guidelines.
 ## 🔄 CI/CD & Automation
 
 ### Automated Workflows
+
 - **Continuous Integration**: Automated linting, testing, and building on every PR
 - **Security Scanning**: CodeQL analysis and dependency review
 - **Dependabot Auto-Merge**: Automatic approval and merging of dependency updates
@@ -214,6 +229,7 @@ See [DEVELOPMENT.md](./DEVELOPMENT.md) for detailed development guidelines.
   - Weekly updates on Mondays
 
 ### GitHub Actions Workflows
+
 - `ci.yml` - Lint, test, build, and E2E tests
 - `security.yml` - CodeQL and npm audit checks
 - `dependabot-auto-merge.yml` - Automated dependency management
@@ -224,11 +240,13 @@ See [DEVELOPMENT.md](./DEVELOPMENT.md#dependency-management) for more details.
 ## 🐛 Troubleshooting
 
 ### Build Issues
+
 - Ensure Node.js 18+ is installed
 - Clear `node_modules` and reinstall: `rm -rf node_modules && npm install`
 - Check for TypeScript errors: `npx tsc --noEmit`
 
 ### Runtime Issues
+
 - Verify API key configuration
 - Check browser console for errors
 - Clear browser cache and IndexedDB

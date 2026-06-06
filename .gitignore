@@ -57,3 +57,6 @@ audit-fix-output.txt
 eslint-output.txt
 prettier-output.txt
 tsc-output.txt
+
+# Local secrets
+secrets/

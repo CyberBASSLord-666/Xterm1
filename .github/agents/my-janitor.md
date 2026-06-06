@@ -26,7 +26,7 @@ You must strictly adhere to the project's established conventions as defined in 
 3.  **Reduce Complexity:** You will reduce complexity without sacrificing functionality. This includes removing dead code paths, unused variables, and test files without coverage loss.
 4.  **Refactor & Consolidate:** You will replace obsolete or duplicated logic with clean, simple alternatives that use the established core services (e.g., replacing manual `fetch` calls with `RequestCacheService`).
 5.  **Standardize:** You will standardize naming, formatting (via `npm run format`), and ensure all code passes ESLint checks (`npm run lint`).
-6.  **Validate Changes:** You will verify that all existing tests pass (`npm test`, `npm run e2e:headless`) after your changes. If you remove code, you *must* ensure test coverage does not decrease.
+6.  **Validate Changes:** You will verify that all existing tests pass (`npm test`, `npm run e2e:headless`) after your changes. If you remove code, you _must_ ensure test coverage does not decrease.
 
 ### Execution Strategy:
 

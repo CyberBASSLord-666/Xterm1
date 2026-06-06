@@ -19,16 +19,17 @@ This comprehensive guide covers setting up a complete development environment fo
 
 ### Required Software
 
-| Software | Minimum Version | Recommended | Purpose |
-|----------|----------------|-------------|---------|
-| **Node.js** | 18.x | 20.x LTS | JavaScript runtime |
-| **npm** | 9.x | 10.x | Package manager |
-| **Git** | 2.x | Latest | Version control |
-| **VS Code** | Latest | Latest | IDE (recommended) |
+| Software    | Minimum Version | Recommended | Purpose            |
+| ----------- | --------------- | ----------- | ------------------ |
+| **Node.js** | 18.x            | 20.x LTS    | JavaScript runtime |
+| **npm**     | 9.x             | 10.x        | Package manager    |
+| **Git**     | 2.x             | Latest      | Version control    |
+| **VS Code** | Latest          | Latest      | IDE (recommended)  |
 
 ### Operating System
 
 **Supported**:
+
 - ✅ macOS 12+ (Monterey or later)
 - ✅ Windows 10/11 with WSL2
 - ✅ Ubuntu 22.04 LTS
@@ -42,23 +43,27 @@ This comprehensive guide covers setting up a complete development environment fo
 ### 1. Install Node.js
 
 #### macOS (Homebrew)
+
 ```bash
 brew install node@20
 ```
 
 #### Windows (Official Installer)
+
 ```bash
 # Download from https://nodejs.org/
 # Install LTS version (20.x)
 ```
 
 #### Linux (NodeSource)
+
 ```bash
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt-get install -y nodejs
 ```
 
 #### Verify Installation
+
 ```bash
 node --version    # Should show v20.x.x
 npm --version     # Should show 10.x.x
@@ -67,24 +72,28 @@ npm --version     # Should show 10.x.x
 ### 2. Install Git
 
 #### macOS
+
 ```bash
 # Included with Xcode Command Line Tools
 xcode-select --install
 ```
 
 #### Windows
+
 ```bash
 # Download from https://git-scm.com/
 # Use Git Bash for command line
 ```
 
 #### Linux
+
 ```bash
 sudo apt-get update
 sudo apt-get install git
 ```
 
 #### Verify Installation
+
 ```bash
 git --version     # Should show 2.x.x
 ```
@@ -92,9 +101,11 @@ git --version     # Should show 2.x.x
 ### 3. Install VS Code
 
 #### All Platforms
+
 Download from: https://code.visualstudio.com/
 
 #### Recommended Extensions
+
 ```bash
 # Install via VS Code Extensions marketplace:
 - Angular Language Service
@@ -173,6 +184,7 @@ ng serve
 ```
 
 **Output**:
+
 ```
 ✔ Browser application bundle generation complete.
 Initial chunk files   | Names         | Raw size
@@ -400,6 +412,7 @@ git commit -m "fix(component): resolve issue with X"
 ```
 
 **Commit Message Format**:
+
 ```
 <type>(<scope>): <description>
 
@@ -409,6 +422,7 @@ git commit -m "fix(component): resolve issue with X"
 ```
 
 **Types**:
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `docs`: Documentation only
@@ -456,6 +470,7 @@ npx jest --testNamePattern="should log"
 #### Write Tests
 
 **Example Service Test**:
+
 ```typescript
 import { TestBed } from '@angular/core/testing';
 import { MyService } from './my.service';
@@ -480,6 +495,7 @@ describe('MyService', () => {
 ```
 
 **Example Component Test**:
+
 ```typescript
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MyComponent } from './my.component';
@@ -490,7 +506,7 @@ describe('MyComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [MyComponent] // Standalone component
+      imports: [MyComponent], // Standalone component
     }).compileComponents();
 
     fixture = TestBed.createComponent(MyComponent);
@@ -538,6 +554,7 @@ npx playwright test --debug
 #### Write E2E Tests
 
 **Example**:
+
 ```typescript
 import { test, expect } from '@playwright/test';
 
@@ -664,6 +681,7 @@ npm run format:check
 **Error**: `Port 4200 is already in use`
 
 **Solution**:
+
 ```bash
 # Kill process on port 4200
 lsof -ti:4200 | xargs kill -9
@@ -677,6 +695,7 @@ ng serve --port 4201
 **Error**: `Cannot find module '@angular/core'`
 
 **Solution**:
+
 ```bash
 # Reinstall dependencies
 rm -rf node_modules package-lock.json
@@ -688,6 +707,7 @@ npm ci
 **Error**: Type errors in IDE
 
 **Solution**:
+
 ```bash
 # Restart TypeScript server (VS Code)
 # Cmd+Shift+P → "TypeScript: Restart TS Server"
@@ -701,6 +721,7 @@ npm run build
 **Error**: Build fails with memory error
 
 **Solution**:
+
 ```bash
 # Increase Node memory
 NODE_OPTIONS=--max_old_space_size=4096 npm run build
@@ -757,8 +778,8 @@ NODE_OPTIONS=--max_old_space_size=4096 npm run build
 
 ---
 
-*This development guide is the definitive reference for setting up and contributing to PolliWall.*  
-*Last Updated: 2025-11-10 | Operation Bedrock Phase 1.2*
+_This development guide is the definitive reference for setting up and contributing to PolliWall._  
+_Last Updated: 2025-11-10 | Operation Bedrock Phase 1.2_
 
 - **npm**: Version 9.x or higher (comes with Node.js)
   - Verify installation: `npm --version`
@@ -796,6 +817,7 @@ npm install
 ```
 
 This will install all required packages including:
+
 - Angular framework and CLI
 - Tailwind CSS
 - TypeScript
@@ -818,6 +840,7 @@ GEMINI_API_KEY=your_api_key_here
 Set the API key through the settings UI after starting the application.
 
 **Getting a Gemini API Key**:
+
 1. Visit [Google AI Studio](https://aistudio.google.com/)
 2. Sign in with your Google account
 3. Create a new API key
@@ -838,6 +861,7 @@ npx ng serve
 The application will be available at `http://localhost:4200/`
 
 The dev server will:
+
 - Watch for file changes
 - Automatically reload the browser
 - Provide source maps for debugging
@@ -865,11 +889,11 @@ Xterm1/
 
 ### Available Scripts
 
-| Command | Description |
-|---------|-------------|
-| `npm start` | Start development server |
-| `npm run build` | Build for production |
-| `npm run build:dev` | Build for development |
+| Command             | Description              |
+| ------------------- | ------------------------ |
+| `npm start`         | Start development server |
+| `npm run build`     | Build for production     |
+| `npm run build:dev` | Build for development    |
 
 ### Code Style Guidelines
 
@@ -881,6 +905,7 @@ Xterm1/
 - Use **enums** for constants
 
 Example:
+
 ```typescript
 interface User {
   id: string;
@@ -901,20 +926,21 @@ function getUser(id: string): User | null {
 - Use **computed signals**: For derived values
 
 Example:
+
 ```typescript
 @Component({
   selector: 'app-example',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule],
-  template: `...`
+  template: `...`,
 })
 export class ExampleComponent {
   count = signal(0);
   double = computed(() => this.count() * 2);
-  
+
   increment() {
-    this.count.update(n => n + 1);
+    this.count.update((n) => n + 1);
   }
 }
 ```
@@ -926,11 +952,12 @@ export class ExampleComponent {
 - Use **proper typing**: All service methods should be typed
 
 Example:
+
 ```typescript
 @Injectable({ providedIn: 'root' })
 export class DataService {
   private http = inject(HttpClient);
-  
+
   getData(): Observable<Data[]> {
     return this.http.get<Data[]>('/api/data');
   }
@@ -950,7 +977,7 @@ console.log(count()); // 0
 
 // Update a signal
 count.set(1);
-count.update(n => n + 1);
+count.update((n) => n + 1);
 
 // Computed signal (derived value)
 const double = computed(() => count() * 2);
@@ -971,7 +998,7 @@ import { ErrorHandlerService } from './services/error-handler.service';
 @Component({...})
 export class MyComponent {
   private errorHandler = inject(ErrorHandlerService);
-  
+
   async doSomething() {
     try {
       await riskyOperation();
@@ -985,6 +1012,7 @@ export class MyComponent {
 ### Performance Best Practices
 
 1. **Use OnPush Change Detection**
+
    ```typescript
    @Component({
      changeDetection: ChangeDetectionStrategy.OnPush
@@ -992,25 +1020,28 @@ export class MyComponent {
    ```
 
 2. **Lazy Load Routes**
+
    ```typescript
    const routes: Routes = [
      {
        path: 'gallery',
-       loadComponent: () => import('./gallery/gallery.component')
-     }
+       loadComponent: () => import('./gallery/gallery.component'),
+     },
    ];
    ```
 
 3. **Use Lazy Loading Directive**
+
    ```html
-   <img [appLazyImage]="imageUrl" [lazySrc]="placeholder">
+   <img [appLazyImage]="imageUrl" [lazySrc]="placeholder" />
    ```
 
 4. **Optimize Images**
+
    ```typescript
    const compressed = await imageUtil.compressImage(blob, {
      maxWidth: 2048,
-     quality: 0.85
+     quality: 0.85,
    });
    ```
 
@@ -1028,6 +1059,7 @@ export class MyComponent {
 ### Browser DevTools
 
 **Console Logging**:
+
 ```typescript
 // Use LoggerService for consistent logging
 logger.debug('Debug info', data);
@@ -1037,12 +1069,14 @@ logger.error('Error occurred', error);
 ```
 
 **Angular DevTools**:
+
 1. Install the Angular DevTools browser extension
 2. Open DevTools (F12)
 3. Navigate to "Angular" tab
 4. Inspect components, profiler, injector tree
 
 **Performance Profiling**:
+
 ```typescript
 // Use PerformanceMonitorService
 const id = perfMonitor.startMeasure('operation');
@@ -1114,6 +1148,7 @@ Output will be in `dist/app/` directory.
 ### Build Optimization
 
 The production build includes:
+
 - **Minification**: Code is minified
 - **Tree shaking**: Unused code is removed
 - **AOT compilation**: Ahead-of-time compilation
@@ -1147,11 +1182,13 @@ Edit `angular.json` for build settings:
 ### Build Errors
 
 **Error: Module not found**
+
 ```bash
 npm install
 ```
 
 **Error: Port 4200 already in use**
+
 ```bash
 # Kill the process using port 4200
 # On Windows:
@@ -1163,6 +1200,7 @@ lsof -ti:4200 | xargs kill
 ```
 
 **TypeScript Errors**
+
 - Check `tsconfig.json` for strict mode settings
 - Ensure all types are properly defined
 - Run `npx tsc --noEmit` to check for errors
@@ -1170,16 +1208,19 @@ lsof -ti:4200 | xargs kill
 ### Runtime Errors
 
 **API Errors**
+
 - Check API key configuration
 - Verify network connectivity
 - Check browser console for details
 
 **IndexedDB Errors**
+
 - Clear browser data
 - Check browser compatibility
 - Verify storage quota
 
 **Service Worker Issues**
+
 - Unregister existing service workers
 - Clear browser cache
 - Check console for service worker errors
@@ -1191,19 +1232,23 @@ lsof -ti:4200 | xargs kill
 The project uses Dependabot to automatically manage dependencies. An automated workflow handles most dependency updates:
 
 **Automatic Merging:**
+
 - **Patch updates** (e.g., 1.0.0 → 1.0.1): Auto-approved and auto-merged after CI passes
 - **Minor updates** (e.g., 1.0.0 → 1.1.0): Auto-approved and auto-merged after CI passes
 - **Major updates** (e.g., 1.0.0 → 2.0.0): Require manual review and approval
 
 **Update Schedule:**
+
 - **npm dependencies**: Weekly on Mondays at 7:00 AM (America/Denver)
 - **GitHub Actions**: Weekly on Mondays at 6:00 AM (America/Denver)
 
 **Configuration Files:**
+
 - `.github/dependabot.yml`: Dependabot configuration
 - `.github/workflows/dependabot-auto-merge.yml`: Auto-merge workflow
 
 **How It Works:**
+
 1. Dependabot creates a PR for dependency updates
 2. CI workflows (lint, test, build, security) run automatically
 3. If all checks pass and the update is patch/minor:
@@ -1214,6 +1259,7 @@ The project uses Dependabot to automatically manage dependencies. An automated w
 
 **Manual Intervention:**
 Major version updates require manual review because they may contain breaking changes:
+
 1. Review the PR description and changelog
 2. Check for breaking changes
 3. Update code if necessary
@@ -1244,6 +1290,7 @@ Major version updates require manual review because they may contain breaking ch
    - Reference issues if applicable
 
 Example:
+
 ```
 feat(gallery): add batch delete functionality
 

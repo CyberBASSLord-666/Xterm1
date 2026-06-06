@@ -31,6 +31,7 @@
 [Describe the user need or business requirement]
 
 Example:
+
 ```
 Users currently cannot save their favorite generated wallpapers for later use.
 They must regenerate wallpapers or manually save images to their device.
@@ -43,6 +44,7 @@ quick access and management.
 List all user stories this feature addresses:
 
 **User Story 1**:
+
 ```
 As a user,
 I want to save generated wallpapers to a favorites collection,
@@ -50,6 +52,7 @@ So that I can quickly access my best wallpapers without regenerating them.
 ```
 
 **User Story 2**:
+
 ```
 As a user,
 I want to view all my favorites in one place,
@@ -57,6 +60,7 @@ So that I can browse and manage my saved wallpapers.
 ```
 
 **User Story 3**:
+
 ```
 As a user,
 I want to remove wallpapers from my favorites,
@@ -68,11 +72,13 @@ So that I can keep my collection relevant and manageable.
 ### 1.3 Scope
 
 **In Scope**:
+
 - [ ] Item 1
 - [ ] Item 2
 - [ ] Item 3
 
 **Out of Scope**:
+
 - [ ] Item 1
 - [ ] Item 2
 - [ ] Item 3
@@ -98,10 +104,12 @@ So that I can keep my collection relevant and manageable.
 **Standalone**: `true` ✅ MANDATORY
 
 **Dependencies**:
+
 - Service dependencies: [List services to inject]
 - Component dependencies: [List components to import]
 
 **State Management**:
+
 ```typescript
 // Define Signals to be used
 readonly items = signal<Item[]>([]);
@@ -113,6 +121,7 @@ readonly hasSelection = computed(() => this.selectedItem() !== null);
 ```
 
 **Public Interface**:
+
 ```typescript
 // Inputs
 @Input() config: ComponentConfig;
@@ -126,6 +135,7 @@ public clearSelection(): void;
 ```
 
 **Template Structure**:
+
 ```
 - Header section
 - Main content section
@@ -133,6 +143,7 @@ public clearSelection(): void;
 ```
 
 **Keyboard Shortcuts**:
+
 - [Key]: [Action]
 - [Key]: [Action]
 
@@ -149,6 +160,7 @@ public clearSelection(): void;
 **Injection**: `{ providedIn: 'root' }` ✅ MANDATORY
 
 **Dependencies** (MUST be injected):
+
 ```typescript
 // Core Services (MANDATORY where applicable)
 private readonly logger = inject(LoggerService);
@@ -162,6 +174,7 @@ private readonly featureService = inject(FeatureService);
 ```
 
 **State Management**:
+
 ```typescript
 // Private writable signals
 private readonly _items = signal<Item[]>([]);
@@ -175,6 +188,7 @@ readonly isEmpty = computed(() => this._items().length === 0);
 ```
 
 **Public API**:
+
 ```typescript
 // Methods
 async getItems(): Promise<Item[]>;
@@ -186,6 +200,7 @@ async updateItem(id: string, updates: Partial<Item>): Promise<void>;
 **Storage Strategy**: [IndexedDB / LocalStorage / Memory / API]
 
 **Error Handling Pattern**:
+
 ```typescript
 async methodName(): Promise<void> {
   try {
@@ -215,11 +230,13 @@ async methodName(): Promise<void> {
 **Type**: [Attribute / Structural]
 
 **Usage Example**:
+
 ```html
 <div appDirectiveName [config]="options">Content</div>
 ```
 
 **Inputs**:
+
 ```typescript
 @Input() config: DirectiveConfig;
 ```
@@ -238,11 +255,13 @@ async methodName(): Promise<void> {
 **Purpose**: [Brief description]
 
 **Functions**:
+
 ```typescript
 export function functionName(param: Type): ReturnType;
 ```
 
 **Usage Example**:
+
 ```typescript
 const result = functionName(input);
 ```
@@ -256,6 +275,7 @@ const result = functionName(input);
 **Reason for Modification**: [Why this file needs to change]
 
 **Changes Required**:
+
 - [ ] Change 1
 - [ ] Change 2
 - [ ] Change 3
@@ -269,6 +289,7 @@ const result = functionName(input);
 ### 2.6 Routing Changes
 
 **New Routes**:
+
 ```typescript
 {
   path: 'route-name',
@@ -292,12 +313,14 @@ const result = functionName(input);
 **Purpose**: All logging operations
 
 **Usage Points**:
+
 - [ ] Component initialization: `this.logger.info('Component initialized')`
 - [ ] Service operations: `this.logger.debug('Operation started', { context })`
 - [ ] Error logging: `this.logger.error('Operation failed', { error })`
 - [ ] Performance logging: `this.logger.performance('Slow operation', { duration })`
 
 **Log Levels**:
+
 - `info`: Informational messages
 - `debug`: Debugging details
 - `warn`: Warning conditions
@@ -309,11 +332,13 @@ const result = functionName(input);
 **Purpose**: All error handling and user notifications
 
 **Usage Points**:
+
 - [ ] Service errors: `this.errorHandler.handleError(error, 'User message')`
 - [ ] Validation errors: `this.errorHandler.showError('Invalid input')`
 - [ ] Network errors: `this.errorHandler.handleNetworkError(error)`
 
 **Error Messages** (user-facing):
+
 - Success: "[Action] completed successfully"
 - Warning: "Please review [issue]"
 - Error: "Failed to [action]. Please try again."
@@ -323,12 +348,14 @@ const result = functionName(input);
 **Purpose**: All user input validation (XSS prevention)
 
 **Usage Points**:
+
 - [ ] Text inputs: `this.validator.sanitizeHtml(userInput)`
 - [ ] URLs: `this.validator.validateUrl(url)`
 - [ ] File uploads: `this.validator.validateFile(file, options)`
 - [ ] Form data: `this.validator.sanitizeFormData(formData)`
 
 **Validation Rules**:
+
 - All HTML content: sanitize-html with 5-layer defense
 - All URLs: protocol validation (https only)
 - All file uploads: type and size validation
@@ -339,6 +366,7 @@ const result = functionName(input);
 **Purpose**: Track user interactions and feature usage
 
 **Events to Track**:
+
 - [ ] Feature accessed: `analytics.track('feature_name_opened')`
 - [ ] Action performed: `analytics.track('action_completed', { details })`
 - [ ] Error occurred: `analytics.track('error_encountered', { error })`
@@ -353,11 +381,13 @@ Example: `favorites_add_success`, `favorites_remove_error`
 **Purpose**: Monitor performance-critical operations
 
 **Monitoring Points**:
+
 - [ ] API calls: `this.performance.measureAsync('api_call', () => apiCall())`
 - [ ] Data processing: `this.performance.measureSync('data_process', () => process())`
 - [ ] Rendering: `this.performance.mark('render_start')` / `measure('render_end')`
 
 **Performance Budgets**:
+
 - API calls: <2 seconds
 - Data processing: <500ms
 - Rendering: <100ms
@@ -367,6 +397,7 @@ Example: `favorites_add_success`, `favorites_remove_error`
 **Purpose**: Register keyboard shortcuts for feature
 
 **Shortcuts to Register**:
+
 ```typescript
 ngOnInit(): void {
   this.keyboardShortcuts.register('shortcut_key', () => this.action());
@@ -378,6 +409,7 @@ ngOnDestroy(): void {
 ```
 
 **Shortcut Keys**:
+
 - [Key]: [Action] - [Description]
 - [Key]: [Action] - [Description]
 
@@ -386,10 +418,12 @@ ngOnDestroy(): void {
 **Purpose**: Manage blob URLs (prevent memory leaks)
 
 **Usage Points**:
+
 - [ ] Creating blobs: `this.blobManager.createUrl(blob)`
 - [ ] Cleanup: `this.blobManager.revokeUrl(url)` or auto-cleanup with DestroyRef
 
 **Pattern**:
+
 ```typescript
 ngOnDestroy(): void {
   this.blobManager.cleanup();
@@ -406,15 +440,16 @@ ngOnDestroy(): void {
 
 ```typescript
 interface InterfaceName {
-  id: string;              // Unique identifier
-  property1: Type;         // Description
-  property2: Type;         // Description
-  createdAt: Date;         // Creation timestamp
-  updatedAt?: Date;        // Last update timestamp
+  id: string; // Unique identifier
+  property1: Type; // Description
+  property2: Type; // Description
+  createdAt: Date; // Creation timestamp
+  updatedAt?: Date; // Last update timestamp
 }
 ```
 
 **Validation Rules**:
+
 - `id`: Required, non-empty string
 - `property1`: [Validation rule]
 - `property2`: [Validation rule]
@@ -441,7 +476,7 @@ type TypeName = 'value1' | 'value2' | 'value3';
 enum EnumName {
   VALUE1 = 'value1',
   VALUE2 = 'value2',
-  VALUE3 = 'value3'
+  VALUE3 = 'value3',
 }
 ```
 
@@ -534,33 +569,39 @@ readonly isValid = computed(() => this.localState().property !== null);
 ### 6.1 Technology Stack
 
 **Frontend**:
+
 - Angular 20 (standalone components)
 - TypeScript 5.8 (strict mode)
 - Tailwind CSS 4
 - RxJS (minimal, prefer Signals)
 
 **Storage**:
+
 - [IndexedDB / LocalStorage / None]
 - Library: [e.g., `idb` for IndexedDB]
 
 **External APIs**:
+
 - [None / List APIs]
 - Authentication: [Required / Not Required]
 
 ### 6.2 Dependencies
 
 **New Dependencies**:
+
 - Package name: `package-name@version`
   - Purpose: [Why this dependency is needed]
   - Security: [Audit status]
   - Size: [Bundle size impact]
 
 **Existing Dependencies**:
+
 - [List any existing dependencies that will be used]
 
 ### 6.3 Browser Compatibility
 
 **Target Browsers**:
+
 - Chrome: Latest 2 versions
 - Firefox: Latest 2 versions
 - Safari: Latest 2 versions
@@ -574,11 +615,13 @@ readonly isValid = computed(() => this.localState().property !== null);
 ### 6.4 Responsive Design
 
 **Breakpoints**:
+
 - Mobile: 320px - 767px
 - Tablet: 768px - 1023px
 - Desktop: 1024px+
 
 **Mobile-Specific Features**:
+
 - [Touch gestures]
 - [Mobile navigation]
 - [Responsive layouts]
@@ -590,24 +633,28 @@ readonly isValid = computed(() => this.localState().property !== null);
 ### 7.1 Development Phases
 
 **Phase 1**: Core Service and Data Structures (Day 1)
+
 - Create service file
 - Define interfaces and types
 - Implement state management
 - Add core service integration
 
 **Phase 2**: Component Implementation (Day 2)
+
 - Create component files
 - Implement UI
 - Wire up service integration
 - Add keyboard shortcuts
 
 **Phase 3**: Testing (Day 2-3)
+
 - Write unit tests (100% coverage)
 - Write E2E tests
 - Run all tests
 - Fix any issues
 
 **Phase 4**: Documentation and Polish (Day 3)
+
 - Update all documentation
 - Code review and refinement
 - Performance optimization
@@ -618,6 +665,7 @@ readonly isValid = computed(() => this.localState().property !== null);
 **Breaking Changes**: [Yes/No]
 
 **Migration Path**:
+
 1. Step 1
 2. Step 2
 3. Step 3
@@ -627,11 +675,13 @@ readonly isValid = computed(() => this.localState().property !== null);
 ### 7.3 Rollback Plan
 
 **Rollback Trigger**:
+
 - [Critical bug affecting users]
 - [Performance degradation >20%]
 - [Security vulnerability discovered]
 
 **Rollback Procedure**:
+
 1. Revert merge commit
 2. Redeploy previous version
 3. Notify users (if applicable)
@@ -645,11 +695,13 @@ readonly isValid = computed(() => this.localState().property !== null);
 ### 8.1 Technical Risks
 
 **Risk 1**: [Risk description]
+
 - **Probability**: [High / Medium / Low]
 - **Impact**: [High / Medium / Low]
 - **Mitigation**: [How to mitigate this risk]
 
 **Risk 2**: [Risk description]
+
 - **Probability**: [High / Medium / Low]
 - **Impact**: [High / Medium / Low]
 - **Mitigation**: [How to mitigate this risk]
@@ -659,17 +711,21 @@ readonly isValid = computed(() => this.localState().property !== null);
 ### 8.2 User Experience Risks
 
 **Risk 1**: Feature is too complex for users
+
 - **Mitigation**: User testing, clear UI, onboarding
 
 **Risk 2**: Performance impact on existing features
+
 - **Mitigation**: Performance testing, lazy loading
 
 ### 8.3 Security Risks
 
 **Risk 1**: New user input vectors
+
 - **Mitigation**: ValidationService, XSS prevention
 
 **Risk 2**: New dependencies
+
 - **Mitigation**: Security audit, minimal dependencies
 
 ---
@@ -757,4 +813,4 @@ Once this Plan of Record is approved:
 
 ---
 
-*End of Plan of Record Template*
+_End of Plan of Record Template_

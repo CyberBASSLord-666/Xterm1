@@ -1,7 +1,7 @@
 name: ✨ Feature Request
 description: Suggest a new feature or enhancement
-title: "[Feature]: "
-labels: ["enhancement", "needs-triage"]
+title: '[Feature]: '
+labels: ['enhancement', 'needs-triage']
 assignees: []
 
 body:
@@ -9,9 +9,9 @@ body:
     attributes:
       value: |
         ## ✨ Feature Request
-        
+
         Thank you for suggesting a new feature! Please fill out the form below to help us understand your request.
-        
+
         **Before submitting**, please:
         - Search existing issues and discussions to avoid duplicates
         - Check the roadmap for planned features
@@ -82,7 +82,7 @@ body:
       description: Describe your use case for this feature. How would you use it?
       placeholder: |
         As a [type of user], I want [goal] so that [benefit].
-        
+
         Example workflow:
         1. ...
         2. ...

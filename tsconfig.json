@@ -16,9 +16,9 @@
     "declaration": false,
     "downlevelIteration": true,
     "importHelpers": true,
-    "typeRoots": ["node_modules/@types"]
+    "typeRoots": ["node_modules/@types"],
+    "ignoreDeprecations": "5.0"
   },
-  "files": ["index.tsx"],
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist", "**/*.spec.ts", "playwright", "cypress"],
   "angularCompilerOptions": {

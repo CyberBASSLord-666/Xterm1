@@ -11,6 +11,7 @@
 This comprehensive guide covers deploying PolliWall to multiple hosting platforms including GitHub Pages, Vercel, Netlify, and custom servers. Each deployment target includes step-by-step instructions, configuration files, and troubleshooting guidance.
 
 **Supported Platforms**:
+
 - ✅ GitHub Pages (Primary - Automated CI/CD)
 - ✅ Vercel (Recommended - Zero config)
 - ✅ Netlify (Alternative - Great DX)
@@ -23,7 +24,7 @@ This comprehensive guide covers deploying PolliWall to multiple hosting platform
 ### Required Software
 
 - **Node.js**: Version 20.x or higher
-- **npm**: Version 10.x or higher  
+- **npm**: Version 10.x or higher
 - **Git**: Latest version
 - **Angular CLI**: Version 20.x (installed locally)
 
@@ -79,7 +80,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "pages"
+  group: 'pages'
   cancel-in-progress: false
 
 jobs:
@@ -137,12 +138,14 @@ npx angular-cli-ghpages --dir=dist/app
 ### Configuration
 
 **Repository Settings**:
+
 1. Go to: `Settings` → `Pages`
 2. Source: `GitHub Actions`
 3. Branch: `main`
 4. Path: `/` (root)
 
 **Custom Domain** (Optional):
+
 1. Add `CNAME` file to `public/` directory:
    ```
    polliwall.app
@@ -157,12 +160,14 @@ npx angular-cli-ghpages --dir=dist/app
 ### Troubleshooting
 
 **Issue**: 404 errors on refresh
+
 ```javascript
 // Solution: Handled by Angular routing + 404.html fallback
 // index.html copied to 404.html during build
 ```
 
 **Issue**: Assets not loading
+
 ```bash
 # Verify base-href is correct
 cat dist/app/index.html | grep base
@@ -192,6 +197,7 @@ cat dist/app/index.html | grep base
    - Authorize Vercel
 
 2. **Configure Project**:
+
    ```
    Framework Preset: Angular
    Build Command: npm run build
@@ -200,6 +206,7 @@ cat dist/app/index.html | grep base
    ```
 
 3. **Environment Variables**:
+
    ```
    GEMINI_API_KEY=your-api-key-here
    NODE_VERSION=20
@@ -290,6 +297,7 @@ vercel --prod
 
 1. **Add Domain**: Vercel Dashboard → Domains
 2. **Configure DNS**:
+
    ```
    Type: A
    Name: @
@@ -299,6 +307,7 @@ vercel --prod
    Name: www
    Value: cname.vercel-dns.com
    ```
+
 3. **SSL**: Automatic via Let's Encrypt
 
 ---
@@ -451,7 +460,7 @@ sudo chmod -R 755 /var/www/polliwall
 server {
     listen 80;
     server_name polliwall.app www.polliwall.app;
-    
+
     # Redirect to HTTPS
     return 301 https://$server_name$request_uri;
 }
@@ -459,17 +468,17 @@ server {
 server {
     listen 443 ssl http2;
     server_name polliwall.app www.polliwall.app;
-    
+
     # SSL Configuration (managed by Certbot)
     ssl_certificate /etc/letsencrypt/live/polliwall.app/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/polliwall.app/privkey.pem;
     include /etc/letsencrypt/options-ssl-nginx.conf;
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
-    
+
     # Document Root
     root /var/www/polliwall;
     index index.html;
-    
+
     # Security Headers
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-Frame-Options "DENY" always;
@@ -478,31 +487,31 @@ server {
     add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), interest-cohort=()" always;
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
     add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://image.pollinations.ai; connect-src 'self' https://image.pollinations.ai; frame-ancestors 'none'" always;
-    
+
     # SPA Routing
     location / {
         try_files $uri $uri/ /index.html;
     }
-    
+
     # Static Assets - Long Cache
     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
         expires 1y;
         add_header Cache-Control "public, immutable";
         access_log off;
     }
-    
+
     # Service Worker - No Cache
     location = /ngsw-worker.js {
         expires 0;
         add_header Cache-Control "public, max-age=0, must-revalidate";
     }
-    
+
     # Manifest
     location = /manifest.webmanifest {
         expires 1d;
         add_header Cache-Control "public, max-age=86400";
     }
-    
+
     # Gzip Compression
     gzip on;
     gzip_vary on;
@@ -592,16 +601,19 @@ ANALYTICS_ID=your-dev-analytics-id
 **Platform-Specific**:
 
 **Vercel**:
+
 ```bash
 vercel env add GEMINI_API_KEY production
 ```
 
 **Netlify**:
+
 ```bash
 netlify env:set GEMINI_API_KEY "your-key"
 ```
 
 **Custom Server**:
+
 ```bash
 # /etc/environment
 export GEMINI_API_KEY="your-key"
@@ -614,6 +626,7 @@ export GEMINI_API_KEY="your-key"
 ### Performance Monitoring
 
 **Lighthouse CI**:
+
 ```yaml
 # .github/workflows/lighthouse.yml
 - uses: treosh/lighthouse-ci-action@v10
@@ -624,18 +637,20 @@ export GEMINI_API_KEY="your-key"
 ```
 
 **Web Vitals**:
+
 - Monitor via Google Analytics
 - Track: LCP, FID, CLS
 
 ### Error Tracking
 
 **Sentry** (Optional):
+
 ```typescript
-import * as Sentry from "@sentry/angular";
+import * as Sentry from '@sentry/angular';
 
 Sentry.init({
-  dsn: "your-sentry-dsn",
-  environment: "production"
+  dsn: 'your-sentry-dsn',
+  environment: 'production',
 });
 ```
 
@@ -675,12 +690,14 @@ sudo systemctl reload nginx
 ### Build Failures
 
 **Issue**: `npm ci` fails
+
 ```bash
 # Solution: Reinstall dependencies cleanly
 npm ci
 ```
 
 **Issue**: Build timeout
+
 ```bash
 # Solution: Increase memory
 NODE_OPTIONS=--max_old_space_size=4096 npm run build
@@ -689,6 +706,7 @@ NODE_OPTIONS=--max_old_space_size=4096 npm run build
 ### Runtime Errors
 
 **Issue**: White screen / blank page
+
 ```javascript
 // Check browser console for errors
 // Verify base-href in index.html
@@ -696,6 +714,7 @@ NODE_OPTIONS=--max_old_space_size=4096 npm run build
 ```
 
 **Issue**: Assets 404
+
 ```bash
 # Verify output directory structure
 ls -la dist/app/
@@ -703,8 +722,8 @@ ls -la dist/app/
 
 ---
 
-*This deployment guide is the definitive reference for deploying PolliWall to production.*  
-*Last Updated: 2025-11-10 | Operation Bedrock Phase 1.2*
+_This deployment guide is the definitive reference for deploying PolliWall to production._  
+_Last Updated: 2025-11-10 | Operation Bedrock Phase 1.2_
 
 1. Go to your repository settings on GitHub
 2. Navigate to **Settings** → **Pages**
@@ -714,6 +733,7 @@ ls -la dist/app/
 ### Deployment Workflow
 
 The `.github/workflows/deploy.yml` workflow:
+
 - Triggers on pushes to `main` branch
 - Builds the production application with base href `/Xterm1/`
 - Deploys to GitHub Pages
@@ -722,6 +742,7 @@ The `.github/workflows/deploy.yml` workflow:
 ### Manual Deployment
 
 To manually trigger deployment:
+
 1. Go to **Actions** tab in GitHub
 2. Select **Deploy to GitHub Pages** workflow
 3. Click **Run workflow**
@@ -740,6 +761,7 @@ npm run build
 ### Build Configuration
 
 The production build includes:
+
 - ✅ Code minification and optimization
 - ✅ Tree shaking for smaller bundle size
 - ✅ Service worker for PWA capabilities
@@ -837,7 +859,7 @@ The application uses environment configuration for API keys:
 ```typescript
 export const environment = {
   production: true,
-  geminiApiKey: 'YOUR_GEMINI_API_KEY' // Configure before deployment
+  geminiApiKey: 'YOUR_GEMINI_API_KEY', // Configure before deployment
 };
 ```
 
@@ -857,6 +879,7 @@ For GitHub Pages deployment with API keys:
 After deployment, verify:
 
 ### ✅ Functionality Checklist
+
 - [ ] Application loads without errors
 - [ ] Navigation works correctly
 - [ ] Theme toggle functions
@@ -869,12 +892,14 @@ After deployment, verify:
 ### 🎯 Performance Verification
 
 Check performance metrics:
+
 ```bash
 # Run Lighthouse audit
 npx lighthouse https://your-deployment-url.com --view
 ```
 
 Expected scores:
+
 - **Performance**: 90+
 - **Accessibility**: 90+
 - **Best Practices**: 90+
@@ -896,6 +921,7 @@ rm -rf .angular/
 ### 404 Errors on Refresh
 
 For static hosting (GitHub Pages, Netlify):
+
 - Ensure SPA redirect is configured
 - Check base href configuration
 - Verify routing uses hash location strategy (already configured)
@@ -931,6 +957,7 @@ The application includes analytics infrastructure:
 ### Error Tracking
 
 Consider integrating error tracking:
+
 - Sentry
 - LogRocket
 - Rollbar
@@ -942,6 +969,7 @@ Update `src/services/error-handler.service.ts` to send errors to your service.
 The repository includes a complete CI/CD pipeline:
 
 ### Continuous Integration (`.github/workflows/ci.yml`)
+
 - ✅ Linting
 - ✅ Unit tests
 - ✅ Build verification
@@ -949,6 +977,7 @@ The repository includes a complete CI/CD pipeline:
 - ✅ Lighthouse audits
 
 ### Continuous Deployment (`.github/workflows/deploy.yml`)
+
 - ✅ Automatic deployment on main branch
 - ✅ Manual deployment trigger
 - ✅ GitHub Pages integration
@@ -958,6 +987,7 @@ The repository includes a complete CI/CD pipeline:
 Before deploying to production:
 
 ### Pre-Deployment
+
 - [ ] All tests passing
 - [ ] Linting passes (0 errors)
 - [ ] TypeScript compilation successful
@@ -968,6 +998,7 @@ Before deploying to production:
 - [ ] CHANGELOG updated
 
 ### Post-Deployment
+
 - [ ] Verify application loads
 - [ ] Test critical user flows
 - [ ] Check console for errors
@@ -982,6 +1013,7 @@ Before deploying to production:
 Your PolliWall application is now deployed and ready for use!
 
 For support and updates:
+
 - **Documentation**: See repository README and docs
 - **Issues**: GitHub Issues
 - **Repository**: https://github.com/CyberBASSLord-666/Xterm1

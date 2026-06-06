@@ -39,9 +39,10 @@ import { reflectionLoop } from 'ai-patterns';
 
 const result = await reflectionLoop({
   execute: async (ctx) => {
-    const prompt = ctx.iteration === 1
-      ? 'Write a blog post about TypeScript'
-      : `Previous attempt: ${ctx.previousResponse}
+    const prompt =
+      ctx.iteration === 1
+        ? 'Write a blog post about TypeScript'
+        : `Previous attempt: ${ctx.previousResponse}
          Critique: ${ctx.previousCritique?.feedback}
          Please improve based on this feedback.`;
 
@@ -52,18 +53,18 @@ const result = await reflectionLoop({
     const critique = await generateText({
       model,
       prompt: `Rate this blog post (1-10) and suggest improvements:
-               ${text}`
+               ${text}`,
     });
 
     return {
       score: extractScore(critique),
       feedback: critique,
-      shouldContinue: extractScore(critique) < 8
+      shouldContinue: extractScore(critique) < 8,
     };
   },
 
   maxIterations: 5,
-  targetScore: 8
+  targetScore: 8,
 });
 
 console.log(result.value); // Best response
@@ -90,9 +91,10 @@ interface CodeCritique {
 
 const result = await reflectionLoop<CodeOutput>({
   execute: async (ctx) => {
-    const prompt = ctx.iteration === 1
-      ? 'Write a TypeScript function for binary search with tests'
-      : `Previous code: ${ctx.previousResponse?.code}
+    const prompt =
+      ctx.iteration === 1
+        ? 'Write a TypeScript function for binary search with tests'
+        : `Previous code: ${ctx.previousResponse?.code}
          Issues found: ${ctx.previousCritique?.feedback}
          Fix and improve the code.`;
 
@@ -112,26 +114,22 @@ const result = await reflectionLoop<CodeOutput>({
                Code: ${code.code}
                Tests: ${code.tests.join('\n')}
 
-               Provide score (1-10) and specific issues.`
+               Provide score (1-10) and specific issues.`,
     });
 
     const critique = parseReview(review);
-    const overallScore = (
-      critique.correctness +
-      critique.performance +
-      critique.readability +
-      critique.testCoverage
-    ) / 4;
+    const overallScore =
+      (critique.correctness + critique.performance + critique.readability + critique.testCoverage) / 4;
 
     return {
       score: overallScore,
       feedback: review,
-      shouldContinue: overallScore < 8
+      shouldContinue: overallScore < 8,
     };
   },
 
   maxIterations: 5,
-  targetScore: 8
+  targetScore: 8,
 });
 
 console.log(result.value.code); // ✅ Fully typed
@@ -140,32 +138,32 @@ console.log(result.targetReached); // ✅ Whether quality goal was met
 
 ### ReflectionLoopConfig<TResponse>
 
-| Option | Type | Required | Default | Description |
-|--------|------|----------|---------|-------------|
-| `execute` | `(ctx) => Promise<TResponse>` | ✅ Yes | - | Generate response |
-| `reflect` | `(response, ctx) => Promise<ReflectionResult>` | ✅ Yes | - | Critique response |
-| `maxIterations` | `number` | ❌ No | `5` | Maximum iterations |
-| `targetScore` | `number` | ❌ No | `10` | Target quality score |
-| `onMaxIterationsReached` | `'return-best' \| 'return-last' \| 'throw'` | ❌ No | `'return-best'` | Strategy when max iterations hit |
-| `onStart` | `(config) => void \| Promise<void>` | ❌ No | `undefined` | Callback at start |
-| `onBeforeExecute` | `(context) => void \| Promise<void>` | ❌ No | `undefined` | Callback before execute |
-| `onAfterExecute` | `(response, context, time) => void \| Promise<void>` | ❌ No | `undefined` | Callback after execute |
-| `onBeforeReflect` | `(response, context) => void \| Promise<void>` | ❌ No | `undefined` | Callback before reflect |
-| `onAfterReflect` | `(critique, context, time) => void \| Promise<void>` | ❌ No | `undefined` | Callback after reflect |
-| `onIterationComplete` | `(iteration) => void \| Promise<void>` | ❌ No | `undefined` | Callback after iteration |
-| `onImprovement` | `(current, previous) => void \| Promise<void>` | ❌ No | `undefined` | Callback on score improvement |
-| `onStagnation` | `(current, previous, iter) => void \| Promise<void>` | ❌ No | `undefined` | Callback on stagnation |
-| `onTargetReached` | `(iteration, history) => void \| Promise<void>` | ❌ No | `undefined` | Callback on target reached |
-| `onMaxIterations` | `(history) => void \| Promise<void>` | ❌ No | `undefined` | Callback on max iterations |
-| `onError` | `(error, context, iter) => void \| Promise<void>` | ❌ No | `undefined` | Callback on error |
-| `onComplete` | `(result, history) => void \| Promise<void>` | ❌ No | `undefined` | Callback on completion |
-| `enableHistory` | `boolean` | ❌ No | `true` | Track history |
-| `historyStorage` | `ReflectionHistoryStorage` | ❌ No | In-memory | Storage for history |
-| `sessionId` | `string` | ❌ No | Auto-generated | Session identifier |
-| `costPerToken` | `number` | ❌ No | `undefined` | Cost per token (e.g., 0.00002 for $0.02/1K) |
-| `includeHistoryInContext` | `boolean` | ❌ No | `false` | Include history in context |
-| `maxHistoryInContext` | `number` | ❌ No | `3` | Max history items in context |
-| `logger` | `Logger` | ❌ No | Default logger | Logger instance |
+| Option                    | Type                                                 | Required | Default         | Description                                 |
+| ------------------------- | ---------------------------------------------------- | -------- | --------------- | ------------------------------------------- |
+| `execute`                 | `(ctx) => Promise<TResponse>`                        | ✅ Yes   | -               | Generate response                           |
+| `reflect`                 | `(response, ctx) => Promise<ReflectionResult>`       | ✅ Yes   | -               | Critique response                           |
+| `maxIterations`           | `number`                                             | ❌ No    | `5`             | Maximum iterations                          |
+| `targetScore`             | `number`                                             | ❌ No    | `10`            | Target quality score                        |
+| `onMaxIterationsReached`  | `'return-best' \| 'return-last' \| 'throw'`          | ❌ No    | `'return-best'` | Strategy when max iterations hit            |
+| `onStart`                 | `(config) => void \| Promise<void>`                  | ❌ No    | `undefined`     | Callback at start                           |
+| `onBeforeExecute`         | `(context) => void \| Promise<void>`                 | ❌ No    | `undefined`     | Callback before execute                     |
+| `onAfterExecute`          | `(response, context, time) => void \| Promise<void>` | ❌ No    | `undefined`     | Callback after execute                      |
+| `onBeforeReflect`         | `(response, context) => void \| Promise<void>`       | ❌ No    | `undefined`     | Callback before reflect                     |
+| `onAfterReflect`          | `(critique, context, time) => void \| Promise<void>` | ❌ No    | `undefined`     | Callback after reflect                      |
+| `onIterationComplete`     | `(iteration) => void \| Promise<void>`               | ❌ No    | `undefined`     | Callback after iteration                    |
+| `onImprovement`           | `(current, previous) => void \| Promise<void>`       | ❌ No    | `undefined`     | Callback on score improvement               |
+| `onStagnation`            | `(current, previous, iter) => void \| Promise<void>` | ❌ No    | `undefined`     | Callback on stagnation                      |
+| `onTargetReached`         | `(iteration, history) => void \| Promise<void>`      | ❌ No    | `undefined`     | Callback on target reached                  |
+| `onMaxIterations`         | `(history) => void \| Promise<void>`                 | ❌ No    | `undefined`     | Callback on max iterations                  |
+| `onError`                 | `(error, context, iter) => void \| Promise<void>`    | ❌ No    | `undefined`     | Callback on error                           |
+| `onComplete`              | `(result, history) => void \| Promise<void>`         | ❌ No    | `undefined`     | Callback on completion                      |
+| `enableHistory`           | `boolean`                                            | ❌ No    | `true`          | Track history                               |
+| `historyStorage`          | `ReflectionHistoryStorage`                           | ❌ No    | In-memory       | Storage for history                         |
+| `sessionId`               | `string`                                             | ❌ No    | Auto-generated  | Session identifier                          |
+| `costPerToken`            | `number`                                             | ❌ No    | `undefined`     | Cost per token (e.g., 0.00002 for $0.02/1K) |
+| `includeHistoryInContext` | `boolean`                                            | ❌ No    | `false`         | Include history in context                  |
+| `maxHistoryInContext`     | `number`                                             | ❌ No    | `3`             | Max history items in context                |
+| `logger`                  | `Logger`                                             | ❌ No    | Default logger  | Logger instance                             |
 
 ### ReflectionContext<TResponse>
 
@@ -173,14 +171,15 @@ Context provided to `execute` and `reflect` functions:
 
 ```typescript
 interface ReflectionContext<TResponse> {
-  iteration: number;                    // Current iteration (1-indexed)
-  previousResponse?: TResponse;         // Previous attempt
-  previousCritique?: ReflectionResult;  // Previous critique
-  history: Array<{                      // Full history (if enabled)
+  iteration: number; // Current iteration (1-indexed)
+  previousResponse?: TResponse; // Previous attempt
+  previousCritique?: ReflectionResult; // Previous critique
+  history: Array<{
+    // Full history (if enabled)
     response: TResponse;
     critique: ReflectionResult;
   }>;
-  metadata?: Record<string, unknown>;   // Custom metadata
+  metadata?: Record<string, unknown>; // Custom metadata
 }
 ```
 
@@ -190,8 +189,8 @@ Return value from `reflect` function:
 
 ```typescript
 interface ReflectionResult<TResponse> {
-  score: number;           // Quality score (any range, typically 0-10)
-  feedback: string;        // Detailed feedback for improvement
+  score: number; // Quality score (any range, typically 0-10)
+  feedback: string; // Detailed feedback for improvement
   shouldContinue: boolean; // Whether to continue iterating
   metadata?: Record<string, unknown>;
 }
@@ -201,19 +200,19 @@ interface ReflectionResult<TResponse> {
 
 ```typescript
 interface ReflectionLoopResult<TResponse> {
-  value: TResponse;              // Best or final response
-  finalScore: number;            // Final quality score
-  iterations: number;            // Iterations performed
-  targetReached: boolean;        // Whether target was reached
-  history: ReflectionHistory;    // Complete history
-  timestamp: number;             // Completion timestamp
+  value: TResponse; // Best or final response
+  finalScore: number; // Final quality score
+  iterations: number; // Iterations performed
+  targetReached: boolean; // Whether target was reached
+  history: ReflectionHistory; // Complete history
+  timestamp: number; // Completion timestamp
   metrics: {
-    totalTime: number;           // Total time (ms)
-    totalCost?: number;          // Total cost (if tracked)
-    totalTokens?: number;        // Total tokens (if tracked)
+    totalTime: number; // Total time (ms)
+    totalCost?: number; // Total cost (if tracked)
+    totalTokens?: number; // Total tokens (if tracked)
     averageIterationTime: number; // Avg time per iteration
-    scoreProgression: number[];  // Score across iterations
-  }
+    scoreProgression: number[]; // Score across iterations
+  };
 }
 ```
 
@@ -226,9 +225,10 @@ interface ReflectionLoopResult<TResponse> {
 ```typescript
 const article = await reflectionLoop({
   execute: async (ctx) => {
-    const prompt = ctx.iteration === 1
-      ? 'Write a technical article about async/await in JavaScript'
-      : `Previous article: ${ctx.previousResponse}
+    const prompt =
+      ctx.iteration === 1
+        ? 'Write a technical article about async/await in JavaScript'
+        : `Previous article: ${ctx.previousResponse}
 
          Feedback: ${ctx.previousCritique?.feedback}
 
@@ -248,7 +248,7 @@ const article = await reflectionLoop({
 
                Article: ${article}
 
-               Provide overall score and specific improvements.`
+               Provide overall score and specific improvements.`,
     });
 
     const parsed = parseCritique(critique);
@@ -256,12 +256,12 @@ const article = await reflectionLoop({
     return {
       score: parsed.overallScore,
       feedback: parsed.improvements,
-      shouldContinue: parsed.overallScore < 8
+      shouldContinue: parsed.overallScore < 8,
     };
   },
 
   maxIterations: 5,
-  targetScore: 8
+  targetScore: 8,
 });
 ```
 
@@ -270,9 +270,10 @@ const article = await reflectionLoop({
 ```typescript
 const code = await reflectionLoop({
   execute: async (ctx) => {
-    const prompt = ctx.iteration === 1
-      ? 'Write a TypeScript function to merge sorted arrays'
-      : `Previous code had these issues:
+    const prompt =
+      ctx.iteration === 1
+        ? 'Write a TypeScript function to merge sorted arrays'
+        : `Previous code had these issues:
          ${ctx.previousCritique?.feedback}
 
          Previous code:
@@ -296,7 +297,7 @@ const code = await reflectionLoop({
                - Code style and best practices
                - Test coverage
 
-               Rate 1-10 and list specific issues.`
+               Rate 1-10 and list specific issues.`,
     });
 
     const score = extractScore(review);
@@ -304,9 +305,9 @@ const code = await reflectionLoop({
     return {
       score,
       feedback: review,
-      shouldContinue: score < 9
+      shouldContinue: score < 9,
     };
-  }
+  },
 });
 ```
 
@@ -315,9 +316,10 @@ const code = await reflectionLoop({
 ```typescript
 const plan = await reflectionLoop({
   execute: async (ctx) => {
-    const prompt = ctx.iteration === 1
-      ? 'Create a business plan for a SaaS startup in the AI space'
-      : `Previous plan: ${ctx.previousResponse}
+    const prompt =
+      ctx.iteration === 1
+        ? 'Create a business plan for a SaaS startup in the AI space'
+        : `Previous plan: ${ctx.previousResponse}
 
          Analysis: ${ctx.previousCritique?.feedback}
 
@@ -339,17 +341,17 @@ const plan = await reflectionLoop({
                - Risk assessment completeness
                - Overall viability
 
-               Score 1-10 and suggest improvements.`
+               Score 1-10 and suggest improvements.`,
     });
 
     return {
       score: extractScore(analysis),
       feedback: analysis,
-      shouldContinue: extractScore(analysis) < 7
+      shouldContinue: extractScore(analysis) < 7,
     };
   },
 
-  targetScore: 7
+  targetScore: 7,
 });
 ```
 
@@ -396,7 +398,7 @@ const result = await reflectionLoop({
     console.log(`  Final Score: ${result.finalScore}`);
     console.log(`  Improvement: ${history.stats.scoreImprovement}`);
     console.log(`  Total Cost: $${result.metrics.totalCost?.toFixed(2)}`);
-  }
+  },
 });
 ```
 
@@ -410,13 +412,13 @@ const result = await reflectionLoop({
     // Return response with tokens (similar to costTracking pattern)
     return {
       text: response.text,
-      tokens: response.usage.total_tokens  // User provides tokens
+      tokens: response.usage.total_tokens, // User provides tokens
     };
   },
 
   reflect: async (output) => critiqueText(output.text),
 
-  costPerToken: 0.00002  // $0.02 per 1K tokens - we calculate cost automatically
+  costPerToken: 0.00002, // $0.02 per 1K tokens - we calculate cost automatically
 });
 
 console.log(`Total tokens: ${result.metrics.totalTokens}`);
@@ -435,16 +437,16 @@ class DatabaseStorage<TResponse> {
     await db.reflectionHistory.create({
       sessionId,
       iteration: iteration.iteration,
-      data: JSON.stringify(iteration)
+      data: JSON.stringify(iteration),
     });
   }
 
   async load(sessionId: string): Promise<ReflectionIteration<TResponse>[]> {
     const records = await db.reflectionHistory.findMany({
       where: { sessionId },
-      orderBy: { iteration: 'asc' }
+      orderBy: { iteration: 'asc' },
     });
-    return records.map(r => JSON.parse(r.data));
+    return records.map((r) => JSON.parse(r.data));
   }
 
   async delete(sessionId: string) {
@@ -459,7 +461,7 @@ const result = await reflectionLoop({
 
   enableHistory: true,
   historyStorage: new DatabaseStorage(),
-  sessionId: `user-${userId}-${Date.now()}`
+  sessionId: `user-${userId}-${Date.now()}`,
 });
 
 // Later, retrieve history
@@ -474,17 +476,22 @@ console.log('Previous attempts:', history);
 const result = await reflectionLoop({
   execute: async (ctx) => {
     // Access full history in prompt
-    const historyText = ctx.history.map((h, i) => `
+    const historyText = ctx.history
+      .map(
+        (h, i) => `
       Attempt ${i + 1}:
       ${h.response}
 
       Critique (score ${h.critique.score}/10):
       ${h.critique.feedback}
-    `).join('\n\n');
+    `
+      )
+      .join('\n\n');
 
-    const prompt = ctx.iteration === 1
-      ? 'Write a story about AI'
-      : `You've made ${ctx.iteration - 1} previous attempts.
+    const prompt =
+      ctx.iteration === 1
+        ? 'Write a story about AI'
+        : `You've made ${ctx.iteration - 1} previous attempts.
 
          History of your attempts:
          ${historyText}
@@ -498,7 +505,7 @@ const result = await reflectionLoop({
 
   // Enable history in context
   includeHistoryInContext: true,
-  maxHistoryInContext: 3 // Last 3 iterations
+  maxHistoryInContext: 3, // Last 3 iterations
 });
 ```
 
@@ -506,14 +513,14 @@ const result = await reflectionLoop({
 
 ## Comparison with Response Validation
 
-| Aspect | Reflection Loop | Response Validation |
-|--------|----------------|---------------------|
-| **Approach** | AI self-critique | External rules |
-| **Feedback** | Qualitative (score + suggestions) | Binary (pass/fail) |
-| **Improvement** | Guided by feedback | Blind retry |
-| **Cost** | Higher (multiple LLM calls) | Lower (1 LLM call + validators) |
-| **Use Case** | Subjective quality | Hard constraints |
-| **Example** | Style, clarity, creativity | Price range, format, schema |
+| Aspect          | Reflection Loop                   | Response Validation             |
+| --------------- | --------------------------------- | ------------------------------- |
+| **Approach**    | AI self-critique                  | External rules                  |
+| **Feedback**    | Qualitative (score + suggestions) | Binary (pass/fail)              |
+| **Improvement** | Guided by feedback                | Blind retry                     |
+| **Cost**        | Higher (multiple LLM calls)       | Lower (1 LLM call + validators) |
+| **Use Case**    | Subjective quality                | Hard constraints                |
+| **Example**     | Style, clarity, creativity        | Price range, format, schema     |
 
 **They are complementary!** You can even combine them:
 
@@ -551,15 +558,17 @@ const result = await reflectionLoop({
 ## Best Practices
 
 ### 1. Set Realistic Target Scores
+
 ```typescript
 // ❌ Too high - may never reach
-targetScore: 10
+targetScore: 10;
 
 // ✅ Achievable goal
-targetScore: 8
+targetScore: 8;
 ```
 
 ### 2. Limit Iterations to Control Cost
+
 ```typescript
 // ✅ Reasonable limits
 maxIterations: 5,
@@ -568,18 +577,20 @@ onMaxIterationsReached: 'return-best'
 ```
 
 ### 3. Use Specific Feedback
+
 ```typescript
 // ❌ Vague feedback
-feedback: "This needs improvement"
+feedback: 'This needs improvement';
 
 // ✅ Specific, actionable feedback
 feedback: `Issues:
   - Add more code examples in section 2
   - Clarify the explanation of async behavior
-  - Fix typo in line 15: 'thier' -> 'their'`
+  - Fix typo in line 15: 'thier' -> 'their'`;
 ```
 
 ### 4. Track Costs
+
 ```typescript
 // ✅ Always track in production
 costPerToken: 0.00002,  // $0.02 per 1K tokens
@@ -594,6 +605,7 @@ costPerToken: 0.00002,  // $0.02 per 1K tokens
 ```
 
 ### 5. Implement Early Stopping
+
 ```typescript
 reflect: async (response) => {
   const score = evaluateQuality(response);
@@ -602,9 +614,9 @@ reflect: async (response) => {
   return {
     score,
     feedback: getFeedback(score),
-    shouldContinue: score < 7 // Stop at 7, even if target is 8
+    shouldContinue: score < 7, // Stop at 7, even if target is 8
   };
-}
+};
 ```
 
 ---
@@ -616,12 +628,12 @@ reflect: async (response) => {
 ```typescript
 // Types are automatically inferred
 const result = await reflectionLoop({
-  execute: async () => ({ text: "hello", score: 5 }),
+  execute: async () => ({ text: 'hello', score: 5 }),
   reflect: async (response) => ({
     score: response.score, // ✅ response is typed
-    feedback: "Good",
-    shouldContinue: false
-  })
+    feedback: 'Good',
+    shouldContinue: false,
+  }),
 });
 
 result.value.text; // ✅ Fully typed
@@ -643,7 +655,7 @@ const result = await reflectionLoop<BlogPost>({
   },
   reflect: async (post: BlogPost) => {
     // Critique
-  }
+  },
 });
 ```
 
@@ -660,7 +672,7 @@ try {
     reflect: async (content) => critiqueContent(content),
     maxIterations: 5,
     targetScore: 10,
-    onMaxIterationsReached: 'throw' // Throw on failure
+    onMaxIterationsReached: 'throw', // Throw on failure
   });
 } catch (error) {
   if (error instanceof PatternError) {
@@ -673,7 +685,6 @@ try {
       console.error(`Target score: ${error.details.targetScore}`);
     }
   }
-
 }
 ```
 

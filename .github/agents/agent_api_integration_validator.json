@@ -213,12 +213,7 @@
     },
     "error_handling_validation": {
       "test_scenarios": {
-        "network_errors": [
-          "timeout",
-          "connection_refused",
-          "dns_failure",
-          "ssl_error"
-        ],
+        "network_errors": ["timeout", "connection_refused", "dns_failure", "ssl_error"],
         "http_errors": [
           "400_bad_request",
           "401_unauthorized",
@@ -230,12 +225,7 @@
           "503_service_unavailable",
           "504_gateway_timeout"
         ],
-        "response_errors": [
-          "malformed_json",
-          "unexpected_content_type",
-          "incomplete_response",
-          "invalid_image_data"
-        ]
+        "response_errors": ["malformed_json", "unexpected_content_type", "incomplete_response", "invalid_image_data"]
       },
       "expected_handling": {
         "user_notification": true,

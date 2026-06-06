@@ -69,7 +69,11 @@
         "allowed_script_sources": ["self", "https://apis.google.com"],
         "allowed_style_sources": ["self", "unsafe-inline"],
         "allowed_image_sources": ["self", "data:", "https:"],
-        "allowed_connect_sources": ["self", "https://image.pollinations.ai", "https://generativelanguage.googleapis.com"],
+        "allowed_connect_sources": [
+          "self",
+          "https://image.pollinations.ai",
+          "https://generativelanguage.googleapis.com"
+        ],
         "block_all_mixed_content": true
       },
       "input_sanitization": {

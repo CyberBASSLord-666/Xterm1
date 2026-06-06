@@ -92,7 +92,8 @@ export class AppInitializerService {
         // Setup default keyboard shortcuts
         this.setupKeyboardShortcuts();
 
-        // Log Web Vitals
+        // Initialize and log Web Vitals
+        this.perfMonitor.initializeWebVitals?.();
         const vitals = this.perfMonitor.getWebVitals();
         this.logger.debug('Web Vitals', vitals, 'AppInitializer');
 

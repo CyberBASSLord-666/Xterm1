@@ -15,7 +15,7 @@
 # Integration: This config is used by security.yml workflow
 # =============================================================================
 
-name: "CodeQL Configuration"
+name: 'CodeQL Configuration'
 
 # Disable default queries and use security-and-quality suite
 disable-default-queries: false

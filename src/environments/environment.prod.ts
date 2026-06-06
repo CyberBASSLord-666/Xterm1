@@ -10,6 +10,6 @@ export const environment = {
       geminiApiKey: 'gemini-api-key',
       analyticsMeasurementId: 'analytics-measurement-id',
     },
-    failOnMissingGeminiKey: true,
+    failOnMissingGeminiKey: false,
   },
 };

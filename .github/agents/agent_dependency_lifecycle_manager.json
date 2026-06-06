@@ -54,22 +54,13 @@
         "require_manual_review": true
       },
       "angular_tooling": {
-        "packages": [
-          "@angular/build",
-          "@angular/cli",
-          "@angular/compiler-cli"
-        ],
+        "packages": ["@angular/build", "@angular/cli", "@angular/compiler-cli"],
         "update_together": true,
         "auto_merge": false,
         "require_manual_review": true
       },
       "testing_frameworks": {
-        "packages": [
-          "jest",
-          "jest-preset-angular",
-          "@playwright/test",
-          "@types/jest"
-        ],
+        "packages": ["jest", "jest-preset-angular", "@playwright/test", "@types/jest"],
         "update_together": true,
         "auto_merge": false,
         "require_test_validation": true
@@ -161,21 +152,8 @@
       }
     },
     "license_compliance": {
-      "allowed_licenses": [
-        "MIT",
-        "Apache-2.0",
-        "BSD-2-Clause",
-        "BSD-3-Clause",
-        "ISC",
-        "0BSD"
-      ],
-      "forbidden_licenses": [
-        "GPL-3.0",
-        "AGPL-3.0",
-        "LGPL-3.0",
-        "SSPL",
-        "Commons Clause"
-      ],
+      "allowed_licenses": ["MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "ISC", "0BSD"],
+      "forbidden_licenses": ["GPL-3.0", "AGPL-3.0", "LGPL-3.0", "SSPL", "Commons Clause"],
       "require_license_validation": true,
       "block_merge_on_license_violation": true,
       "generate_license_report": true

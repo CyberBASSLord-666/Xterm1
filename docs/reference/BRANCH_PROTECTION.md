@@ -9,51 +9,52 @@ This document outlines the recommended branch protection rules for the PolliWall
 Navigate to: **Settings → Branches → Add branch protection rule**
 
 #### Branch name pattern
+
 ```
 main
 ```
 
 #### Protection Rules
 
-| Setting | Recommended Value | Description |
-|---------|-------------------|-------------|
-| **Require a pull request before merging** | ✅ Enabled | All changes must go through PR review |
-| **Required approving reviews** | 1 | At least one approval required |
-| **Dismiss stale pull request approvals** | ✅ Enabled | New commits invalidate existing approvals |
-| **Require review from Code Owners** | ✅ Enabled | CODEOWNERS file determines reviewers |
-| **Require status checks to pass** | ✅ Enabled | CI must pass before merge |
-| **Require branches to be up to date** | ✅ Enabled | Branch must be current with main |
-| **Required status checks** | See below | Specific checks that must pass |
-| **Require conversation resolution** | ✅ Enabled | All comments must be resolved |
-| **Require signed commits** | ⚠️ Optional | GPG signed commits (enterprise) |
-| **Require linear history** | ⚠️ Optional | Forces rebase/squash merges |
-| **Include administrators** | ✅ Enabled | Rules apply to admins too |
-| **Restrict who can push** | ⚠️ Optional | Limit direct push access |
-| **Allow force pushes** | ❌ Disabled | Prevent history rewriting |
-| **Allow deletions** | ❌ Disabled | Prevent branch deletion |
+| Setting                                   | Recommended Value | Description                               |
+| ----------------------------------------- | ----------------- | ----------------------------------------- |
+| **Require a pull request before merging** | ✅ Enabled        | All changes must go through PR review     |
+| **Required approving reviews**            | 1                 | At least one approval required            |
+| **Dismiss stale pull request approvals**  | ✅ Enabled        | New commits invalidate existing approvals |
+| **Require review from Code Owners**       | ✅ Enabled        | CODEOWNERS file determines reviewers      |
+| **Require status checks to pass**         | ✅ Enabled        | CI must pass before merge                 |
+| **Require branches to be up to date**     | ✅ Enabled        | Branch must be current with main          |
+| **Required status checks**                | See below         | Specific checks that must pass            |
+| **Require conversation resolution**       | ✅ Enabled        | All comments must be resolved             |
+| **Require signed commits**                | ⚠️ Optional       | GPG signed commits (enterprise)           |
+| **Require linear history**                | ⚠️ Optional       | Forces rebase/squash merges               |
+| **Include administrators**                | ✅ Enabled        | Rules apply to admins too                 |
+| **Restrict who can push**                 | ⚠️ Optional       | Limit direct push access                  |
+| **Allow force pushes**                    | ❌ Disabled       | Prevent history rewriting                 |
+| **Allow deletions**                       | ❌ Disabled       | Prevent branch deletion                   |
 
 ### Required Status Checks
 
 The following checks must pass before merging:
 
-| Check Name | Source Workflow | Description |
-|------------|-----------------|-------------|
-| `lint` | `ci.yml` | ESLint validation |
-| `test (18)` | `ci.yml` | Jest unit tests (Node 18) |
-| `test (20)` | `ci.yml` | Jest unit tests (Node 20) |
-| `test (22)` | `ci.yml` | Jest unit tests (Node 22) |
-| `build (production)` | `ci.yml` | Production build |
-| `build (development)` | `ci.yml` | Development build |
-| `security-scan` | `security.yml` | Security vulnerability scan |
+| Check Name            | Source Workflow | Description                 |
+| --------------------- | --------------- | --------------------------- |
+| `lint`                | `ci.yml`        | ESLint validation           |
+| `test (18)`           | `ci.yml`        | Jest unit tests (Node 18)   |
+| `test (20)`           | `ci.yml`        | Jest unit tests (Node 20)   |
+| `test (22)`           | `ci.yml`        | Jest unit tests (Node 22)   |
+| `build (production)`  | `ci.yml`        | Production build            |
+| `build (development)` | `ci.yml`        | Development build           |
+| `security-scan`       | `security.yml`  | Security vulnerability scan |
 
 ### Optional Status Checks (Advisory)
 
 These checks are informational and don't block merging:
 
-| Check Name | Source Workflow | Description |
-|------------|-----------------|-------------|
-| `e2e` | `ci.yml` | Playwright E2E tests |
-| `lighthouse` | `ci.yml` | Performance audit |
+| Check Name    | Source Workflow   | Description            |
+| ------------- | ----------------- | ---------------------- |
+| `e2e`         | `ci.yml`          | Playwright E2E tests   |
+| `lighthouse`  | `ci.yml`          | Performance audit      |
 | `bundle-size` | `bundle-size.yml` | Bundle size monitoring |
 
 ## Develop Branch Protection
@@ -61,31 +62,32 @@ These checks are informational and don't block merging:
 ### Settings for `develop` branch (if used)
 
 #### Branch name pattern
+
 ```
 develop
 ```
 
 #### Protection Rules
 
-| Setting | Recommended Value |
-|---------|-------------------|
-| **Require a pull request before merging** | ✅ Enabled |
-| **Required approving reviews** | 1 |
-| **Require status checks to pass** | ✅ Enabled |
-| **Required status checks** | `lint`, `test (20)`, `build (development)` |
+| Setting                                   | Recommended Value                          |
+| ----------------------------------------- | ------------------------------------------ |
+| **Require a pull request before merging** | ✅ Enabled                                 |
+| **Required approving reviews**            | 1                                          |
+| **Require status checks to pass**         | ✅ Enabled                                 |
+| **Required status checks**                | `lint`, `test (20)`, `build (development)` |
 
 ## Feature Branch Naming Convention
 
 Use the following branch naming patterns:
 
-| Type | Pattern | Example |
-|------|---------|---------|
+| Type    | Pattern               | Example                 |
+| ------- | --------------------- | ----------------------- |
 | Feature | `feature/description` | `feature/add-dark-mode` |
-| Bug fix | `fix/description` | `fix/login-validation` |
-| Hotfix | `hotfix/description` | `hotfix/security-patch` |
-| Release | `release/version` | `release/1.2.0` |
-| Chore | `chore/description` | `chore/update-deps` |
-| Docs | `docs/description` | `docs/api-reference` |
+| Bug fix | `fix/description`     | `fix/login-validation`  |
+| Hotfix  | `hotfix/description`  | `hotfix/security-patch` |
+| Release | `release/version`     | `release/1.2.0`         |
+| Chore   | `chore/description`   | `chore/update-deps`     |
+| Docs    | `docs/description`    | `docs/api-reference`    |
 
 ## CODEOWNERS File
 
@@ -160,5 +162,5 @@ The Agentic Swarm respects branch protection:
 
 ---
 
-*Last updated: November 2024*
-*Part of PolliWall (Xterm1) documentation*
+_Last updated: November 2024_
+_Part of PolliWall (Xterm1) documentation_

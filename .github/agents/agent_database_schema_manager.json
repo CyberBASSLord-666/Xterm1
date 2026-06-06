@@ -129,17 +129,12 @@
       "migration_scripts": {
         "1_to_2": {
           "description": "Add collections object store",
-          "operations": [
-            "create_object_store_collections",
-            "create_index_collections_by_name"
-          ],
+          "operations": ["create_object_store_collections", "create_index_collections_by_name"],
           "rollback": "drop_object_store_collections"
         },
         "2_to_3": {
           "description": "Add compound index for wallpapers",
-          "operations": [
-            "create_index_wallpapers_by_created_prompt"
-          ],
+          "operations": ["create_index_wallpapers_by_created_prompt"],
           "rollback": "drop_index_wallpapers_by_created_prompt"
         }
       },
