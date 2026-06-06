@@ -154,12 +154,7 @@
           "target_conversion_rate_percent": 30
         },
         "sharing": {
-          "steps": [
-            "wallpaper_generated",
-            "wallpaper_opened",
-            "share_button_clicked",
-            "share_completed"
-          ],
+          "steps": ["wallpaper_generated", "wallpaper_opened", "share_button_clicked", "share_completed"],
           "target_conversion_rate_percent": 10
         }
       },

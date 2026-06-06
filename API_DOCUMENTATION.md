@@ -57,7 +57,7 @@ enum LogLevel {
   INFO = 1,
   WARN = 2,
   ERROR = 3,
-  NONE = 4
+  NONE = 4,
 }
 
 interface LogEntry {
@@ -69,14 +69,14 @@ interface LogEntry {
 }
 
 class LoggerService {
-  setLogLevel(level: LogLevel): void
-  debug(message: string, data?: unknown, source?: string): void
-  info(message: string, data?: unknown, source?: string): void
-  warn(message: string, data?: unknown, source?: string): void
-  error(message: string, error?: unknown, source?: string): void
-  getHistory(): LogEntry[]
-  clearHistory(): void
-  exportLogs(): string
+  setLogLevel(level: LogLevel): void;
+  debug(message: string, data?: unknown, source?: string): void;
+  info(message: string, data?: unknown, source?: string): void;
+  warn(message: string, data?: unknown, source?: string): void;
+  error(message: string, error?: unknown, source?: string): void;
+  getHistory(): LogEntry[];
+  clearHistory(): void;
+  exportLogs(): string;
 }
 ```
 
@@ -88,12 +88,12 @@ import { LoggerService, LogLevel } from './services/logger.service';
 
 export class MyComponent {
   private logger = inject(LoggerService);
-  
+
   ngOnInit() {
     this.logger.setLogLevel(LogLevel.INFO);
     this.logger.info('Component initialized', { id: this.id }, 'MyComponent');
   }
-  
+
   onError(error: Error) {
     this.logger.error('Operation failed', error, 'MyComponent');
   }
@@ -120,17 +120,12 @@ Centralized error handling with logging and user notification.
 
 ```typescript
 class AppError extends Error {
-  constructor(
-    message: string,
-    code?: string,
-    isUserFriendly?: boolean,
-    details?: unknown
-  )
+  constructor(message: string, code?: string, isUserFriendly?: boolean, details?: unknown);
 }
 
 class ErrorHandlerService {
-  handleError(error: unknown, source: string, showToast?: boolean): void
-  createAppError(message: string, code?: string, isUserFriendly?: boolean): AppError
+  handleError(error: unknown, source: string, showToast?: boolean): void;
+  createAppError(message: string, code?: string, isUserFriendly?: boolean): AppError;
 }
 ```
 
@@ -142,7 +137,7 @@ import { ErrorHandlerService, AppError } from './services/error-handler.service'
 
 export class MyService {
   private errorHandler = inject(ErrorHandlerService);
-  
+
   async performOperation(): Promise<void> {
     try {
       await this.riskyOperation();
@@ -152,7 +147,7 @@ export class MyService {
       throw error; // Re-throw if caller needs to handle
     }
   }
-  
+
   validateInput(input: string): void {
     if (!input) {
       throw this.errorHandler.createAppError(
@@ -191,16 +186,16 @@ interface ValidationResult {
 
 class ValidationService {
   // Validation methods
-  validatePrompt(prompt: string): ValidationResult
-  validateImageUrl(url: string): ValidationResult
-  validateSeed(seed: number | undefined): ValidationResult
-  validateDimensions(width: number, height: number): ValidationResult
-  validateApiKey(key: string): ValidationResult
-  
+  validatePrompt(prompt: string): ValidationResult;
+  validateImageUrl(url: string): ValidationResult;
+  validateSeed(seed: number | undefined): ValidationResult;
+  validateDimensions(width: number, height: number): ValidationResult;
+  validateApiKey(key: string): ValidationResult;
+
   // Sanitization methods (5-layer XSS prevention)
-  sanitizeHtml(html: string): string
-  sanitizeHtmlForAngular(html: string): string
-  sanitizeUrl(url: string): string
+  sanitizeHtml(html: string): string;
+  sanitizeHtmlForAngular(html: string): string;
+  sanitizeUrl(url: string): string;
 }
 ```
 
@@ -212,19 +207,19 @@ import { ValidationService } from './services/validation.service';
 
 export class WizardComponent {
   private validation = inject(ValidationService);
-  
+
   validateAndGenerate(prompt: string): void {
     const result = this.validation.validatePrompt(prompt);
-    
+
     if (!result.isValid) {
       console.error('Validation errors:', result.errors);
       return;
     }
-    
+
     // Safe to use prompt
     this.generate(prompt);
   }
-  
+
   displayUserContent(html: string): void {
     // Always sanitize user-generated content
     this.safeHtml = this.validation.sanitizeHtml(html);
@@ -269,11 +264,11 @@ interface PerformanceMetric {
 }
 
 class PerformanceMonitorService {
-  measureSync<T>(name: string, fn: () => T): T
-  measureAsync<T>(name: string, fn: () => Promise<T>): Promise<T>
-  getMetrics(): PerformanceMetric[]
-  clearMetrics(): void
-  getAverageTime(name: string): number
+  measureSync<T>(name: string, fn: () => T): T;
+  measureAsync<T>(name: string, fn: () => Promise<T>): Promise<T>;
+  getMetrics(): PerformanceMetric[];
+  clearMetrics(): void;
+  getAverageTime(name: string): number;
 }
 ```
 
@@ -285,14 +280,14 @@ import { PerformanceMonitorService } from './services/performance-monitor.servic
 
 export class ImageService {
   private perf = inject(PerformanceMonitorService);
-  
+
   async generateImage(prompt: string): Promise<Blob> {
     return this.perf.measureAsync('image-generation', async () => {
       // Operation automatically timed
       return await this.api.generate(prompt);
     });
   }
-  
+
   processImage(blob: Blob): ImageData {
     return this.perf.measureSync('image-processing', () => {
       return this.process(blob);
@@ -324,15 +319,15 @@ interface AnalyticsEvent {
 }
 
 class AnalyticsService {
-  initialize(trackingId?: string): void
-  trackPageView(path: string, title?: string): void
-  trackEvent(event: Omit<AnalyticsEvent, 'timestamp'>): void
-  trackImageGeneration(model: string, duration: number): void
-  trackError(error: string, source: string): void
-  trackFeatureUsage(feature: string, action: string): void
-  trackInteraction(element: string, action: string): void
-  flush(): void
-  setEnabled(enabled: boolean): void
+  initialize(trackingId?: string): void;
+  trackPageView(path: string, title?: string): void;
+  trackEvent(event: Omit<AnalyticsEvent, 'timestamp'>): void;
+  trackImageGeneration(model: string, duration: number): void;
+  trackError(error: string, source: string): void;
+  trackFeatureUsage(feature: string, action: string): void;
+  trackInteraction(element: string, action: string): void;
+  flush(): void;
+  setEnabled(enabled: boolean): void;
 }
 ```
 
@@ -344,14 +339,14 @@ import { AnalyticsService } from './services/analytics.service';
 
 export class WizardComponent {
   private analytics = inject(AnalyticsService);
-  
+
   async generateImage(): Promise<void> {
     const startTime = Date.now();
-    
+
     try {
       await this.generate();
       const duration = Date.now() - startTime;
-      
+
       this.analytics.trackImageGeneration(this.model, duration);
       this.analytics.trackFeatureUsage('wizard', 'generate');
     } catch (error) {
@@ -381,11 +376,11 @@ HTTP request caching and deduplication.
 
 ```typescript
 class RequestCacheService {
-  get<T>(key: string): T | null
-  set<T>(key: string, value: T, ttl?: number): void
-  has(key: string): boolean
-  delete(key: string): void
-  clear(): void
+  get<T>(key: string): T | null;
+  set<T>(key: string, value: T, ttl?: number): void;
+  has(key: string): boolean;
+  delete(key: string): void;
+  clear(): void;
 }
 ```
 
@@ -404,9 +399,9 @@ Prevent memory leaks from blob URLs with automatic cleanup.
 
 ```typescript
 class BlobUrlManagerService {
-  createObjectURL(blob: Blob, destroyRef?: DestroyRef): string
-  revokeObjectURL(url: string): void
-  revokeAll(): void
+  createObjectURL(blob: Blob, destroyRef?: DestroyRef): string;
+  revokeObjectURL(url: string): void;
+  revokeAll(): void;
 }
 ```
 
@@ -419,9 +414,9 @@ import { BlobUrlManagerService } from './services/blob-url-manager.service';
 export class ImageComponent implements OnInit {
   private blobManager = inject(BlobUrlManagerService);
   private destroyRef = inject(DestroyRef);
-  
+
   imageUrl = signal<string>('');
-  
+
   loadImage(blob: Blob): void {
     // Automatically cleaned up when component destroys
     const url = this.blobManager.createObjectURL(blob, this.destroyRef);
@@ -450,10 +445,10 @@ Image processing, compression, and optimization.
 
 ```typescript
 class ImageUtilService {
-  createThumbnail(blob: Blob, maxWidth: number, maxHeight: number): Promise<Blob>
-  compress(blob: Blob, quality: number): Promise<Blob>
-  convertFormat(blob: Blob, format: 'image/jpeg' | 'image/png' | 'image/webp'): Promise<Blob>
-  getDimensions(blob: Blob): Promise<{ width: number; height: number }>
+  createThumbnail(blob: Blob, maxWidth: number, maxHeight: number): Promise<Blob>;
+  compress(blob: Blob, quality: number): Promise<Blob>;
+  convertFormat(blob: Blob, format: 'image/jpeg' | 'image/png' | 'image/webp'): Promise<Blob>;
+  getDimensions(blob: Blob): Promise<{ width: number; height: number }>;
 }
 ```
 
@@ -476,11 +471,11 @@ interface ShortcutConfig {
 }
 
 class KeyboardShortcutsService {
-  register(key: string, handler: () => void, scope?: string): void
-  unregister(key: string, scope?: string): void
-  registerDefaultShortcuts(config: ShortcutConfig): void
-  disable(): void
-  enable(): void
+  register(key: string, handler: () => void, scope?: string): void;
+  unregister(key: string, scope?: string): void;
+  registerDefaultShortcuts(config: ShortcutConfig): void;
+  disable(): void;
+  enable(): void;
 }
 ```
 
@@ -492,16 +487,16 @@ import { KeyboardShortcutsService } from './services/keyboard-shortcuts.service'
 
 export class GalleryComponent implements OnInit, OnDestroy {
   private shortcuts = inject(KeyboardShortcutsService);
-  
+
   ngOnInit(): void {
     this.shortcuts.registerDefaultShortcuts({
       'ctrl+s': () => this.save(),
-      'delete': () => this.confirmDelete(),
-      'escape': () => this.cancel(),
-      '?': () => this.showHelp()
+      delete: () => this.confirmDelete(),
+      escape: () => this.cancel(),
+      '?': () => this.showHelp(),
     });
   }
-  
+
   ngOnDestroy(): void {
     this.shortcuts.unregister('ctrl+s');
     this.shortcuts.unregister('delete');
@@ -533,7 +528,7 @@ User notifications and feedback messages.
 type ToastType = 'success' | 'error' | 'info';
 
 class ToastService {
-  show(message: string, type?: ToastType, duration?: number): void
+  show(message: string, type?: ToastType, duration?: number): void;
 }
 ```
 
@@ -545,7 +540,7 @@ import { ToastService } from './services/toast.service';
 
 export class SaveComponent {
   private toast = inject(ToastService);
-  
+
   async save(): Promise<void> {
     try {
       await this.saveData();
@@ -591,25 +586,25 @@ interface Collection {
 
 class GalleryService {
   // Gallery Items
-  readonly items: Signal<GalleryItem[]>
-  addItem(item: Omit<GalleryItem, 'id' | 'createdAt'>): Promise<GalleryItem>
-  updateItem(id: string, updates: Partial<GalleryItem>): Promise<void>
-  deleteItem(id: string): Promise<void>
-  deleteItems(ids: string[]): Promise<void>
-  getItem(id: string): Promise<GalleryItem | undefined>
-  toggleFavorite(id: string): Promise<void>
-  
+  readonly items: Signal<GalleryItem[]>;
+  addItem(item: Omit<GalleryItem, 'id' | 'createdAt'>): Promise<GalleryItem>;
+  updateItem(id: string, updates: Partial<GalleryItem>): Promise<void>;
+  deleteItem(id: string): Promise<void>;
+  deleteItems(ids: string[]): Promise<void>;
+  getItem(id: string): Promise<GalleryItem | undefined>;
+  toggleFavorite(id: string): Promise<void>;
+
   // Collections
-  readonly collections: Signal<Collection[]>
-  createCollection(name: string): Promise<Collection>
-  renameCollection(id: string, name: string): Promise<void>
-  deleteCollection(id: string): Promise<void>
-  addToCollection(itemId: string, collectionId: string): Promise<void>
-  removeFromCollection(itemId: string, collectionId: string): Promise<void>
-  
+  readonly collections: Signal<Collection[]>;
+  createCollection(name: string): Promise<Collection>;
+  renameCollection(id: string, name: string): Promise<void>;
+  deleteCollection(id: string): Promise<void>;
+  addToCollection(itemId: string, collectionId: string): Promise<void>;
+  removeFromCollection(itemId: string, collectionId: string): Promise<void>;
+
   // Import/Export
-  exportGallery(): Promise<Blob>
-  importGallery(file: File): Promise<{ imported: number; failed: number }>
+  exportGallery(): Promise<Blob>;
+  importGallery(file: File): Promise<{ imported: number; failed: number }>;
 }
 ```
 
@@ -634,13 +629,13 @@ interface GenerationResult {
 }
 
 class GenerationService {
-  readonly status: Signal<GenerationStatus>
-  readonly statusMessage: Signal<string>
-  readonly currentGenerationResult: Signal<GenerationResult | null>
-  
-  generate(prompt: string, options: ImageOptions): Promise<GenerationResult>
-  saveToGallery(): Promise<void>
-  reset(): void
+  readonly status: Signal<GenerationStatus>;
+  readonly statusMessage: Signal<string>;
+  readonly currentGenerationResult: Signal<GenerationResult | null>;
+
+  generate(prompt: string, options: ImageOptions): Promise<GenerationResult>;
+  saveToGallery(): Promise<void>;
+  reset(): void;
 }
 ```
 
@@ -657,16 +652,16 @@ User preferences with localStorage persistence.
 
 ```typescript
 class SettingsService {
-  readonly themeDark: WritableSignal<boolean>
-  readonly defaultModel: WritableSignal<string>
-  readonly defaultQuality: WritableSignal<number>
-  readonly geminiApiKey: WritableSignal<string>
-  
-  saveSettings(): void
-  loadSettings(): void
-  resetToDefaults(): void
-  exportSettings(): string
-  importSettings(json: string): void
+  readonly themeDark: WritableSignal<boolean>;
+  readonly defaultModel: WritableSignal<string>;
+  readonly defaultQuality: WritableSignal<number>;
+  readonly geminiApiKey: WritableSignal<string>;
+
+  saveSettings(): void;
+  loadSettings(): void;
+  resetToDefaults(): void;
+  exportSettings(): string;
+  importSettings(json: string): void;
 }
 ```
 
@@ -685,11 +680,11 @@ Environment configuration and secrets management.
 
 ```typescript
 class ConfigService {
-  readonly isProduction: boolean
-  readonly apiEndpoint: string
-  
-  getApiKey(provider: string): string | undefined
-  setApiKey(provider: string, key: string): void
+  readonly isProduction: boolean;
+  readonly apiEndpoint: string;
+
+  getApiKey(provider: string): string | undefined;
+  setApiKey(provider: string, key: string): void;
 }
 ```
 
@@ -715,8 +710,8 @@ interface DeviceInfo {
 }
 
 class DeviceService {
-  getDeviceInfo(): DeviceInfo
-  isTouchDevice(): boolean
+  getDeviceInfo(): DeviceInfo;
+  isTouchDevice(): boolean;
 }
 ```
 
@@ -741,10 +736,10 @@ interface ImageOptions {
 }
 
 // Functions
-function initializeGeminiClient(apiKey: string): void
-function generateImage(prompt: string, width: number, height: number, options?: ImageOptions): Promise<Blob>
-function enhancePrompt(prompt: string): Promise<string>
-function listImageModels(): string[]
+function initializeGeminiClient(apiKey: string): void;
+function generateImage(prompt: string, width: number, height: number, options?: ImageOptions): Promise<Blob>;
+function enhancePrompt(prompt: string): Promise<string>;
+function listImageModels(): string[];
 ```
 
 ---
@@ -755,17 +750,17 @@ All components are standalone with OnPush change detection and Signal-based stat
 
 ### Component API Overview
 
-| Component | Route | Purpose |
-|-----------|-------|---------|
-| **WizardComponent** | `/` | Image generation interface |
-| **GalleryComponent** | `/gallery` | Saved images management |
-| **CollectionsComponent** | `/collections` | Collection organization |
-| **FeedComponent** | `/feed` | Community feed (future) |
-| **EditorComponent** | `/edit/:id` | Image editing |
-| **SettingsComponent** | `/settings` | App configuration |
-| **ToastComponent** | N/A | Notification display |
-| **ShortcutsHelpComponent** | N/A | Keyboard help overlay |
-| **SkeletonComponent** | N/A | Loading placeholder |
+| Component                  | Route          | Purpose                    |
+| -------------------------- | -------------- | -------------------------- |
+| **WizardComponent**        | `/`            | Image generation interface |
+| **GalleryComponent**       | `/gallery`     | Saved images management    |
+| **CollectionsComponent**   | `/collections` | Collection organization    |
+| **FeedComponent**          | `/feed`        | Community feed (future)    |
+| **EditorComponent**        | `/edit/:id`    | Image editing              |
+| **SettingsComponent**      | `/settings`    | App configuration          |
+| **ToastComponent**         | N/A            | Notification display       |
+| **ShortcutsHelpComponent** | N/A            | Keyboard help overlay      |
+| **SkeletonComponent**      | N/A            | Loading placeholder        |
 
 ---
 
@@ -792,9 +787,9 @@ Lazy load images with IntersectionObserver.
 **File**: `src/utils/component-helpers.ts`
 
 ```typescript
-function createLoadingState(): LoadingState
-function createSelectionState<T>(): SelectionState<T>
-function createFormField<T>(initialValue: T): FormField<T>
+function createLoadingState(): LoadingState;
+function createSelectionState<T>(): SelectionState<T>;
+function createFormField<T>(initialValue: T): FormField<T>;
 ```
 
 ### Type Guards
@@ -802,10 +797,10 @@ function createFormField<T>(initialValue: T): FormField<T>
 **File**: `src/utils/type-guards.ts`
 
 ```typescript
-function isString(value: unknown): value is string
-function isNumber(value: unknown): value is number
-function isError(value: unknown): value is Error
-function getErrorMessage(error: unknown): string
+function isString(value: unknown): value is string;
+function isNumber(value: unknown): value is number;
+function isError(value: unknown): value is Error;
+function getErrorMessage(error: unknown): string;
 ```
 
 ---
@@ -813,6 +808,7 @@ function getErrorMessage(error: unknown): string
 ## Best Practices Summary
 
 ### Service Integration
+
 - ✅ Inject services via constructor or `inject()` function
 - ✅ Use LoggerService for all logging
 - ✅ Use ErrorHandlerService for all errors
@@ -820,6 +816,7 @@ function getErrorMessage(error: unknown): string
 - ✅ Use BlobUrlManagerService for all blob URLs
 
 ### Component Patterns
+
 - ✅ Standalone components only
 - ✅ OnPush change detection
 - ✅ Signal-based state
@@ -828,12 +825,14 @@ function getErrorMessage(error: unknown): string
 - ✅ Unregister in ngOnDestroy
 
 ### Error Handling
+
 - ✅ try-catch-finally for async operations
 - ✅ Always use finally for cleanup (e.g., loading states)
 - ✅ Log errors with context
 - ✅ Show user-friendly messages
 
 ### Performance
+
 - ✅ Wrap operations with PerformanceMonitorService
 - ✅ Use RequestCacheService for repeated calls
 - ✅ Lazy load components
@@ -841,13 +840,14 @@ function getErrorMessage(error: unknown): string
 
 ---
 
-*This API documentation is the authoritative reference for all public-facing APIs in PolliWall.*  
-*Last Updated: 2025-11-08 | Operation Bedrock Phase 1.2*
+_This API documentation is the authoritative reference for all public-facing APIs in PolliWall._  
+_Last Updated: 2025-11-08 | Operation Bedrock Phase 1.2_
 
-  1080,
-  { model: 'flux', seed: 42 }
+1080,
+{ model: 'flux', seed: 42 }
 );
-```
+
+````
 
 ##### `composePromptForDevice(device: DeviceInfo, prefs: StylePreferences, options?: TextOptions): Promise<string>`
 
@@ -864,28 +864,28 @@ Compose a prompt optimized for a specific device using Gemini AI.
 ```typescript
 const prompt = await composePromptForDevice(
   { width: 1920, height: 1080, dpr: 2 },
-  { 
+  {
     styles: ['Vibrant colors', 'High contrast'],
     basePrompt: 'Mountain landscape'
   }
 );
-```
+````
 
 ##### `composeVariantPrompt(basePrompt: string, options?: TextOptions): Promise<string>`
 
 Generate a subtle variation of an existing prompt.
 
 **Parameters**:
+
 - `basePrompt` (string): The original prompt to vary
 - `options` (TextOptions): Optional text generation parameters
 
 **Returns**: Promise<string> - The variant prompt
 
 **Example**:
+
 ```typescript
-const variant = await composeVariantPrompt(
-  'A sunset over mountains with warm colors'
-);
+const variant = await composeVariantPrompt('A sunset over mountains with warm colors');
 ```
 
 ##### `composeRestylePrompt(basePrompt: string, styleDirective: string, options?: TextOptions): Promise<string>`
@@ -893,6 +893,7 @@ const variant = await composeVariantPrompt(
 Restyle an existing prompt with a new style directive.
 
 **Parameters**:
+
 - `basePrompt` (string): The original prompt
 - `styleDirective` (string): The style to apply
 - `options` (TextOptions): Optional text generation parameters
@@ -900,11 +901,9 @@ Restyle an existing prompt with a new style directive.
 **Returns**: Promise<string> - The restyled prompt
 
 **Example**:
+
 ```typescript
-const restyled = await composeRestylePrompt(
-  'A mountain landscape',
-  'Golden hour warmth, cinematic'
-);
+const restyled = await composeRestylePrompt('A mountain landscape', 'Golden hour warmth, cinematic');
 ```
 
 ##### `createDeviceWallpaper(params: WallpaperParams): Promise<WallpaperResult>`
@@ -912,6 +911,7 @@ const restyled = await composeRestylePrompt(
 Create a wallpaper optimized for a specific device.
 
 **Parameters**:
+
 - `device` (DeviceInfo): Device specifications
 - `supported` (SupportedResolutions): Supported aspect ratios and resolutions
 - `prompt` (string): Image generation prompt
@@ -920,12 +920,13 @@ Create a wallpaper optimized for a specific device.
 **Returns**: Promise<WallpaperResult> - Generated wallpaper details
 
 **Example**:
+
 ```typescript
 const result = await createDeviceWallpaper({
   device: { width: 1920, height: 1080, dpr: 2 },
   supported: { '16:9': [{ w: 1920, h: 1080 }] },
   prompt: 'Beautiful landscape',
-  options: { model: 'flux' }
+  options: { model: 'flux' },
 });
 ```
 
@@ -944,6 +945,7 @@ Application initialization service that handles startup configuration and servic
 Initialize the application during bootstrap. Called automatically via APP_INITIALIZER.
 
 **Initialization Steps**:
+
 1. Sets log level based on environment (DEBUG for development, WARN for production)
 2. Hydrates configuration from multiple sources (runtime config, meta tags, environment)
 3. Starts request cache periodic cleanup
@@ -953,6 +955,7 @@ Initialize the application during bootstrap. Called automatically via APP_INITIA
 7. Logs Web Vitals metrics
 
 **Configuration Sources** (in priority order):
+
 1. Runtime configuration object: `window.__POLLIWALL_RUNTIME_CONFIG__`
 2. HTML meta tags: `<meta name="gemini-api-key">` and `<meta name="analytics-measurement-id">`
 3. Environment bootstrap configuration
@@ -961,6 +964,7 @@ Initialize the application during bootstrap. Called automatically via APP_INITIA
 If `environment.bootstrapConfig.failOnMissingGeminiKey` is true and no Gemini API key is found in production, throws an error to prevent incomplete deployment.
 
 **Example**:
+
 ```typescript
 // In app.config.ts
 import { APP_INITIALIZER, ApplicationConfig } from '@angular/core';
@@ -972,24 +976,26 @@ export const appConfig: ApplicationConfig = {
       provide: APP_INITIALIZER,
       useFactory: initializeApp,
       deps: [AppInitializerService],
-      multi: true
-    }
-  ]
+      multi: true,
+    },
+  ],
 };
 ```
 
 **Runtime Configuration Example**:
+
 ```html
 <!-- Inject configuration at runtime -->
 <script>
   window.__POLLIWALL_RUNTIME_CONFIG__ = {
     geminiApiKey: 'your-api-key',
-    analyticsMeasurementId: 'G-XXXXXXXXXX'
+    analyticsMeasurementId: 'G-XXXXXXXXXX',
   };
 </script>
 ```
 
 **Meta Tag Configuration Example**:
+
 ```html
 <!-- Inject secrets via meta tags -->
 <meta name="gemini-api-key" content="your-api-key" />
@@ -1015,9 +1021,11 @@ Centralized logging service with configurable log levels.
 Set the minimum log level.
 
 **Parameters**:
+
 - `level` (LogLevel): Minimum level to log
 
 **Log Levels**:
+
 - `LogLevel.DEBUG` (0): Detailed debugging information
 - `LogLevel.INFO` (1): General informational messages
 - `LogLevel.WARN` (2): Warning messages
@@ -1025,6 +1033,7 @@ Set the minimum log level.
 - `LogLevel.NONE` (4): Disable logging
 
 **Example**:
+
 ```typescript
 loggerService.setLogLevel(LogLevel.DEBUG);
 ```
@@ -1046,6 +1055,7 @@ Log a warning message.
 Log an error message.
 
 **Example**:
+
 ```typescript
 logger.debug('User action', { action: 'click', target: 'button' }, 'Component');
 logger.info('Generation started', { prompt: 'test' });
@@ -1080,11 +1090,13 @@ Centralized error handling with user-friendly messages.
 Handle an error with logging and optional user notification.
 
 **Parameters**:
+
 - `error` (any): The error to handle
 - `source` (string): Source component/service
 - `showToast` (boolean): Whether to show toast notification (default: true)
 
 **Example**:
+
 ```typescript
 try {
   await riskyOperation();
@@ -1098,6 +1110,7 @@ try {
 Create a user-friendly error.
 
 **Example**:
+
 ```typescript
 throw errorHandler.createError('Invalid input', 'VALIDATION_ERROR');
 ```
@@ -1107,11 +1120,9 @@ throw errorHandler.createError('Invalid input', 'VALIDATION_ERROR');
 Wrap an async operation with error handling.
 
 **Example**:
+
 ```typescript
-const result = await errorHandler.wrapAsync(
-  () => apiCall(),
-  'MyService'
-);
+const result = await errorHandler.wrapAsync(() => apiCall(), 'MyService');
 ```
 
 ---
@@ -1129,14 +1140,16 @@ Image manipulation and optimization utilities.
 Create a thumbnail from an image.
 
 **Parameters**:
+
 - `blob` (Blob): Source image
 - `options` (ThumbnailOptions): Size and quality options
 
 **Example**:
+
 ```typescript
 const thumbnail = await imageUtil.makeThumbnail(blob, {
   size: 320,
-  quality: 0.85
+  quality: 0.85,
 });
 ```
 
@@ -1145,16 +1158,18 @@ const thumbnail = await imageUtil.makeThumbnail(blob, {
 Compress an image.
 
 **Parameters**:
+
 - `blob` (Blob): Source image
 - `options` (CompressionOptions): Compression parameters
 
 **Example**:
+
 ```typescript
 const compressed = await imageUtil.compressImage(blob, {
   maxWidth: 2048,
   maxHeight: 2048,
   quality: 0.85,
-  format: 'image/jpeg'
+  format: 'image/jpeg',
 });
 ```
 
@@ -1187,6 +1202,7 @@ Validate a prompt string.
 **Returns**: `{ isValid: boolean, errors: string[] }`
 
 **Example**:
+
 ```typescript
 const result = validationService.validatePrompt(userInput);
 if (!result.isValid) {
@@ -1250,6 +1266,7 @@ Start measuring a performance metric.
 End measuring a performance metric.
 
 **Example**:
+
 ```typescript
 const id = perfMonitor.startMeasure('ImageGeneration');
 // ... operation ...
@@ -1261,11 +1278,9 @@ perfMonitor.endMeasure(id);
 Measure an async operation.
 
 **Example**:
+
 ```typescript
-const result = await perfMonitor.measureAsync(
-  'DatabaseQuery',
-  () => db.query('SELECT * FROM items')
-);
+const result = await perfMonitor.measureAsync('DatabaseQuery', () => db.query('SELECT * FROM items'));
 ```
 
 ##### `measureSync<T>(name: string, operation: () => T, metadata?: any): T`
@@ -1299,11 +1314,13 @@ Request caching and deduplication.
 Execute a request with caching and deduplication.
 
 **Parameters**:
+
 - `key` (string): Cache key
 - `requestFn` (() => Promise<T>): Request function
 - `ttl` (number): Time to live in milliseconds (default: 5 minutes)
 
 **Example**:
+
 ```typescript
 const data = await requestCache.execute(
   'models-list',
@@ -1355,17 +1372,19 @@ Keyboard shortcut management.
 Register a keyboard shortcut.
 
 **Parameters**:
+
 - `id` (string): Unique identifier
 - `config` (ShortcutConfig): Shortcut configuration
 
 **Example**:
+
 ```typescript
 keyboardShortcuts.register('save', {
   key: 's',
   ctrl: true,
   description: 'Save current item',
   handler: () => this.save(),
-  preventDefault: true
+  preventDefault: true,
 });
 ```
 
@@ -1386,6 +1405,7 @@ Get all registered shortcuts.
 Register common application shortcuts.
 
 **Example**:
+
 ```typescript
 keyboardShortcuts.registerDefaultShortcuts({
   save: () => this.save(),
@@ -1394,7 +1414,7 @@ keyboardShortcuts.registerDefaultShortcuts({
   redo: () => this.redo(),
   search: () => this.openSearch(),
   help: () => this.showHelp(),
-  escape: () => this.closeDialog()
+  escape: () => this.closeDialog(),
 });
 ```
 
@@ -1429,12 +1449,13 @@ Revoke all tracked blob URLs.
 Create a blob URL with automatic cleanup.
 
 **Example**:
+
 ```typescript
 @Component({...})
 export class MyComponent {
   private blobUrlManager = inject(BlobUrlManagerService);
   private destroyRef = inject(DestroyRef);
-  
+
   imageUrl = computed(() => {
     const blob = this.imageBlob();
     return blob ? this.blobUrlManager.createAutoCleanupUrl(blob, this.destroyRef) : null;
@@ -1450,14 +1471,14 @@ export class MyComponent {
 
 ```typescript
 interface ImageOptions {
-  model?: string;           // AI model to use (default: 'flux')
-  nologo?: boolean;         // Remove watermark (default: false)
-  private?: boolean;        // Private generation (default: false)
-  safe?: boolean;          // Safe content filtering (default: false)
-  referrer?: string;       // Custom referrer
-  seed?: number;           // Random seed for reproducibility
-  image?: string;          // Source image URL for image-to-image
-  enhance?: boolean;       // Enhance prompt with AI (default: false)
+  model?: string; // AI model to use (default: 'flux')
+  nologo?: boolean; // Remove watermark (default: false)
+  private?: boolean; // Private generation (default: false)
+  safe?: boolean; // Safe content filtering (default: false)
+  referrer?: string; // Custom referrer
+  seed?: number; // Random seed for reproducibility
+  image?: string; // Source image URL for image-to-image
+  enhance?: boolean; // Enhance prompt with AI (default: false)
 }
 ```
 
@@ -1465,9 +1486,9 @@ interface ImageOptions {
 
 ```typescript
 interface DeviceInfo {
-  width: number;           // Device width in pixels
-  height: number;          // Device height in pixels
-  dpr: number;            // Device pixel ratio
+  width: number; // Device width in pixels
+  height: number; // Device height in pixels
+  dpr: number; // Device pixel ratio
 }
 ```
 
@@ -1475,8 +1496,8 @@ interface DeviceInfo {
 
 ```typescript
 interface ValidationResult {
-  isValid: boolean;        // Whether validation passed
-  errors: string[];        // List of validation errors
+  isValid: boolean; // Whether validation passed
+  errors: string[]; // List of validation errors
 }
 ```
 
@@ -1484,9 +1505,9 @@ interface ValidationResult {
 
 ```typescript
 interface CompressionOptions {
-  maxWidth?: number;       // Maximum width (default: 2048)
-  maxHeight?: number;      // Maximum height (default: 2048)
-  quality?: number;        // Quality 0-1 (default: 0.85)
+  maxWidth?: number; // Maximum width (default: 2048)
+  maxHeight?: number; // Maximum height (default: 2048)
+  quality?: number; // Quality 0-1 (default: 0.85)
   format?: 'image/jpeg' | 'image/png' | 'image/webp';
 }
 ```
@@ -1495,8 +1516,8 @@ interface CompressionOptions {
 
 ```typescript
 interface ThumbnailOptions {
-  size?: number;          // Max dimension (default: 320)
-  quality?: number;       // Quality 0-1 (default: 0.85)
+  size?: number; // Max dimension (default: 320)
+  quality?: number; // Quality 0-1 (default: 0.85)
 }
 ```
 
@@ -1504,13 +1525,13 @@ interface ThumbnailOptions {
 
 ```typescript
 interface ShortcutConfig {
-  key: string;            // Key name (e.g., 's', 'escape')
-  ctrl?: boolean;         // Ctrl modifier
-  shift?: boolean;        // Shift modifier
-  alt?: boolean;          // Alt modifier
-  meta?: boolean;         // Meta/Command modifier
-  description: string;    // Human-readable description
-  handler: () => void;    // Handler function
+  key: string; // Key name (e.g., 's', 'escape')
+  ctrl?: boolean; // Ctrl modifier
+  shift?: boolean; // Shift modifier
+  alt?: boolean; // Alt modifier
+  meta?: boolean; // Meta/Command modifier
+  description: string; // Human-readable description
+  handler: () => void; // Handler function
   preventDefault?: boolean; // Prevent default action
 }
 ```
@@ -1526,20 +1547,19 @@ interface ShortcutConfig {
 Lazy load images using Intersection Observer with dynamic source binding.
 
 **Usage**:
+
 ```html
-<img 
-  [appLazyImage]="imageUrl"
-  [lazySrc]="placeholderUrl"
-  [lazyThreshold]="0.1"
-  alt="Description" />
+<img [appLazyImage]="imageUrl" [lazySrc]="placeholderUrl" [lazyThreshold]="0.1" alt="Description" />
 ```
 
 **Inputs**:
+
 - `appLazyImage` (string | null): The actual image source URL to lazy load
 - `lazySrc` (string): Optional placeholder image to display while loading
 - `lazyThreshold` (number): Visibility threshold for triggering load (default: 0.1)
 
 **Features**:
+
 - Loads image when it enters viewport using Intersection Observer
 - Supports placeholder images during loading
 - Automatically reuses observer instance for efficiency
@@ -1550,15 +1570,10 @@ Lazy load images using Intersection Observer with dynamic source binding.
 - Clears metadata after successful load
 
 **Example**:
+
 ```typescript
 @Component({
-  template: `
-    <img 
-      [appLazyImage]="wallpaperUrl"
-      [lazySrc]="thumbnailUrl"
-      alt="AI Generated Wallpaper"
-    />
-  `
+  template: ` <img [appLazyImage]="wallpaperUrl" [lazySrc]="thumbnailUrl" alt="AI Generated Wallpaper" /> `,
 })
 export class GalleryComponent {
   wallpaperUrl = 'https://example.com/wallpaper.jpg';
@@ -1567,6 +1582,7 @@ export class GalleryComponent {
 ```
 
 **Browser Compatibility**:
+
 - Modern browsers with IntersectionObserver support: lazy loading with viewport detection
 - Browsers without IntersectionObserver: immediate loading (graceful degradation)
 
@@ -1581,15 +1597,13 @@ export class GalleryComponent {
 Loading skeleton screen component.
 
 **Usage**:
+
 ```html
-<app-skeleton 
-  [width]="'200px'" 
-  [height]="'100px'"
-  [borderRadius]="'8px'"
-></app-skeleton>
+<app-skeleton [width]="'200px'" [height]="'100px'" [borderRadius]="'8px'"></app-skeleton>
 ```
 
 **Inputs**:
+
 - `width` (string): Width of skeleton (default: '100%')
 - `height` (string): Height of skeleton (default: '20px')
 - `borderRadius` (string): Border radius (default: '4px')
@@ -1603,11 +1617,7 @@ Loading skeleton screen component.
 
 ```typescript
 import { inject } from '@angular/core';
-import { 
-  initializeGeminiClient, 
-  composePromptForDevice,
-  createDeviceWallpaper 
-} from './services/pollinations.client';
+import { initializeGeminiClient, composePromptForDevice, createDeviceWallpaper } from './services/pollinations.client';
 import { ErrorHandlerService } from './services/error-handler.service';
 import { ImageUtilService } from './services/image-util.service';
 import { ValidationService } from './services/validation.service';
@@ -1616,40 +1626,39 @@ class WallpaperGenerator {
   private errorHandler = inject(ErrorHandlerService);
   private imageUtil = inject(ImageUtilService);
   private validation = inject(ValidationService);
-  
+
   async generate(userPrompt: string) {
     // Validate input
     const validationResult = this.validation.validatePrompt(userPrompt);
     if (!validationResult.isValid) {
       throw this.errorHandler.createError(validationResult.errors[0]);
     }
-    
+
     try {
       // Initialize Gemini
       initializeGeminiClient('your-api-key');
-      
+
       // Compose enhanced prompt
       const prompt = await composePromptForDevice(
         { width: 1920, height: 1080, dpr: 2 },
-        { 
+        {
           styles: ['Vibrant', 'Detailed'],
-          basePrompt: userPrompt 
+          basePrompt: userPrompt,
         }
       );
-      
+
       // Generate wallpaper
       const { blob } = await createDeviceWallpaper({
         device: { width: 1920, height: 1080, dpr: 2 },
         supported: { '16:9': [{ w: 1920, h: 1080 }] },
         prompt,
-        options: { model: 'flux', enhance: true }
+        options: { model: 'flux', enhance: true },
       });
-      
+
       // Create thumbnail
       const thumbnail = await this.imageUtil.makeThumbnail(blob);
-      
+
       return { blob, thumbnail, prompt };
-      
     } catch (error) {
       this.errorHandler.handleError(error, 'WallpaperGenerator');
       throw error;
@@ -1695,5 +1704,6 @@ try {
 ---
 
 For more information, see:
+
 - [ARCHITECTURE.md](./ARCHITECTURE.md)
 - [DEVELOPMENT.md](./DEVELOPMENT.md)

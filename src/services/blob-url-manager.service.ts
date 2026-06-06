@@ -24,11 +24,12 @@ export class BlobUrlManagerService {
    * Revoke a blob URL and remove it from tracking.
    */
   revokeUrl(url: string): void {
-    if (this.activeUrls.has(url)) {
-      URL.revokeObjectURL(url);
-      this.activeUrls.delete(url);
-      this.logger.debug(`Revoked blob URL: ${url}`, undefined, 'BlobUrlManager');
+    if (!url.startsWith('blob:')) {
+      return;
     }
+    URL.revokeObjectURL(url);
+    this.activeUrls.delete(url);
+    this.logger.debug(`Revoked blob URL: ${url}`, undefined, 'BlobUrlManager');
   }
 
   /**

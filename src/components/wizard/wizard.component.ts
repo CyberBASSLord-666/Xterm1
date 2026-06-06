@@ -14,6 +14,7 @@ import { ToastService } from '../../services/toast.service';
 import { GalleryService } from '../../services/gallery.service';
 import { SettingsService } from '../../services/settings.service';
 import { GenerationService } from '../../services/generation.service';
+import { WizardStateService } from '../../services/wizard-state.service';
 import {
   composePromptForDevice,
   computeExactFitTarget,
@@ -48,6 +49,7 @@ export class WizardComponent implements OnInit {
   galleryService = inject(GalleryService);
   settingsService = inject(SettingsService);
   generationService = inject(GenerationService);
+  wizardStateService = inject(WizardStateService);
 
   // --- Local State ---
   process = signal<'compose' | null>(null);
@@ -186,8 +188,6 @@ export class WizardComponent implements OnInit {
 
   currentStyles = computed(() => [...this.selectedPreset().styles, ...this.baseQualityStyles]);
 
-  private readonly historyKey = 'polliwall.promptHistory';
-  private readonly wizardSettingsKey = 'polliwall.wizardSettings';
   promptHistory = signal<string[]>([]);
   isHistoryOpen = signal(false);
 
@@ -271,33 +271,24 @@ export class WizardComponent implements OnInit {
   // --- End of type-safe event handlers ---
 
   private loadWizardSettings(): void {
-    const saved = localStorage.getItem(this.wizardSettingsKey);
-    if (saved) {
-      try {
-        const settings = JSON.parse(saved);
-        if (settings.selectedModel) {
-          this.selectedModel.set(settings.selectedModel);
-        }
-        if (typeof settings.enhancePrompt === 'boolean') {
-          this.enhancePrompt.set(settings.enhancePrompt);
-        }
-        if ('seed' in settings && (settings.seed === null || typeof settings.seed === 'number')) {
-          this.seed.set(settings.seed ?? undefined);
-        }
-      } catch (e) {
-        console.error('Failed to parse wizard settings from localStorage', e);
-        localStorage.removeItem(this.wizardSettingsKey);
-      }
+    const settings = this.wizardStateService.loadSettings();
+    if (settings.selectedModel) {
+      this.selectedModel.set(settings.selectedModel);
+    }
+    if (typeof settings.enhancePrompt === 'boolean') {
+      this.enhancePrompt.set(settings.enhancePrompt);
+    }
+    if (typeof settings.seed === 'number') {
+      this.seed.set(settings.seed);
     }
   }
 
   private saveWizardSettings(): void {
-    const settings = {
+    this.wizardStateService.saveSettings({
       selectedModel: this.selectedModel(),
       enhancePrompt: this.enhancePrompt(),
       seed: this.seed(),
-    };
-    localStorage.setItem(this.wizardSettingsKey, JSON.stringify(settings));
+    });
   }
 
   async loadModels(): Promise<void> {
@@ -307,9 +298,8 @@ export class WizardComponent implements OnInit {
       if (!models.includes(this.selectedModel())) {
         this.selectedModel.set(models.includes('flux') ? 'flux' : models[0] || '');
       }
-    } catch (e) {
+    } catch {
       this.toastService.show('Could not load image models.');
-      console.error(e);
     }
   }
 
@@ -319,14 +309,7 @@ export class WizardComponent implements OnInit {
   }
 
   private loadHistory(): void {
-    const saved = localStorage.getItem(this.historyKey);
-    if (saved) {
-      try {
-        this.promptHistory.set(JSON.parse(saved));
-      } catch {
-        this.promptHistory.set([]);
-      }
-    }
+    this.promptHistory.set(this.wizardStateService.loadHistory());
   }
 
   private updateHistory(newPrompt: string): void {
@@ -334,7 +317,7 @@ export class WizardComponent implements OnInit {
     const currentHistory = this.promptHistory().filter((p) => p !== newPrompt);
     const updatedHistory = [newPrompt, ...currentHistory].slice(0, 10);
     this.promptHistory.set(updatedHistory);
-    localStorage.setItem(this.historyKey, JSON.stringify(updatedHistory));
+    this.wizardStateService.saveHistory(updatedHistory);
   }
 
   useHistoryPrompt(p: string): void {
@@ -345,7 +328,7 @@ export class WizardComponent implements OnInit {
 
   clearHistory(): void {
     this.promptHistory.set([]);
-    localStorage.removeItem(this.historyKey);
+    this.wizardStateService.clearHistory();
     this.isHistoryOpen.set(false);
     this.toastService.show('Prompt history cleared.');
   }

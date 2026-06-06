@@ -6,7 +6,7 @@
     "app": {
       "projectType": "application",
       "root": "",
-      "sourceRoot": ".",
+      "sourceRoot": "src",
       "prefix": "app",
       "architect": {
         "build": {
@@ -14,10 +14,10 @@
           "options": {
             "outputPath": "dist/app",
             "index": "index.html",
-            "browser": "index.tsx",
+            "browser": "src/main.ts",
             "tsConfig": "tsconfig.json",
             "inlineStyleLanguage": "css",
-            "allowedCommonJsDependencies": ["jszip"],
+            "allowedCommonJsDependencies": ["jszip", "p-retry"],
             "optimization": {
               "scripts": false,
               "styles": false,

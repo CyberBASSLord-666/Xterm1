@@ -144,7 +144,7 @@ describe('pollinations.client integration', () => {
     expect(wallpaper.aspect).toBe('16:9');
   });
 
-  it('filters image models against supported allowlist', async () => {
+  it('normalizes image models while preserving provider-supported additions', async () => {
     (globalThis.fetch as jest.Mock).mockImplementation(() =>
       Promise.resolve({
         ok: true,
@@ -153,7 +153,7 @@ describe('pollinations.client integration', () => {
     );
 
     const models = await listImageModels();
-    expect(models).toEqual(['flux']);
+    expect(models).toEqual(['flux', 'legacy-model']);
   });
 
   it('returns available text models without modification', async () => {

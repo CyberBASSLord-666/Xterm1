@@ -38,7 +38,7 @@
   "github.copilot.editor.enableAutoCompletions": true,
   "github.copilot.chat.localeOverride": "en",
   "github.copilot.inlineSuggest.enable": true,
-  
+
   // ========== TYPESCRIPT SETTINGS ==========
   "typescript.tsdk": "node_modules/typescript/lib",
   "typescript.enablePromptUseWorkspaceTsdk": true,
@@ -46,7 +46,7 @@
   "typescript.updateImportsOnFileMove.enabled": "always",
   "typescript.suggest.autoImports": true,
   "typescript.preferences.quoteStyle": "single",
-  
+
   // ========== JAVASCRIPT SETTINGS ==========
   "javascript.preferences.quoteStyle": "single",
   "javascript.updateImportsOnFileMove.enabled": "always",
@@ -127,12 +127,7 @@
 
   // ========== ESLINT SETTINGS ==========
   "eslint.enable": true,
-  "eslint.validate": [
-    "javascript",
-    "javascriptreact",
-    "typescript",
-    "typescriptreact"
-  ],
+  "eslint.validate": ["javascript", "javascriptreact", "typescript", "typescriptreact"],
   "eslint.run": "onType",
   "eslint.codeActionsOnSave.mode": "all",
 

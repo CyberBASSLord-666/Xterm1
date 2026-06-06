@@ -216,7 +216,7 @@ describe('Agentic Swarm - Agent Configuration Tests', () => {
       });
 
       it('should have responsibilities with sufficient detail (min 100 chars each)', () => {
-        agent.responsibilities.forEach((responsibility, index) => {
+        agent.responsibilities.forEach((responsibility) => {
           expect(responsibility.length).toBeGreaterThanOrEqual(100);
         });
       });

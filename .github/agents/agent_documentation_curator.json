@@ -32,28 +32,16 @@
         "DEPLOYMENT.md",
         "DEPLOYMENT_SECURITY.md"
       ],
-      "testing_documentation": [
-        "TEST_COVERAGE.md",
-        "E2E_TESTING.md"
-      ],
+      "testing_documentation": ["TEST_COVERAGE.md", "E2E_TESTING.md"],
       "operational_documentation": [
         "CHANGELOG.md",
         "PRODUCTION_READINESS_REPORT.md",
         "PRODUCTION_LINE_GUIDE.md",
         "QUALITY_METRICS.md"
       ],
-      "planning_documentation": [
-        "PLAN.md",
-        "PLAN_OF_RECORD_TEMPLATE.md"
-      ],
-      "compliance_documentation": [
-        "docs/XSS_PREVENTION.md",
-        "docs/DEPENDABOT_STRATEGY.md"
-      ],
-      "agent_documentation": [
-        ".github/AGENT_WORKFLOW.md",
-        "AGENT_WORKFLOW_EXECUTION_LOG.md"
-      ]
+      "planning_documentation": ["PLAN.md", "PLAN_OF_RECORD_TEMPLATE.md"],
+      "compliance_documentation": ["docs/XSS_PREVENTION.md", "docs/DEPENDABOT_STRATEGY.md"],
+      "agent_documentation": [".github/AGENT_WORKFLOW.md", "AGENT_WORKFLOW_EXECUTION_LOG.md"]
     },
     "documentation_standards": {
       "markdown_style": {
@@ -91,16 +79,7 @@
     },
     "changelog_management": {
       "format": "keep_a_changelog",
-      "categories": [
-        "Added",
-        "Changed",
-        "Deprecated",
-        "Removed",
-        "Fixed",
-        "Security",
-        "Performance",
-        "Accessibility"
-      ],
+      "categories": ["Added", "Changed", "Deprecated", "Removed", "Fixed", "Security", "Performance", "Accessibility"],
       "version_format": "semantic",
       "require_issue_links": true,
       "require_commit_references": true,

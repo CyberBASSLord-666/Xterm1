@@ -24,49 +24,49 @@
  * - Safe: skips common build and vendor directories.
  */
 
-import fs from "node:fs";
-import path from "node:path";
+import fs from 'node:fs';
+import path from 'node:path';
 
 const repoRoot = process.cwd();
-const outputPath = path.join(repoRoot, "gpt", "file-map.json");
+const outputPath = path.join(repoRoot, 'gpt', 'file-map.json');
 
 // Directories to skip
 const SKIP_DIRS = new Set([
-  ".git",
-  ".github",
-  "node_modules",
-  "dist",
-  "build",
-  "out",
-  ".next",
-  "coverage",
-  "tmp",
-  "temp"
+  '.git',
+  '.github',
+  'node_modules',
+  'dist',
+  'build',
+  'out',
+  '.next',
+  'coverage',
+  'tmp',
+  'temp',
 ]);
 
 // File extensions to index
 const INTERESTING_EXTS = new Set([
-  ".ts",
-  ".tsx",
-  ".js",
-  ".jsx",
-  ".mjs",
-  ".cjs",
-  ".json",
-  ".md",
-  ".mdx",
-  ".yml",
-  ".yaml",
-  ".toml",
-  ".sh",
-  ".bash"
+  '.ts',
+  '.tsx',
+  '.js',
+  '.jsx',
+  '.mjs',
+  '.cjs',
+  '.json',
+  '.md',
+  '.mdx',
+  '.yml',
+  '.yaml',
+  '.toml',
+  '.sh',
+  '.bash',
 ]);
 
 function main() {
   ensureDir(path.dirname(outputPath));
   const entries = [];
 
-  walk(repoRoot, "", entries);
+  walk(repoRoot, '', entries);
 
   // Stable sort by path
   entries.sort((a, b) => a.path.localeCompare(b.path));
@@ -74,20 +74,20 @@ function main() {
   const payload = {
     generatedAt: new Date().toISOString(),
     root: repoRoot,
-    entries
+    entries,
   };
 
-  fs.writeFileSync(outputPath, JSON.stringify(payload, null, 2) + "\n", "utf8");
+  fs.writeFileSync(outputPath, JSON.stringify(payload, null, 2) + '\n', 'utf8');
   console.log(`Wrote ${outputPath} with ${entries.length} entries.`);
 }
 
 function walk(root, rel, entries) {
-  const dirPath = path.join(root, rel || ".");
+  const dirPath = path.join(root, rel || '.');
   const dirents = fs.readdirSync(dirPath, { withFileTypes: true });
 
   for (const dirent of dirents) {
     const name = dirent.name;
-    if (name === "." || name === "..") continue;
+    if (name === '.' || name === '..') continue;
 
     const relPath = rel ? path.join(rel, name) : name;
     const fullPath = path.join(root, relPath);
@@ -107,16 +107,16 @@ function walk(root, rel, entries) {
     const tags = deriveTags(relPath, ext);
 
     entries.push({
-      path: relPath.replace(/\\/g, "/"),
+      path: relPath.replace(/\\/g, '/'),
       size: stat.size,
       ext,
-      tags
+      tags,
     });
   }
 }
 
 function deriveTags(relPath, ext) {
-  const segments = relPath.replace(/\\/g, "/").split("/");
+  const segments = relPath.replace(/\\/g, '/').split('/');
   const tags = new Set();
 
   for (const segment of segments.slice(0, -1)) {
@@ -125,7 +125,7 @@ function deriveTags(relPath, ext) {
   }
 
   if (ext) {
-    tags.add(ext.replace(/^\./, ""));
+    tags.add(ext.replace(/^\./, ''));
   }
 
   return Array.from(tags).sort();

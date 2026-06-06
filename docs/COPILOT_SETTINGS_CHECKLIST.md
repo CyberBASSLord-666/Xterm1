@@ -3,6 +3,7 @@
 This document provides a comprehensive checklist of GitHub repository and account settings that should be configured to ensure GitHub Copilot has full access and all features are enabled, aligned with the permissions granted in `.github/copilot-instructions.md`.
 
 ## Table of Contents
+
 1. [Account-Level Settings](#account-level-settings)
 2. [Repository-Level Settings](#repository-level-settings)
 3. [Organization-Level Settings](#organization-level-settings-if-applicable)
@@ -18,12 +19,14 @@ This document provides a comprehensive checklist of GitHub repository and accoun
 **Location:** `https://github.com/settings/copilot`
 
 ✅ **Required Settings:**
+
 - [ ] **Copilot Subscription Active**: Ensure you have an active GitHub Copilot subscription (Individual, Pro, Business, or Enterprise)
 - [ ] **Copilot Chat Enabled**: Enable GitHub Copilot Chat
 - [ ] **Suggestions Matching Public Code**: Configure preference (Allowed/Blocked/Notify)
   - Recommendation: Set to "Allowed" for full functionality, or "Notify" for transparency
 
 **Action Required:**
+
 ```
 1. Go to: https://github.com/settings/copilot
 2. Verify subscription is active
@@ -40,12 +43,14 @@ This document provides a comprehensive checklist of GitHub repository and accoun
 **Location:** `https://github.com/[owner]/[repo]/settings/copilot`
 
 ✅ **Required Settings:**
+
 - [ ] **Copilot Enabled**: Repository must allow Copilot access
 - [ ] **Content Exclusions**: Review and configure (if using Business/Enterprise)
   - By default, NO files should be excluded to grant full access
   - Only exclude sensitive files if absolutely necessary (e.g., `.env`, `secrets.json`)
 
 **Action Required:**
+
 ```
 1. Go to: https://github.com/CyberBASSLord-666/Xterm1/settings/copilot
 2. Ensure Copilot is enabled for the repository
@@ -58,10 +63,12 @@ This document provides a comprehensive checklist of GitHub repository and accoun
 **Location:** `https://github.com/[owner]/[repo]/settings/access`
 
 ✅ **Required Settings:**
+
 - [ ] **Your Access Level**: Ensure you have Admin or Write access to use Copilot fully
 - [ ] **Copilot Access for Team Members**: All contributors should have appropriate access
 
 **Action Required:**
+
 ```
 1. Go to: https://github.com/CyberBASSLord-666/Xterm1/settings/access
 2. Verify your permission level (Admin recommended)
@@ -73,11 +80,13 @@ This document provides a comprehensive checklist of GitHub repository and accoun
 **Location:** `https://github.com/[owner]/[repo]/settings/branches`
 
 ✅ **Recommended Settings for Copilot:**
+
 - [ ] **Copilot Code Review**: Enable automated code review (Business/Enterprise)
 - [ ] **Pull Request Reviews**: Configure to allow Copilot-generated suggestions
 - [ ] **Status Checks**: Do not block Copilot-generated commits (unless for CI/CD)
 
 **Action Required:**
+
 ```
 1. Go to: https://github.com/CyberBASSLord-666/Xterm1/settings/branches
 2. Review branch protection rules
@@ -90,11 +99,13 @@ This document provides a comprehensive checklist of GitHub repository and accoun
 **Location:** `https://github.com/[owner]/[repo]/settings/actions`
 
 ✅ **Required Settings for Full Access:**
+
 - [ ] **Actions Permissions**: Allow all actions and reusable workflows
 - [ ] **Workflow Permissions**: Set to "Read and write permissions"
   - This aligns with Copilot's authority to modify CI/CD workflows
 
 **Action Required:**
+
 ```
 1. Go to: https://github.com/CyberBASSLord-666/Xterm1/settings/actions
 2. Under "Actions permissions", select "Allow all actions and reusable workflows"
@@ -107,6 +118,7 @@ This document provides a comprehensive checklist of GitHub repository and accoun
 **Location:** `https://github.com/[owner]/[repo]/settings/security_analysis`
 
 ✅ **Required Settings:**
+
 - [ ] **Dependabot Alerts**: Enabled (Copilot can help resolve)
 - [ ] **Dependabot Security Updates**: Enabled
 - [ ] **Dependabot Version Updates**: Configure in `.github/dependabot.yml`
@@ -114,6 +126,7 @@ This document provides a comprehensive checklist of GitHub repository and accoun
 - [ ] **Secret Scanning**: Enable (protects against accidental commits)
 
 **Action Required:**
+
 ```
 1. Go to: https://github.com/CyberBASSLord-666/Xterm1/settings/security_analysis
 2. Enable all security features
@@ -131,6 +144,7 @@ If this repository is part of an organization, additional settings may need conf
 **Location:** `https://github.com/organizations/[org]/settings/copilot`
 
 ✅ **Required Settings:**
+
 - [ ] **Copilot Access**: Grant access to organization members
 - [ ] **Policies**: Review organization-wide Copilot policies
   - Ensure policies don't restrict repository-level access
@@ -138,6 +152,7 @@ If this repository is part of an organization, additional settings may need conf
   - Should align with repository-level permissions
 
 **Action Required:**
+
 ```
 1. Go to: https://github.com/organizations/[org]/settings/copilot
 2. Ensure organization members have Copilot access
@@ -150,11 +165,13 @@ If this repository is part of an organization, additional settings may need conf
 **Location:** `https://github.com/organizations/[org]/settings/oauth_application_policy`
 
 ✅ **Required Settings:**
+
 - [ ] **GitHub Copilot OAuth App**: Must be authorized
 - [ ] **GitHub Copilot Workspace**: Authorize (for advanced features)
 - [ ] **GitHub Copilot CLI**: Authorize (if using terminal features)
 
 **Action Required:**
+
 ```
 1. Go to: https://github.com/organizations/[org]/settings/oauth_application_policy
 2. Search for "GitHub Copilot" apps
@@ -171,12 +188,14 @@ If this repository is part of an organization, additional settings may need conf
 **Location:** `.vscode/settings.json` (in repository)
 
 ✅ **Required Settings:** (Already configured in this repository)
+
 - [x] **Copilot Enabled**: `github.copilot.enable` set appropriately
 - [x] **Auto Completions**: `github.copilot.editor.enableAutoCompletions: true`
 - [x] **Inline Suggestions**: `github.copilot.inlineSuggest.enable: true`
 - [x] **Chat Enabled**: Copilot Chat extension installed and enabled
 
 **Verification:**
+
 ```bash
 # Check if settings.json exists
 cat .vscode/settings.json | grep copilot
@@ -187,13 +206,15 @@ cat .vscode/settings.json | grep copilot
 **Location:** `~/.config/Code/User/settings.json` (Linux/macOS) or `%APPDATA%\Code\User\settings.json` (Windows)
 
 ✅ **Personal Settings to Check:**
-- [ ] **Copilot Extensions Installed**: 
+
+- [ ] **Copilot Extensions Installed**:
   - `github.copilot`
   - `github.copilot-chat`
 - [ ] **OAuth Token Valid**: Sign in to GitHub Copilot in VS Code
 - [ ] **Network Access**: Ensure no proxy/firewall blocking Copilot APIs
 
 **Action Required:**
+
 ```
 1. Open VS Code Command Palette (Ctrl+Shift+P / Cmd+Shift+P)
 2. Run: "GitHub Copilot: Sign In"
@@ -218,6 +239,7 @@ npm run verify:copilot
 ```
 
 This script will automatically check:
+
 - ✓ Local configuration files
 - ✓ Git configuration
 - ✓ Node.js/npm setup
@@ -292,12 +314,14 @@ After running the automated script, complete these manual verification steps:
 ### Issue: Copilot Not Suggesting Code
 
 **Possible Causes:**
+
 - Subscription inactive or expired
 - Repository not accessible to Copilot
 - Content exclusions blocking files
 - Network/proxy issues
 
 **Solutions:**
+
 1. Verify subscription at https://github.com/settings/copilot
 2. Check repository settings for content exclusions
 3. Review VS Code Copilot extension status
@@ -306,11 +330,13 @@ After running the automated script, complete these manual verification steps:
 ### Issue: Copilot Can't Access Specific Files
 
 **Possible Causes:**
+
 - Content exclusions configured at repo/org level
 - File language not enabled in Copilot settings
 - `.gitignore` or file permissions issues
 
 **Solutions:**
+
 1. Check content exclusions in repository settings
 2. Review `.vscode/settings.json` for `github.copilot.enable` settings
 3. Verify file is tracked by Git
@@ -318,11 +344,13 @@ After running the automated script, complete these manual verification steps:
 ### Issue: Limited Copilot Features
 
 **Possible Causes:**
+
 - Individual subscription instead of Business/Enterprise
 - Organization policies restricting features
 - OAuth app not authorized with full "repo" scope
 
 **Solutions:**
+
 1. Upgrade to Copilot Pro/Business/Enterprise if needed
 2. Review organization settings and policies
 3. Re-authorize Copilot OAuth app with full permissions
@@ -332,6 +360,7 @@ After running the automated script, complete these manual verification steps:
 ## Current Status for Xterm1 Repository
 
 ### Configured ✅
+
 - [x] `.github/copilot-instructions.md` - Grants full repository access
 - [x] `.vscode/settings.json` - Copilot settings aligned
 - [x] `.vscode/extensions.json` - Copilot extensions recommended
@@ -340,6 +369,7 @@ After running the automated script, complete these manual verification steps:
 - [x] npm script `verify:copilot` - Easy verification command
 
 ### Requires Manual Verification ⚠️
+
 - [ ] GitHub account Copilot subscription active
 - [ ] Repository-level Copilot settings reviewed
 - [ ] No unnecessary content exclusions configured
@@ -349,6 +379,7 @@ After running the automated script, complete these manual verification steps:
 ### Action Items 📋
 
 **Repository Owner Should:**
+
 1. **Run verification script**: `npm run verify:copilot` to check local configuration
 2. Visit `https://github.com/CyberBASSLord-666/Xterm1/settings/copilot` and verify settings
 3. Visit `https://github.com/CyberBASSLord-666/Xterm1/settings/actions` and enable full permissions
@@ -368,6 +399,7 @@ After running the automated script, complete these manual verification steps:
 ---
 
 ## Last Updated
+
 **Date**: 2026-01-08  
 **By**: GitHub Copilot  
 **Version**: 1.0

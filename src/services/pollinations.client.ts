@@ -35,14 +35,14 @@ const geminiModel = 'gemini-2.0-flash-exp';
  * Initialize the Gemini AI client with an API key.
  * This must be called before using any Gemini-powered features.
  * The @google/genai package is loaded dynamically to reduce initial bundle size.
- * 
+ *
  * **BREAKING CHANGE (v0.1.0):** This function is now async and returns a Promise.
  * Callers must await this function or handle the Promise appropriately.
- * 
+ *
  * @param apiKey - The Gemini API key for authentication
  * @returns Promise that resolves when the client is initialized
  * @throws {Error} If the SDK fails to load or initialization fails
- * 
+ *
  * @example
  * ```typescript
  * try {
@@ -66,7 +66,9 @@ export async function initializeGeminiClient(apiKey: string): Promise<void> {
     console.error('Failed to load Gemini AI client:', error);
     // Provide more specific error context for debugging
     const errorMessage = error instanceof Error ? error.message : String(error);
-    throw new Error(`Failed to initialize AI features: ${errorMessage}. The application will continue to function, but AI-powered features will be unavailable.`);
+    throw new Error(
+      `Failed to initialize AI features: ${errorMessage}. The application will continue to function, but AI-powered features will be unavailable.`
+    );
   }
 }
 
@@ -81,6 +83,13 @@ function ensureGeminiClient(): GoogleGenAIType {
 }
 
 type RequestFn<T> = () => Promise<T>;
+
+interface QueueItem<T> {
+  requestFn: RequestFn<T>;
+  resolve: (value: T) => void;
+  reject: (reason?: Error) => void;
+  abortController?: AbortController;
+}
 
 /** User-friendly error messages for common HTTP errors. */
 const HTTP_ERROR_MESSAGES = {
@@ -117,7 +126,7 @@ function parseApiErrorMessage(errorText: string): string {
  * Handle HTTP response errors and return appropriate error message.
  * Returns an Error object for server errors (5xx) and rate limiting (429).
  * Returns an Error object for client errors (4xx) which should NOT be retried.
- * 
+ *
  * @param response - The HTTP response to handle
  * @returns Promise<Error> for 5xx/429 (retryable) or 4xx (non-retryable)
  */
@@ -139,7 +148,7 @@ async function handleHttpError(response: Response): Promise<{ error: Error; shou
 
 /**
  * Perform a single fetch attempt with timeout.
- * 
+ *
  * @param url - The URL to fetch
  * @param timeout - Timeout in milliseconds
  * @returns Object containing either response or error, plus shouldRetry flag
@@ -182,7 +191,7 @@ function calculateBackoffDelay(attempt: number): number {
  * Fetch with automatic retries and exponential backoff.
  * Only retries on transient failures (5xx, 429, network errors, timeouts).
  * Client errors (4xx) are not retried as they indicate invalid requests.
- * 
+ *
  * @param url - The URL to fetch
  * @param options - Configuration for timeout and retry attempts
  * @returns Promise resolving to the successful Response
@@ -223,15 +232,13 @@ async function fetchWithRetries(url: string, options: { timeout: number; retries
  * Supports request cancellation via AbortSignal.
  */
 class RequestQueue {
-  private queue: Array<{
-    requestFn: RequestFn<any>; // eslint-disable-line @typescript-eslint/no-explicit-any
-    resolve: (value: any) => void; // eslint-disable-line @typescript-eslint/no-explicit-any
-    reject: (reason?: Error) => void;
-    abortController?: AbortController;
-  }> = [];
+  private queue: QueueItem<unknown>[] = [];
   private isProcessing = false;
 
-  constructor(private interval: number) {}
+  constructor(
+    private interval: number,
+    private maxQueueSize = 50
+  ) {}
 
   /**
    * Adds a request function to the queue.
@@ -241,7 +248,11 @@ class RequestQueue {
    */
   add<T>(requestFn: RequestFn<T>, abortController?: AbortController): Promise<T> {
     return new Promise<T>((resolve, reject) => {
-      this.queue.push({ requestFn, resolve, reject, abortController });
+      if (this.queue.length >= this.maxQueueSize) {
+        reject(new Error('Request queue is full. Please try again later.'));
+        return;
+      }
+      this.queue.push({ requestFn, resolve: resolve as (value: unknown) => void, reject, abortController });
       if (!this.isProcessing) {
         void this.processQueue();
       }
@@ -288,9 +299,7 @@ class RequestQueue {
       const result = await requestFn();
       resolve(result);
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Queue request failed:', error);
-      reject(error as Error);
+      reject(error instanceof Error ? error : new Error(String(error)));
     } finally {
       setTimeout(() => {
         void this.processQueue();
@@ -397,37 +406,29 @@ export async function createDeviceWallpaper({
   return { blob, ...target };
 }
 
-const USABLE_IMAGE_MODELS = [
-  'flux',
-  'sdxl',
-  'playground-v2.5',
-  'dall-e-3',
-  'dall-e-2',
-  'stable-diffusion-2.1',
-  'turbo',
-  'dreamshaper',
-  'realvisxl',
-];
+const PREFERRED_IMAGE_MODEL_ORDER = ['flux', 'turbo', 'sdxl'] as const;
+
+function normalizeModelList(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const models = value.filter((model): model is string => typeof model === 'string' && model.trim().length > 0);
+  const uniqueModels = [...new Set(models.map((model) => model.trim()))];
+  return uniqueModels.sort((a, b) => {
+    const aIndex = PREFERRED_IMAGE_MODEL_ORDER.indexOf(a as (typeof PREFERRED_IMAGE_MODEL_ORDER)[number]);
+    const bIndex = PREFERRED_IMAGE_MODEL_ORDER.indexOf(b as (typeof PREFERRED_IMAGE_MODEL_ORDER)[number]);
+    if (aIndex !== -1 || bIndex !== -1) {
+      return (aIndex === -1 ? Number.MAX_SAFE_INTEGER : aIndex) - (bIndex === -1 ? Number.MAX_SAFE_INTEGER : bIndex);
+    }
+    return a.localeCompare(b);
+  });
+}
 
 export function listImageModels(): Promise<string[]> {
   const url = `https://image.pollinations.ai/models`;
   return textQueue.add(async () => {
     const response = await fetchWithRetries(url, { timeout: 15000, retries: 3 });
-    const allModels = (await response.json()) as string[];
-
-    const usableModels = allModels.filter((m) => USABLE_IMAGE_MODELS.includes(m));
-
-    if (usableModels.length === 0 && allModels.length > 0) {
-      console.warn("Image model whitelist may be outdated. Falling back to default 'flux'.");
-      return allModels.includes('flux') ? ['flux'] : [];
-    }
-
-    // Ensure flux is first if available, as it's a good default.
-    if (usableModels.includes('flux')) {
-      return ['flux', ...usableModels.filter((m) => m !== 'flux')];
-    }
-
-    return usableModels;
+    return normalizeModelList(await response.json());
   });
 }
 

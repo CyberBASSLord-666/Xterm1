@@ -62,11 +62,12 @@ This document describes the comprehensive Dependabot configuration strategy impl
 
 ### Update Schedule
 
-| Day | Time | Timezone | Frequency | Open PR Limit |
-|-----|------|----------|-----------|---------------|
-| Monday | 7:00 AM | America/Denver (MT) | Weekly | 3 PRs max |
+| Day    | Time    | Timezone            | Frequency | Open PR Limit |
+| ------ | ------- | ------------------- | --------- | ------------- |
+| Monday | 7:00 AM | America/Denver (MT) | Weekly    | 3 PRs max     |
 
-**Rationale**: 
+**Rationale**:
+
 - Mondays allow full week for testing and resolution
 - Morning time ensures human reviewers are available
 - Weekly frequency balances currency with stability
@@ -92,37 +93,37 @@ This document describes the comprehensive Dependabot configuration strategy impl
 version: 2
 
 updates:
-  - package-ecosystem: "npm"
-    directory: "/"
-    
+  - package-ecosystem: 'npm'
+    directory: '/'
+
     schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "07:00"
-      timezone: "America/Denver"
-    
-    target-branch: "main"
+      interval: 'weekly'
+      day: 'monday'
+      time: '07:00'
+      timezone: 'America/Denver'
+
+    target-branch: 'main'
     open-pull-requests-limit: 3
-    rebase-strategy: "disabled"
-    versioning-strategy: "increase-if-necessary"
-    
+    rebase-strategy: 'disabled'
+    versioning-strategy: 'increase-if-necessary'
+
     reviewers:
-      - "CyberBASSLord-666"
+      - 'CyberBASSLord-666'
     assignees:
-      - "CyberBASSLord-666"
-    
+      - 'CyberBASSLord-666'
+
     labels:
-      - "dependencies"
-      - "npm"
-      - "automated"
-    
+      - 'dependencies'
+      - 'npm'
+      - 'automated'
+
     pull-request-branch-name:
-      separator: "-"
-    
+      separator: '-'
+
     commit-message:
-      prefix: "chore(deps)"
-      include: "scope"
-    
+      prefix: 'chore(deps)'
+      include: 'scope'
+
     # Optional: Ignore specific packages if needed
     ignore:
       # Example: Ignore major version updates for Angular
@@ -136,10 +137,10 @@ updates:
 
 ```yaml
 schedule:
-  interval: "weekly"      # Run once per week
-  day: "monday"           # Monday morning
-  time: "07:00"           # 7:00 AM
-  timezone: "America/Denver"  # Mountain Time
+  interval: 'weekly' # Run once per week
+  day: 'monday' # Monday morning
+  time: '07:00' # 7:00 AM
+  timezone: 'America/Denver' # Mountain Time
 ```
 
 - **Weekly**: Balances staying current with stability
@@ -149,9 +150,9 @@ schedule:
 #### PR Management
 
 ```yaml
-open-pull-requests-limit: 3  # Maximum concurrent PRs
-rebase-strategy: "disabled"  # Preserve merge history
-versioning-strategy: "increase-if-necessary"  # Conservative updates
+open-pull-requests-limit: 3 # Maximum concurrent PRs
+rebase-strategy: 'disabled' # Preserve merge history
+versioning-strategy: 'increase-if-necessary' # Conservative updates
 ```
 
 - **PR Limit (3)**: Prevents overwhelming reviewers
@@ -162,15 +163,15 @@ versioning-strategy: "increase-if-necessary"  # Conservative updates
 
 ```yaml
 labels:
-  - "dependencies"
-  - "npm"
-  - "automated"
+  - 'dependencies'
+  - 'npm'
+  - 'automated'
 
 reviewers:
-  - "CyberBASSLord-666"
+  - 'CyberBASSLord-666'
 
 assignees:
-  - "CyberBASSLord-666"
+  - 'CyberBASSLord-666'
 ```
 
 - Auto-labels for easy filtering
@@ -181,11 +182,12 @@ assignees:
 
 ```yaml
 commit-message:
-  prefix: "chore(deps)"
-  include: "scope"
+  prefix: 'chore(deps)'
+  include: 'scope'
 ```
 
 **Examples**:
+
 - `chore(deps): bump @angular/core from 20.0.0 to 20.1.0`
 - `chore(deps-dev): bump @types/node from 18.0.0 to 18.1.0`
 
@@ -204,11 +206,12 @@ Dependabot groups related dependencies together to reduce PR count and ensure co
 ```yaml
 groups:
   npm-security:
-    applies-to: "security-updates"
-    patterns: ["*"]
+    applies-to: 'security-updates'
+    patterns: ['*']
 ```
 
 **Behavior**:
+
 - All security updates grouped into one PR
 - Created immediately when vulnerabilities detected
 - Should be reviewed and merged ASAP
@@ -221,14 +224,15 @@ groups:
 ```yaml
 angular-ecosystem:
   patterns:
-    - "@angular/*"
-    - "@angular-devkit/*"
-    - "@angular-eslint/*"
-    - "ng-packagr"
-    - "zone.js"
+    - '@angular/*'
+    - '@angular-devkit/*'
+    - '@angular-eslint/*'
+    - 'ng-packagr'
+    - 'zone.js'
 ```
 
 **Behavior**:
+
 - All Angular-related packages updated together
 - Ensures version compatibility
 - Typically requires testing before merge
@@ -240,16 +244,17 @@ angular-ecosystem:
 
 ```yaml
 dev-dependencies:
-  dependency-type: "development"
+  dependency-type: 'development'
   patterns:
-    - "@types/*"
-    - "eslint*"
-    - "prettier"
-    - "jest*"
-    - "@playwright/*"
+    - '@types/*'
+    - 'eslint*'
+    - 'prettier'
+    - 'jest*'
+    - '@playwright/*'
 ```
 
 **Behavior**:
+
 - Development tools updated together
 - Lower risk (doesn't affect production)
 - Can often auto-merge patch/minor updates
@@ -261,12 +266,13 @@ dev-dependencies:
 
 ```yaml
 production-dependencies:
-  dependency-type: "production"
+  dependency-type: 'production'
   exclude-patterns:
-    - "@angular/*"
+    - '@angular/*'
 ```
 
 **Behavior**:
+
 - Non-Angular production dependencies
 - Requires testing before merge
 - Review for breaking changes
@@ -281,6 +287,7 @@ production-dependencies:
 Dependencies can be auto-merged when **ALL** conditions are met:
 
 ✅ **Required Conditions**:
+
 1. Update type is **patch** or **minor** (not major)
 2. All CI checks pass (tests, linting, build)
 3. No security vulnerabilities introduced
@@ -288,6 +295,7 @@ Dependencies can be auto-merged when **ALL** conditions are met:
 5. No manual review requested
 
 ❌ **Never Auto-Merge**:
+
 - Major version updates (breaking changes possible)
 - Security updates (require human review of fix)
 - Angular core packages (critical to application)
@@ -327,21 +335,19 @@ jobs:
 ### When Manual Review Required
 
 **Always Review**:
+
 1. **Major Version Updates**
    - Breaking changes likely
    - Review changelog and migration guide
    - Test thoroughly in staging
-   
 2. **Angular Core Packages**
    - `@angular/core`, `@angular/common`, etc.
    - Critical to application stability
    - Follow Angular update guide
-   
 3. **Security Updates**
    - Understand vulnerability impact
    - Verify fix doesn't introduce regressions
    - Update security documentation if needed
-   
 4. **Large Dependency Updates**
    - Multiple packages updated at once
    - Significant version jumps
@@ -404,12 +410,12 @@ du -h dist/
 
 ### Security Priority Levels
 
-| Severity | Response Time | Auto-Merge | Deployment |
-|----------|---------------|------------|------------|
-| **Critical** | < 4 hours | No (manual review) | Immediate |
-| **High** | < 24 hours | No (manual review) | Same day |
-| **Medium** | < 1 week | Maybe (if patch/minor) | Next release |
-| **Low** | < 1 month | Yes (if patch) | Next release |
+| Severity     | Response Time | Auto-Merge             | Deployment   |
+| ------------ | ------------- | ---------------------- | ------------ |
+| **Critical** | < 4 hours     | No (manual review)     | Immediate    |
+| **High**     | < 24 hours    | No (manual review)     | Same day     |
+| **Medium**   | < 1 week      | Maybe (if patch/minor) | Next release |
+| **Low**      | < 1 month     | Yes (if patch)         | Next release |
 
 ### Security Alert Handling
 
@@ -459,6 +465,7 @@ du -h dist/
    - Prevents group blocking
 
 4. **Added Registry Configuration**
+
    ```yaml
    registries:
      npm-registry:
@@ -467,8 +474,9 @@ du -h dist/
    ```
 
 5. **Security Hardening**
+
    ```yaml
-   insecure-external-code-execution: "deny"
+   insecure-external-code-execution: 'deny'
    ```
 
 6. **Enhanced Grouping**
@@ -479,11 +487,13 @@ du -h dist/
 ### Previous Versions
 
 **Version 2.0.1** (2025-10-15):
+
 - Initial professional configuration
 - Added basic grouping
 - Configured weekly schedule
 
 **Version 1.0.0** (Pre-Bedrock):
+
 - Basic Dependabot configuration
 - Daily updates (too frequent)
 - No grouping or auto-merge
@@ -499,11 +509,13 @@ du -h dist/
 **Symptom**: More than 3 dependency PRs open
 
 **Causes**:
+
 - PR limit increased temporarily
 - Long-running PRs not merged
 - CI failures blocking auto-merge
 
 **Solution**:
+
 ```bash
 # Review and merge/close oldest PRs
 # Update PR limit in dependabot.yml if needed
@@ -515,12 +527,14 @@ du -h dist/
 **Symptom**: No PRs for > 1 week
 
 **Causes**:
+
 - Schedule configuration issue
 - Branch protection blocking
 - Dependabot disabled
 - No updates available
 
 **Solution**:
+
 1. Check `.github/dependabot.yml` syntax
 2. Verify schedule settings
 3. Check repository settings → Dependabot
@@ -531,12 +545,14 @@ du -h dist/
 **Symptom**: PRs not auto-merging despite passing CI
 
 **Causes**:
+
 - Branch protection requires reviews
 - Major version update (excluded)
 - CI checks failing
 - Auto-merge workflow disabled
 
 **Solution**:
+
 1. Check branch protection rules
 2. Verify CI all green
 3. Check `.github/workflows/dependabot-auto-merge.yml`
@@ -547,11 +563,13 @@ du -h dist/
 **Symptom**: Security PRs not created promptly
 
 **Causes**:
+
 - Open PR limit reached
 - Dependabot not scanning
 - Vulnerability not in GitHub advisory
 
 **Solution**:
+
 1. Merge or close non-critical PRs
 2. Manually run: `npm audit`
 3. Check GitHub Advisory Database

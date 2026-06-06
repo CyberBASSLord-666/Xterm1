@@ -199,7 +199,12 @@
           {
             "name": "pre_release_validation",
             "parallel": true,
-            "agents": ["code_quality_enforcer", "security_guardian", "test_automation_orchestrator", "documentation_curator"],
+            "agents": [
+              "code_quality_enforcer",
+              "security_guardian",
+              "test_automation_orchestrator",
+              "documentation_curator"
+            ],
             "continue_on_failure": false
           },
           {

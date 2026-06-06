@@ -28,6 +28,7 @@
 Xterm1 employs a comprehensive, production-grade testing strategy using multiple testing frameworks and methodologies to ensure code quality, reliability, and security.
 
 **Testing Frameworks**:
+
 - **Jest 30.2.0** - Unit testing (with jest-preset-angular 16.0.0)
 - **Playwright 1.45.0** - End-to-end testing
 - **Istanbul** - Code coverage analysis (via Jest)
@@ -77,27 +78,24 @@ export default {
   testEnvironment: 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/setup-jest.ts'],
   testMatch: ['**/__tests__/**/*.spec.ts'],
-  collectCoverageFrom: [
-    'src/**/*.ts',
-    '!src/**/*.spec.ts',
-    '!src/**/*.types.ts',
-    '!src/main.ts',
-    '!src/polyfills.ts'
-  ],
+  collectCoverageFrom: ['src/**/*.ts', '!src/**/*.spec.ts', '!src/**/*.types.ts', '!src/main.ts', '!src/polyfills.ts'],
   coverageThreshold: {
     global: {
       branches: 46,
       functions: 41,
       lines: 49,
-      statements: 49
-    }
+      statements: 49,
+    },
   },
   transform: {
-    '^.+\\.ts$': ['jest-preset-angular', {
-      tsconfig: '<rootDir>/tsconfig.spec.json',
-      stringifyContentPathRegex: '\\.(html|svg)$'
-    }]
-  }
+    '^.+\\.ts$': [
+      'jest-preset-angular',
+      {
+        tsconfig: '<rootDir>/tsconfig.spec.json',
+        stringifyContentPathRegex: '\\.(html|svg)$',
+      },
+    ],
+  },
 };
 ```
 
@@ -147,6 +145,7 @@ npm test -- --verbose
 ### Unit Test Structure
 
 **Pattern**:
+
 ```typescript
 import { TestBed } from '@angular/core/testing';
 import { ServiceName } from './service-name.service';
@@ -154,44 +153,41 @@ import { ServiceName } from './service-name.service';
 describe('ServiceName', () => {
   let service: ServiceName;
   let mockDependency: jest.Mocked<DependencyService>;
-  
+
   beforeEach(() => {
     // Setup mocks
     mockDependency = {
-      method: jest.fn().mockResolvedValue('result')
+      method: jest.fn().mockResolvedValue('result'),
     } as any;
-    
+
     // Configure TestBed
     TestBed.configureTestingModule({
-      providers: [
-        ServiceName,
-        { provide: DependencyService, useValue: mockDependency }
-      ]
+      providers: [ServiceName, { provide: DependencyService, useValue: mockDependency }],
     });
-    
+
     service = TestBed.inject(ServiceName);
   });
-  
+
   afterEach(() => {
     jest.clearAllMocks();
   });
-  
+
   it('should process data successfully', async () => {
     // Arrange
     const input = 'test input';
-    
+
     // Act
     const result = await service.process(input);
-    
+
     // Assert
     expect(result).toBe('expected output');
     expect(mockDependency.method).toHaveBeenCalledWith(input);
   });
-  
+
   it('should handle errors gracefully', async () => {
     // Arrange
     mockDependency.method.mockRejectedValue(new Error('test error'));
-    
+
     // Act & Assert
     await expect(service.process('input')).rejects.toThrow('test error');
   });
@@ -203,6 +199,7 @@ describe('ServiceName', () => {
 #### Foundation Services
 
 ##### LoggerService (95%+ coverage)
+
 ```typescript
 describe('LoggerService', () => {
   it('should log debug messages with context', () => {
@@ -210,13 +207,13 @@ describe('LoggerService', () => {
     service.debug('test message', { data: 'value' }, 'TestService');
     expect(spy).toHaveBeenCalled();
   });
-  
+
   it('should track log history', () => {
     service.info('test 1');
     service.info('test 2');
     expect(service.getHistory()).toHaveLength(2);
   });
-  
+
   it('should enforce history size limits', () => {
     for (let i = 0; i < 1500; i++) {
       service.info(`log ${i}`);
@@ -227,6 +224,7 @@ describe('LoggerService', () => {
 ```
 
 ##### ValidationService (95%+ coverage)
+
 ```typescript
 describe('ValidationService - XSS Prevention', () => {
   it('should remove script tags', () => {
@@ -234,13 +232,13 @@ describe('ValidationService - XSS Prevention', () => {
     const result = service.sanitizeHtml(input);
     expect(result).toBe('');
   });
-  
+
   it('should remove event handlers', () => {
     const input = '<div onclick="alert(1)">Click</div>';
     const result = service.sanitizeHtml(input);
     expect(result).not.toContain('onclick');
   });
-  
+
   it('should block dangerous protocols', () => {
     const input = '<a href="javascript:alert(1)">Click</a>';
     const result = service.sanitizeHtml(input);
@@ -250,17 +248,15 @@ describe('ValidationService - XSS Prevention', () => {
 ```
 
 ##### ErrorHandlerService (90%+ coverage)
+
 ```typescript
 describe('ErrorHandlerService', () => {
   it('should handle errors with logging and toast', () => {
     const error = new Error('Test error');
     service.handleError(error);
-    
+
     expect(mockLogger.error).toHaveBeenCalled();
-    expect(mockToast.show).toHaveBeenCalledWith(
-      expect.stringContaining('error'),
-      'error'
-    );
+    expect(mockToast.show).toHaveBeenCalledWith(expect.stringContaining('error'), 'error');
   });
 });
 ```
@@ -268,24 +264,25 @@ describe('ErrorHandlerService', () => {
 #### Feature Services
 
 ##### GalleryService (90%+ coverage)
+
 ```typescript
 describe('GalleryService', () => {
   it('should perform CRUD operations on IndexedDB', async () => {
     const item = { prompt: 'test', imageUrl: 'data:image/png;base64,...' };
-    
+
     // Create
     const id = await service.addItem(item);
     expect(id).toBeDefined();
-    
+
     // Read
     const retrieved = await service.getItem(id);
     expect(retrieved.prompt).toBe('test');
-    
+
     // Update
     await service.updateItem(id, { prompt: 'updated' });
     const updated = await service.getItem(id);
     expect(updated.prompt).toBe('updated');
-    
+
     // Delete
     await service.deleteItem(id);
     const deleted = await service.getItem(id);
@@ -310,36 +307,36 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  
+
   reporter: [
     ['html', { outputFolder: 'playwright-report' }],
     ['json', { outputFile: 'playwright-report/results.json' }],
-    ['list']
+    ['list'],
   ],
-  
+
   use: {
     baseURL: 'http://localhost:4200',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
     navigationTimeout: 10000,
-    actionTimeout: 10000
+    actionTimeout: 10000,
   },
-  
+
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
     { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
     { name: 'webkit', use: { ...devices['Desktop Safari'] } },
     { name: 'Mobile Chrome', use: { ...devices['Pixel 5'] } },
-    { name: 'Mobile Safari', use: { ...devices['iPhone 12'] } }
+    { name: 'Mobile Safari', use: { ...devices['iPhone 12'] } },
   ],
-  
+
   webServer: {
     command: 'npm start',
     url: 'http://localhost:4200',
     reuseExistingServer: !process.env.CI,
-    timeout: 120000
-  }
+    timeout: 120000,
+  },
 });
 ```
 
@@ -388,6 +385,7 @@ npx playwright show-report
 ### E2E Test Structure
 
 **Pattern**:
+
 ```typescript
 import { test, expect } from '@playwright/test';
 
@@ -395,14 +393,14 @@ test.describe('Feature Name', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
   });
-  
+
   test('should perform user action', async ({ page }) => {
     // Arrange
     await page.fill('[data-testid="input"]', 'value');
-    
+
     // Act
     await page.click('[data-testid="submit"]');
-    
+
     // Assert
     await expect(page.locator('[data-testid="result"]')).toBeVisible();
   });
@@ -412,12 +410,14 @@ test.describe('Feature Name', () => {
 ### Locator Strategy
 
 **Priority Order**:
+
 1. `data-testid` attributes (best)
 2. ARIA roles and labels
 3. Text content
 4. CSS selectors (last resort)
 
 **Examples**:
+
 ```typescript
 // Preferred: data-testid
 await page.click('[data-testid="generate-button"]');
@@ -434,11 +434,11 @@ await page.click('text=Generate Image');
 
 ### Browser Coverage
 
-| Browser | Desktop | Mobile | Status |
-|---------|---------|--------|--------|
-| **Chromium** | ✅ | ✅ (Pixel 5) | Full coverage |
-| **Firefox** | ✅ | N/A | Full coverage |
-| **WebKit** | ✅ | ✅ (iPhone 12) | Full coverage |
+| Browser      | Desktop | Mobile         | Status        |
+| ------------ | ------- | -------------- | ------------- |
+| **Chromium** | ✅      | ✅ (Pixel 5)   | Full coverage |
+| **Firefox**  | ✅      | N/A            | Full coverage |
+| **WebKit**   | ✅      | ✅ (iPhone 12) | Full coverage |
 
 ---
 
@@ -447,6 +447,7 @@ await page.click('text=Generate Image');
 ### Current Metrics
 
 **Overall Coverage**:
+
 ```json
 {
   "branches": 50,
@@ -458,31 +459,33 @@ await page.click('text=Generate Image');
 
 **Status**: ✅ All thresholds met
 
-| Metric | Threshold | Current | Status |
-|--------|-----------|---------|--------|
-| **Branches** | 46% | ~71% | ✅ Pass |
-| **Functions** | 41% | ~84% | ✅ Pass |
-| **Lines** | 49% | ~84% | ✅ Pass |
-| **Statements** | 49% | ~84% | ✅ Pass |
+| Metric         | Threshold | Current | Status  |
+| -------------- | --------- | ------- | ------- |
+| **Branches**   | 46%       | ~71%    | ✅ Pass |
+| **Functions**  | 41%       | ~84%    | ✅ Pass |
+| **Lines**      | 49%       | ~84%    | ✅ Pass |
+| **Statements** | 49%       | ~84%    | ✅ Pass |
 
 ### Coverage by Category
 
-| Category | Files | Coverage | Priority |
-|----------|-------|----------|----------|
-| **Core Services** | 21 | 85%+ | Critical |
-| **Components** | 10 | 60%+ | High |
-| **Utilities** | 5 | 75%+ | High |
-| **Directives** | 1 | 70%+ | Medium |
-| **Types** | 3 | N/A | N/A |
+| Category          | Files | Coverage | Priority |
+| ----------------- | ----- | -------- | -------- |
+| **Core Services** | 21    | 85%+     | Critical |
+| **Components**    | 10    | 60%+     | High     |
+| **Utilities**     | 5     | 75%+     | High     |
+| **Directives**    | 1     | 70%+     | Medium   |
+| **Types**         | 3     | N/A      | N/A      |
 
 ### Coverage Reports
 
 **Generated Reports**:
+
 - `coverage/lcov-report/index.html` - HTML coverage report (interactive)
 - `coverage/lcov.info` - LCOV format (for CI integration)
 - `coverage/coverage-final.json` - JSON format (machine-readable)
 
 **View HTML Report**:
+
 ```bash
 npm run test:coverage
 open coverage/lcov-report/index.html
@@ -493,16 +496,19 @@ open coverage/lcov-report/index.html
 **Goals (Next 6 Months)**:
 
 **Phase 1: Foundation** (Month 1-2)
+
 - [ ] Increase unit coverage to 70%
 - [ ] Add missing service tests
 - [ ] Improve component test coverage to 80%
 
 **Phase 2: Expansion** (Month 3-4)
+
 - [ ] Increase unit coverage to 80%
 - [ ] Add visual regression tests
 - [ ] Improve E2E test coverage to 25+ tests
 
 **Phase 3: Excellence** (Month 5-6)
+
 - [ ] Achieve 85%+ unit coverage
 - [ ] 100% coverage on critical services
 - [ ] Full accessibility test suite
@@ -515,6 +521,7 @@ open coverage/lcov-report/index.html
 ### DO ✅
 
 **1. Use descriptive test names**
+
 ```typescript
 test('should generate image when valid prompt is submitted', async ({ page }) => {
   // Test implementation
@@ -522,6 +529,7 @@ test('should generate image when valid prompt is submitted', async ({ page }) =>
 ```
 
 **2. Test user behavior, not implementation**
+
 ```typescript
 // Good: Tests what user does
 await page.fill('[data-testid="prompt-input"]', 'A sunset');
@@ -533,18 +541,19 @@ await expect(page.locator('[data-testid="image-result"]')).toBeVisible();
 ```
 
 **3. Use Page Object Model for complex flows**
+
 ```typescript
 class WizardPage {
   constructor(private page: Page) {}
-  
+
   async enterPrompt(prompt: string) {
     await this.page.fill('[data-testid="prompt-input"]', prompt);
   }
-  
+
   async clickGenerate() {
     await this.page.click('[data-testid="generate-button"]');
   }
-  
+
   async waitForResult() {
     await this.page.waitForSelector('[data-testid="image-result"]');
   }
@@ -552,6 +561,7 @@ class WizardPage {
 ```
 
 **4. Clean up test data**
+
 ```typescript
 test.afterEach(async ({ page }) => {
   await page.evaluate(() => {
@@ -562,12 +572,13 @@ test.afterEach(async ({ page }) => {
 ```
 
 **5. Test error scenarios**
+
 ```typescript
 test('should show error when API fails', async ({ page, context }) => {
-  await context.route('**/api/generate', route => {
+  await context.route('**/api/generate', (route) => {
     route.abort('failed');
   });
-  
+
   await page.click('[data-testid="generate-button"]');
   await expect(page.locator('[data-testid="error-message"]')).toBeVisible();
 });
@@ -576,6 +587,7 @@ test('should show error when API fails', async ({ page, context }) => {
 ### DON'T ❌
 
 **1. Don't use hard-coded waits**
+
 ```typescript
 // Bad
 await page.waitForTimeout(5000);
@@ -585,6 +597,7 @@ await expect(element).toBeVisible();
 ```
 
 **2. Don't test implementation details**
+
 ```typescript
 // Bad
 expect(page.locator('.internal-class')).toBeTruthy();
@@ -594,6 +607,7 @@ await expect(page.locator('[data-testid="feature"]')).toBeVisible();
 ```
 
 **3. Don't make tests interdependent**
+
 ```typescript
 // Bad: Test B depends on Test A
 test('A: create item', ...);
@@ -643,6 +657,7 @@ npx playwright show-trace trace.zip
 ### VSCode Debug Configuration
 
 **`.vscode/launch.json`**:
+
 ```json
 {
   "version": "0.2.0",
@@ -671,6 +686,7 @@ npx playwright show-trace trace.zip
 ### Troubleshooting Common Issues
 
 **Issue**: Tests timing out
+
 ```typescript
 // Solution: Increase timeout
 test('long running test', async ({ page }) => {
@@ -680,6 +696,7 @@ test('long running test', async ({ page }) => {
 ```
 
 **Issue**: Flaky tests
+
 ```typescript
 // Solution: Add explicit waits
 await page.waitForLoadState('networkidle');
@@ -687,6 +704,7 @@ await expect(element).toBeVisible();
 ```
 
 **Issue**: Element not found
+
 ```typescript
 // Solution: Use better selectors
 // Bad: await page.click('.btn')
@@ -700,6 +718,7 @@ await expect(element).toBeVisible();
 ### GitHub Actions Configuration
 
 **E2E Testing** (`.github/workflows/ci.yml`):
+
 ```yaml
 e2e:
   runs-on: ubuntu-latest
@@ -719,6 +738,7 @@ e2e:
 ```
 
 **Unit Testing** (`.github/workflows/ci.yml`):
+
 ```yaml
 test:
   runs-on: ubuntu-latest
@@ -754,15 +774,16 @@ test:
 ### Automated A11y Checks
 
 **Using axe-core integration**:
+
 ```typescript
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
 test('should not have accessibility violations', async ({ page }) => {
   await page.goto('/');
-  
+
   const accessibilityScanResults = await new AxeBuilder({ page }).analyze();
-  
+
   expect(accessibilityScanResults.violations).toEqual([]);
 });
 ```
@@ -770,30 +791,32 @@ test('should not have accessibility violations', async ({ page }) => {
 ### Manual A11y Tests
 
 **Keyboard Navigation**:
+
 ```typescript
 test('should navigate with keyboard', async ({ page }) => {
   await page.goto('/');
-  
+
   // Tab through interactive elements
   await page.keyboard.press('Tab');
   await expect(page.locator(':focus')).toHaveAttribute('data-testid', 'first-input');
-  
+
   await page.keyboard.press('Tab');
   await expect(page.locator(':focus')).toHaveAttribute('data-testid', 'second-input');
-  
+
   // Activate with Enter/Space
   await page.keyboard.press('Enter');
 });
 ```
 
 **ARIA Labels**:
+
 ```typescript
 test('should have proper ARIA labels', async ({ page }) => {
   await page.goto('/');
-  
+
   const button = page.locator('button[aria-label="Generate Image"]');
   await expect(button).toBeVisible();
-  
+
   const input = page.locator('input[aria-label="Image prompt"]');
   await expect(input).toBeVisible();
 });
@@ -802,6 +825,7 @@ test('should have proper ARIA labels', async ({ page }) => {
 ### WCAG 2.1 AA Compliance
 
 **Coverage** (90%+ tested):
+
 - ✅ Keyboard navigation
 - ✅ Screen reader support (ARIA labels)
 - ✅ Focus management
@@ -819,16 +843,14 @@ test('should have proper ARIA labels', async ({ page }) => {
 ```typescript
 test('should load quickly', async ({ page }) => {
   const startTime = Date.now();
-  
+
   await page.goto('/');
-  
+
   const loadTime = Date.now() - startTime;
   expect(loadTime).toBeLessThan(3000); // 3 second threshold
-  
+
   // Web Vitals
-  const metrics = await page.evaluate(() => 
-    JSON.stringify(performance.getEntries())
-  );
+  const metrics = await page.evaluate(() => JSON.stringify(performance.getEntries()));
   console.log('Performance metrics:', metrics);
 });
 ```
@@ -836,6 +858,7 @@ test('should load quickly', async ({ page }) => {
 ### Core Web Vitals
 
 **Target**: "Good" rating
+
 - **LCP** (Largest Contentful Paint): < 2.5s
 - **FID** (First Input Delay): < 100ms
 - **CLS** (Cumulative Layout Shift): < 0.1
@@ -872,13 +895,13 @@ test('should load quickly', async ({ page }) => {
 
 ### Test Quality Metrics
 
-| Metric | Value | Target | Status |
-|--------|-------|--------|--------|
-| **Test Count** | 165 | 200+ | 🟡 In Progress |
-| **Pass Rate** | 97.6% | 100% | 🟢 Good |
-| **Test Duration** | ~30s | <60s | 🟢 Excellent |
-| **Flaky Tests** | 0 | 0 | 🟢 Perfect |
-| **Coverage** | 55% | 70%+ | 🟡 Improving |
+| Metric            | Value | Target | Status         |
+| ----------------- | ----- | ------ | -------------- |
+| **Test Count**    | 165   | 200+   | 🟡 In Progress |
+| **Pass Rate**     | 97.6% | 100%   | 🟢 Good        |
+| **Test Duration** | ~30s  | <60s   | 🟢 Excellent   |
+| **Flaky Tests**   | 0     | 0      | 🟢 Perfect     |
+| **Coverage**      | 55%   | 70%+   | 🟡 Improving   |
 
 ### Key Strengths
 
@@ -900,5 +923,5 @@ test('should load quickly', async ({ page }) => {
 
 ---
 
-*This testing documentation is the definitive reference for all testing in Xterm1.*  
-*Last Updated: 2025-12-26 | Documentation Consolidation Complete*
+_This testing documentation is the definitive reference for all testing in Xterm1._  
+_Last Updated: 2025-12-26 | Documentation Consolidation Complete_

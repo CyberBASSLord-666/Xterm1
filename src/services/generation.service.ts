@@ -1,18 +1,20 @@
-import { Injectable, signal, inject } from '@angular/core';
+import { Injectable, OnDestroy, inject, signal } from '@angular/core';
 import { GalleryService } from './gallery.service';
 import { ToastService } from './toast.service';
 import { ImageUtilService } from './image-util.service';
 import { LoggerService } from './logger.service';
+import { BlobUrlManagerService } from './blob-url-manager.service';
 import { createDeviceWallpaper, ImageOptions, DeviceInfo, SupportedResolutions } from './pollinations.client';
 import { GalleryItem } from './idb';
 import { UI_CONFIG, IMAGE_PRESETS, ERROR_MESSAGES } from '../constants';
 
 @Injectable({ providedIn: 'root' })
-export class GenerationService {
-  private galleryService = inject(GalleryService);
-  private imageUtilService = inject(ImageUtilService);
-  private toastService = inject(ToastService);
-  private logger = inject(LoggerService);
+export class GenerationService implements OnDestroy {
+  private readonly galleryService = inject(GalleryService);
+  private readonly imageUtilService = inject(ImageUtilService);
+  private readonly toastService = inject(ToastService);
+  private readonly logger = inject(LoggerService);
+  private readonly blobUrlManager = inject(BlobUrlManagerService);
 
   readonly status = signal<'idle' | 'generating' | 'saving' | 'error' | 'success'>('idle');
   readonly statusMessage = signal('');
@@ -34,16 +36,11 @@ export class GenerationService {
     }
 
     this.reset();
-
     this.status.set('generating');
-    this.statusMessage.set(this.generatingMessages[0]);
+    this.statusMessage.set(this.generatingMessages[0] ?? 'Generating wallpaper');
     this.toastService.show('Sending prompt to AI for generation...');
 
-    let messageIndex = 1;
-    this.messageInterval = window.setInterval(() => {
-      this.statusMessage.set(this.generatingMessages[messageIndex % this.generatingMessages.length]);
-      messageIndex++;
-    }, UI_CONFIG.GENERATION_MESSAGE_INTERVAL);
+    this.startProgressMessages();
 
     try {
       const { blob, width, height, aspect, mode } = await createDeviceWallpaper({
@@ -53,75 +50,118 @@ export class GenerationService {
         options,
       });
 
-      clearInterval(this.messageInterval);
-      this.messageInterval = undefined;
-
+      this.clearProgressMessages();
       this.status.set('saving');
       this.statusMessage.set('Saving to gallery');
       this.toastService.show('Image received, saving to your gallery...');
 
-      const id = crypto.randomUUID();
-      const createdAt = new Date().toISOString();
-      const thumb = await this.imageUtilService.makeThumbnail(blob);
-
-      const galleryItem: GalleryItem = {
-        id,
-        createdAt,
+      const galleryItem = await this.createGalleryItem({
+        blob,
         width,
         height,
         aspect,
         mode,
-        model: options.model!,
+        options,
         prompt,
-        blob,
-        thumb,
         presetName,
-        isFavorite: false,
-        collectionId: null,
-        seed: options.seed,
-      };
-
+      });
       await this.galleryService.add(galleryItem);
 
-      const blobUrl = URL.createObjectURL(blob);
-      this.currentGenerationResult.set({ galleryItem, blobUrl });
+      const blobUrl = this.blobUrlManager.createUrl(blob);
+      this.replaceCurrentResult({ galleryItem, blobUrl });
 
       this.status.set('success');
       this.statusMessage.set('Wallpaper saved to gallery.');
       this.toastService.show('Wallpaper generated and saved to gallery.');
     } catch (e: unknown) {
       this.status.set('error');
-      const error = e as Error;
-      const errorMessage = `Generation failed: ${error.message || String(e)}`;
+      const error = e instanceof Error ? e : new Error(String(e));
+      const errorMessage = `Generation failed: ${error.message}`;
       this.statusMessage.set(errorMessage);
       this.toastService.show(errorMessage);
       this.logger.error('Wallpaper generation failed', error, 'GenerationService');
-      
-      // Clean up any blob URL that might have been created
-      const currentResult = this.currentGenerationResult();
-      if (currentResult) {
-        URL.revokeObjectURL(currentResult.blobUrl);
-        this.currentGenerationResult.set(null);
-      }
+      this.releaseCurrentResult();
     } finally {
-      if (this.messageInterval) {
-        clearInterval(this.messageInterval);
-        this.messageInterval = undefined;
-      }
+      this.clearProgressMessages();
     }
   }
 
   reset(): void {
-    if (this.messageInterval) {
+    this.clearProgressMessages();
+    this.releaseCurrentResult();
+    this.status.set('idle');
+    this.statusMessage.set('');
+  }
+
+  ngOnDestroy(): void {
+    this.reset();
+  }
+
+  private startProgressMessages(): void {
+    let messageIndex = 1;
+    this.messageInterval = window.setInterval(() => {
+      this.statusMessage.set(
+        this.generatingMessages[messageIndex % this.generatingMessages.length] ?? 'Generating wallpaper'
+      );
+      messageIndex++;
+    }, UI_CONFIG.GENERATION_MESSAGE_INTERVAL);
+  }
+
+  private clearProgressMessages(): void {
+    if (this.messageInterval !== undefined) {
       clearInterval(this.messageInterval);
       this.messageInterval = undefined;
     }
+  }
+
+  private async createGalleryItem({
+    blob,
+    width,
+    height,
+    aspect,
+    mode,
+    options,
+    prompt,
+    presetName,
+  }: {
+    blob: Blob;
+    width: number;
+    height: number;
+    aspect: string;
+    mode: 'exact' | 'constrained';
+    options: ImageOptions;
+    prompt: string;
+    presetName: string;
+  }): Promise<GalleryItem> {
+    const thumb = await this.imageUtilService.makeThumbnail(blob);
+    return {
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      width,
+      height,
+      aspect,
+      mode,
+      model: options.model ?? 'unknown',
+      prompt,
+      blob,
+      thumb,
+      presetName,
+      isFavorite: false,
+      collectionId: null,
+      seed: options.seed,
+    };
+  }
+
+  private replaceCurrentResult(result: { galleryItem: GalleryItem; blobUrl: string }): void {
+    this.releaseCurrentResult();
+    this.currentGenerationResult.set(result);
+  }
+
+  private releaseCurrentResult(): void {
     const currentResult = this.currentGenerationResult();
     if (currentResult) {
-      URL.revokeObjectURL(currentResult.blobUrl);
+      this.blobUrlManager.revokeUrl(currentResult.blobUrl);
+      this.currentGenerationResult.set(null);
     }
-    this.status.set('idle');
-    this.statusMessage.set('');
-    this.currentGenerationResult.set(null);
   }
 }

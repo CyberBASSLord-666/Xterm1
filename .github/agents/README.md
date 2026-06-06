@@ -19,25 +19,25 @@ This directory contains the complete Agentic Swarm configuration for the Xterm1 
 
 These agents are structured as rigorously validated, standards-compliant JSON files optimized for GitHub enterprise-grade automation systems.
 
-| # | Agent File | Size | Primary Function |
-|---|------------|------|------------------|
-| 1 | `agent_code_quality_enforcer.json` | 5.6KB | Code quality, linting, complexity analysis |
-| 2 | `agent_security_guardian.json` | 7.7KB | Security scanning, vulnerability management |
-| 3 | `agent_test_automation_orchestrator.json` | 7.5KB | Test execution, coverage analysis |
-| 4 | `agent_ci_cd_pipeline_manager.json` | 8.8KB | CI/CD orchestration, deployment |
-| 5 | `agent_dependency_lifecycle_manager.json` | 8.7KB | Dependency updates, security patches |
-| 6 | `agent_documentation_curator.json` | 8.9KB | Documentation maintenance, CHANGELOG |
-| 7 | `agent_issue_triage_coordinator.json` | 9.4KB | Issue classification, SLA tracking |
-| 8 | `agent_performance_optimization_engineer.json` | 9.3KB | Performance monitoring, optimization |
-| 9 | `agent_release_orchestration_manager.json` | 10KB | Release automation, versioning |
-| 10 | `agent_code_review_automation_agent.json` | 12KB | Automated PR review, quality gates |
-| 11 | `agent_monitoring_observability_specialist.json` | 13KB | Production monitoring, incident response |
-| 12 | `agent_accessibility_compliance_validator.json` | 13KB | WCAG 2.1 AA compliance, accessibility |
-| 13 | `agent_swarm_orchestration_coordinator.json` | 14KB | Multi-agent workflow coordination |
-| 14 | `agent_database_schema_manager.json` | 11KB | IndexedDB schema, migrations |
-| 15 | `agent_api_integration_validator.json` | 12KB | External API testing, resilience |
-| 16 | `agent_analytics_insights_agent.json` | 11KB | Business intelligence, KPIs |
-| 17 | `agent_compliance_audit_specialist.json` | 12KB | Regulatory compliance, licenses |
+| #   | Agent File                                       | Size  | Primary Function                            |
+| --- | ------------------------------------------------ | ----- | ------------------------------------------- |
+| 1   | `agent_code_quality_enforcer.json`               | 5.6KB | Code quality, linting, complexity analysis  |
+| 2   | `agent_security_guardian.json`                   | 7.7KB | Security scanning, vulnerability management |
+| 3   | `agent_test_automation_orchestrator.json`        | 7.5KB | Test execution, coverage analysis           |
+| 4   | `agent_ci_cd_pipeline_manager.json`              | 8.8KB | CI/CD orchestration, deployment             |
+| 5   | `agent_dependency_lifecycle_manager.json`        | 8.7KB | Dependency updates, security patches        |
+| 6   | `agent_documentation_curator.json`               | 8.9KB | Documentation maintenance, CHANGELOG        |
+| 7   | `agent_issue_triage_coordinator.json`            | 9.4KB | Issue classification, SLA tracking          |
+| 8   | `agent_performance_optimization_engineer.json`   | 9.3KB | Performance monitoring, optimization        |
+| 9   | `agent_release_orchestration_manager.json`       | 10KB  | Release automation, versioning              |
+| 10  | `agent_code_review_automation_agent.json`        | 12KB  | Automated PR review, quality gates          |
+| 11  | `agent_monitoring_observability_specialist.json` | 13KB  | Production monitoring, incident response    |
+| 12  | `agent_accessibility_compliance_validator.json`  | 13KB  | WCAG 2.1 AA compliance, accessibility       |
+| 13  | `agent_swarm_orchestration_coordinator.json`     | 14KB  | Multi-agent workflow coordination           |
+| 14  | `agent_database_schema_manager.json`             | 11KB  | IndexedDB schema, migrations                |
+| 15  | `agent_api_integration_validator.json`           | 12KB  | External API testing, resilience            |
+| 16  | `agent_analytics_insights_agent.json`            | 11KB  | Business intelligence, KPIs                 |
+| 17  | `agent_compliance_audit_specialist.json`         | 12KB  | Regulatory compliance, licenses             |
 
 ### Markdown Format Agents (GitHub Copilot)
 
@@ -45,21 +45,22 @@ These agents are structured as rigorously validated, standards-compliant JSON fi
 
 These agents are formatted for GitHub Copilot custom agent integration.
 
-| # | Agent File | Size | Primary Function |
-|---|------------|------|------------------|
-| 🌟 | `swarm-interface.md` | 7.6KB | **PRIMARY INTERFACE - Main entry point, delegation, coordination** |
-| 1 | `code-assistant.md` | 4.5KB | General coding and implementation |
-| 2 | `lead-architect.md` | 3.7KB | Architecture enforcement, planning |
-| 3 | `qa-engineer.md` | 3.2KB | Testing suite management |
-| 4 | `security-specialist.md` | 3.4KB | Security audits and remediation |
-| 5 | `devops-engineer.md` | 3.2KB | CI/CD and deployment configuration |
-| 6 | `my-janitor.md` | 2.9KB | Code cleanup and refactoring |
-| 7 | `technical-scribe.md` | 3.3KB | Documentation writing and maintenance |
-| 8 | `refactor-agent.md` | 7.0KB | **Advanced refactoring, feedback analysis, suggestion application** |
+| #   | Agent File               | Size  | Primary Function                                                    |
+| --- | ------------------------ | ----- | ------------------------------------------------------------------- |
+| 🌟  | `swarm-interface.md`     | 7.6KB | **PRIMARY INTERFACE - Main entry point, delegation, coordination**  |
+| 1   | `code-assistant.md`      | 4.5KB | General coding and implementation                                   |
+| 2   | `lead-architect.md`      | 3.7KB | Architecture enforcement, planning                                  |
+| 3   | `qa-engineer.md`         | 3.2KB | Testing suite management                                            |
+| 4   | `security-specialist.md` | 3.4KB | Security audits and remediation                                     |
+| 5   | `devops-engineer.md`     | 3.2KB | CI/CD and deployment configuration                                  |
+| 6   | `my-janitor.md`          | 2.9KB | Code cleanup and refactoring                                        |
+| 7   | `technical-scribe.md`    | 3.3KB | Documentation writing and maintenance                               |
+| 8   | `refactor-agent.md`      | 7.0KB | **Advanced refactoring, feedback analysis, suggestion application** |
 
 ### Primary Interface Agent
 
 The `swarm-interface` agent is the **main Copilot interface** for this repository. It:
+
 - Serves as the primary point of contact for all user interactions
 - Can handle tasks directly or delegate to specialist agents
 - Coordinates multi-agent workflows for complex tasks
@@ -104,28 +105,28 @@ The [`swarm-manifest.json`](./swarm-manifest.json) file provides a complete inve
 
 ### By Development Phase
 
-| Phase | Primary Agents | Secondary Agents |
-|-------|----------------|------------------|
-| **Planning** | swarm-orchestration-coordinator, lead-architect | - |
-| **Coding** | code-assistant, code-quality-enforcer | - |
-| **Review** | code-review-automation-agent | lead-architect |
-| **Testing** | test-automation-orchestrator | qa-engineer, accessibility-compliance-validator |
-| **Security** | security-guardian | security-specialist, compliance-audit-specialist |
-| **Build** | ci-cd-pipeline-manager | devops-engineer |
-| **Deploy** | ci-cd-pipeline-manager, release-orchestration-manager | devops-engineer |
-| **Monitor** | monitoring-observability-specialist | analytics-insights-agent |
+| Phase        | Primary Agents                                        | Secondary Agents                                 |
+| ------------ | ----------------------------------------------------- | ------------------------------------------------ |
+| **Planning** | swarm-orchestration-coordinator, lead-architect       | -                                                |
+| **Coding**   | code-assistant, code-quality-enforcer                 | -                                                |
+| **Review**   | code-review-automation-agent                          | lead-architect                                   |
+| **Testing**  | test-automation-orchestrator                          | qa-engineer, accessibility-compliance-validator  |
+| **Security** | security-guardian                                     | security-specialist, compliance-audit-specialist |
+| **Build**    | ci-cd-pipeline-manager                                | devops-engineer                                  |
+| **Deploy**   | ci-cd-pipeline-manager, release-orchestration-manager | devops-engineer                                  |
+| **Monitor**  | monitoring-observability-specialist                   | analytics-insights-agent                         |
 
 ### By Quality Aspect
 
-| Quality | Primary Agent | Enforcement Level |
-|---------|---------------|-------------------|
-| **Code Quality** | code-quality-enforcer | Merge Blocking |
-| **Security** | security-guardian | Merge Blocking |
-| **Test Coverage** | test-automation-orchestrator | Merge Blocking |
-| **Accessibility** | accessibility-compliance-validator | Merge Blocking |
-| **Performance** | performance-optimization-engineer | Warning |
-| **Documentation** | documentation-curator | Warning |
-| **Compliance** | compliance-audit-specialist | Merge Blocking |
+| Quality           | Primary Agent                      | Enforcement Level |
+| ----------------- | ---------------------------------- | ----------------- |
+| **Code Quality**  | code-quality-enforcer              | Merge Blocking    |
+| **Security**      | security-guardian                  | Merge Blocking    |
+| **Test Coverage** | test-automation-orchestrator       | Merge Blocking    |
+| **Accessibility** | accessibility-compliance-validator | Merge Blocking    |
+| **Performance**   | performance-optimization-engineer  | Warning           |
+| **Documentation** | documentation-curator              | Warning           |
+| **Compliance**    | compliance-audit-specialist        | Merge Blocking    |
 
 ---
 

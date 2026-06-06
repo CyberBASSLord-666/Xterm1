@@ -11,6 +11,7 @@ This directory contains professional validation and utility scripts for the Xter
 **Purpose**: Verify that GitHub Copilot is properly configured for this repository.
 
 **Features**:
+
 - Local configuration file validation (.github/copilot-instructions.md, .vscode/settings.json)
 - Git configuration checks
 - Node.js/npm setup verification
@@ -19,6 +20,7 @@ This directory contains professional validation and utility scripts for the Xter
 - Color-coded output with status indicators
 
 **Usage**:
+
 ```bash
 # Run directly
 ./scripts/verify-copilot-settings.sh
@@ -28,16 +30,19 @@ npm run verify:copilot
 ```
 
 **Output**:
+
 - ✓ Green checkmark: Passed
 - ✗ Red cross: Failed
 - ⚠ Yellow warning: Requires attention
 - ℹ Blue info: Information
 
 **Exit codes**:
+
 - `0`: All automated checks passed
 - `1`: Some checks failed
 
 **What it checks**:
+
 1. **Local Files**: copilot-instructions.md, settings.json, extensions.json, checklist
 2. **Git Config**: .gitignore, repository URL
 3. **Node/npm**: Installation and package.json
@@ -51,6 +56,7 @@ npm run verify:copilot
 **Purpose**: Comprehensive validation of Dependabot configuration files.
 
 **Features**:
+
 - YAML syntax validation
 - GitHub Dependabot schema compliance checking
 - Best practices audit
@@ -59,6 +65,7 @@ npm run verify:copilot
 - Documentation quality analysis
 
 **Usage**:
+
 ```bash
 # Validate default configuration
 python3 scripts/validate-dependabot.py
@@ -68,6 +75,7 @@ python3 scripts/validate-dependabot.py path/to/dependabot.yml
 ```
 
 **Output**:
+
 - Color-coded validation results
 - Detailed error messages
 - Warnings for potential issues
@@ -75,6 +83,7 @@ python3 scripts/validate-dependabot.py path/to/dependabot.yml
 - Exit code 0 for success, 1 for failures
 
 **Example Output**:
+
 ```
 Validating Dependabot Configuration
 File: .github/dependabot.yml
@@ -106,6 +115,7 @@ Configuration is valid and follows best practices!
 ## Validation Checks
 
 ### Schema Validation
+
 - Version number (must be 2)
 - Top-level keys (version, registries, updates)
 - Registry configurations
@@ -116,17 +126,20 @@ Configuration is valid and follows best practices!
 - Group configurations
 
 ### Best Practices
+
 - Rebase strategy configuration
 - PR limits matching group counts
 - Label configuration
 - Reviewer/assignee assignment
 
 ### Security Checks
+
 - External code execution settings
 - Security update group configuration
 - Registry configuration
 
 ### Operational Checks
+
 - Schedule conflict detection
 - Documentation quality (comment ratio analysis)
 
@@ -172,6 +185,7 @@ To add custom validation rules:
    - `_check_operations()` - Operational checks
 
 2. Add error/warning/info messages:
+
    ```python
    self.errors.append("Error message")
    self.warnings.append("Warning message")
@@ -195,6 +209,7 @@ To add custom validation rules:
 ## Support
 
 For issues or enhancements:
+
 1. Check the validation output for specific error messages
 2. Review GitHub's Dependabot documentation
 3. Open an issue with label `dependencies` and `tooling`

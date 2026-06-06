@@ -1,6 +1,10 @@
 import { Injectable } from '@angular/core';
 import { db, GalleryItem, Collection } from './idb';
 
+interface LegacyImageTransactionStore {
+  put(item: GalleryItem): Promise<unknown>;
+}
+
 @Injectable({ providedIn: 'root' })
 export class GalleryService {
   // Gallery Item Methods
@@ -88,16 +92,22 @@ export class GalleryService {
 
   async removeCollection(id: string): Promise<void> {
     const d = await db();
-    // Unset collectionId for all items in this collection first
-    const items = await d.getAllFromIndex('images', 'by_collectionId', id);
-    const tx = d.transaction('images', 'readwrite');
-    const updates = items.map((item) => {
-      item.collectionId = null;
-      return tx.store.put(item);
-    });
-    await Promise.all(updates);
+    const tx = d.transaction(['images', 'collections'], 'readwrite');
+    if ('objectStore' in tx && typeof tx.objectStore === 'function') {
+      const imageStore = tx.objectStore('images');
+      const collectionStore = tx.objectStore('collections');
+      const items = await imageStore.index('by_collectionId').getAll(id);
+      const updates = items.map((item) => imageStore.put({ ...item, collectionId: null }));
+      await Promise.all([...updates, collectionStore.delete(id)]);
+    } else {
+      const items = await d.getAllFromIndex('images', 'by_collectionId', id);
+      const imageStore = tx.store as LegacyImageTransactionStore | undefined;
+      if (!imageStore) {
+        throw new Error('Image transaction store unavailable.');
+      }
+      const updates = items.map((item) => imageStore.put({ ...item, collectionId: null }));
+      await Promise.all([...updates, d.delete('collections', id)]);
+    }
     await tx.done;
-
-    await d.delete('collections', id);
   }
 }

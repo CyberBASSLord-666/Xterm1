@@ -113,7 +113,7 @@ describe('SettingsService', () => {
 
   it('should load settings from localStorage on initialization', () => {
     const testSettings = {
-      referrer: 'stored-referrer',
+      referrer: 'https://stored.example/path',
       nologo: false,
       private: false,
       safe: false,
@@ -133,7 +133,7 @@ describe('SettingsService', () => {
     const newService = TestBed.inject(SettingsService);
     service = newService;
 
-    expect(service.referrer()).toBe('stored-referrer');
+    expect(service.referrer()).toBe('https://stored.example');
     expect(service.nologo()).toBe(false);
     expect(service.private()).toBe(false);
     expect(service.safe()).toBe(false);
