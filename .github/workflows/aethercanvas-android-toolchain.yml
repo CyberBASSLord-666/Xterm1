@@ -1,0 +1,88 @@
+name: AetherCanvas Android Toolchain
+
+on:
+  push:
+    branches:
+      - ci/aethercanvas-android-toolchain-20260901
+    paths:
+      - .github/workflows/aethercanvas-android-toolchain.yml
+
+permissions:
+  contents: read
+
+jobs:
+  package-toolchain:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install exact Android SDK components
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" --install \
+            'platforms;android-36' \
+            'build-tools;36.1.0' \
+            'platform-tools'
+          test -f "$ANDROID_SDK_ROOT/platforms/android-36/android.jar"
+          test -x "$ANDROID_SDK_ROOT/build-tools/36.1.0/apksigner"
+          test -x "$ANDROID_SDK_ROOT/build-tools/36.1.0/zipalign"
+          test -x "$ANDROID_SDK_ROOT/platform-tools/adb"
+
+      - name: Download and verify Gradle 8.13
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          curl --fail --location --retry 5 --retry-all-errors \
+            --output gradle-8.13-bin.zip \
+            https://services.gradle.org/distributions/gradle-8.13-bin.zip
+          echo '20f1b1176237254a6fc204d8434196fa11a4cfb387567519c61556e8710aed78  gradle-8.13-bin.zip' | sha256sum --check --strict
+          unzip -q gradle-8.13-bin.zip
+          test -x gradle-8.13/bin/gradle
+
+      - name: Package reproducible local toolchain
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p payload/android-sdk/{platforms,build-tools,platform-tools,licenses} payload/gradle
+          cp -a "$ANDROID_SDK_ROOT/platforms/android-36" payload/android-sdk/platforms/
+          cp -a "$ANDROID_SDK_ROOT/build-tools/36.1.0" payload/android-sdk/build-tools/
+          cp -a "$ANDROID_SDK_ROOT/platform-tools/." payload/android-sdk/platform-tools/
+          cp -a "$ANDROID_SDK_ROOT/licenses/." payload/android-sdk/licenses/
+          cp -a gradle-8.13 payload/gradle/
+          {
+            echo 'AetherCanvas local Android build toolchain'
+            echo 'Android SDK Platform: 36'
+            echo 'Android Build Tools: 36.1.0'
+            echo 'Gradle: 8.13'
+            echo 'Gradle distribution SHA-256: 20f1b1176237254a6fc204d8434196fa11a4cfb387567519c61556e8710aed78'
+            echo
+            java -version 2>&1
+            payload/android-sdk/build-tools/36.1.0/apksigner version
+            payload/android-sdk/platform-tools/adb version
+          } > payload/TOOLCHAIN_MANIFEST.txt
+          tar --zstd -cf aethercanvas-android-toolchain.tar.zst -C payload .
+          sha256sum aethercanvas-android-toolchain.tar.zst > aethercanvas-android-toolchain.tar.zst.sha256
+          ls -lh aethercanvas-android-toolchain.tar.zst
+
+      - name: Upload toolchain
+        uses: actions/upload-artifact@v4
+        with:
+          name: aethercanvas-android-toolchain
+          path: |
+            aethercanvas-android-toolchain.tar.zst
+            aethercanvas-android-toolchain.tar.zst.sha256
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
