@@ -67,16 +67,6 @@ jobs:
               id("org.jetbrains.kotlin.plugin.compose") version "2.2.21" apply false
               id("org.jetbrains.kotlin.plugin.serialization") version "2.2.21" apply false
           }
-          tasks.register("resolveEveryConfiguration") {
-              doLast {
-                  allprojects.forEach { project ->
-                      project.configurations.filter { it.isCanBeResolved }.forEach { configuration ->
-                          println("Resolving ${project.path}:${configuration.name}")
-                          configuration.resolve()
-                      }
-                  }
-              }
-          }
           EOF
           cat > "$harness/gradle.properties" <<'EOF'
           org.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8
@@ -129,12 +119,12 @@ jobs:
           suspend fun compileCoroutines(): CacheMarker = withContext(Dispatchers.Default) { CacheMarker("resolved") }
           EOF
 
-      - name: Resolve and compile repair graph
+      - name: Compile the exact repair graph
         shell: bash
         run: |
           set -Eeuo pipefail
           cd "$RUNNER_TEMP/aethercanvas-cache-repair"
-          "$RUNNER_TEMP/gradle-8.13/bin/gradle" --no-daemon --stacktrace resolveEveryConfiguration :repair:compileDebugKotlin :repair:compileReleaseKotlin
+          "$RUNNER_TEMP/gradle-8.13/bin/gradle" --no-daemon --stacktrace :repair:compileDebugKotlin :repair:compileReleaseKotlin
 
       - name: Package verified incremental cache
         shell: bash
