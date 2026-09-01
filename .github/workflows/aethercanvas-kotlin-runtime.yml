@@ -1,0 +1,40 @@
+name: AetherCanvas Kotlin Runtime
+
+on:
+  push:
+    branches:
+      - ci/aethercanvas-android-toolchain-20260901
+    paths:
+      - .github/workflows/aethercanvas-kotlin-runtime.yml
+
+permissions:
+  contents: read
+
+jobs:
+  retrieve-runtime:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Retrieve and verify Kotlin standard library
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          base='https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/2.2.21'
+          curl --fail --location --retry 5 --retry-all-errors --output kotlin-stdlib-2.2.21.jar "$base/kotlin-stdlib-2.2.21.jar"
+          curl --fail --location --retry 5 --retry-all-errors --output kotlin-stdlib-2.2.21.jar.sha1 "$base/kotlin-stdlib-2.2.21.jar.sha1"
+          expected="$(tr -d '[:space:]' < kotlin-stdlib-2.2.21.jar.sha1)"
+          actual="$(sha1sum kotlin-stdlib-2.2.21.jar | awk '{print $1}')"
+          test "$actual" = "$expected"
+          sha256sum kotlin-stdlib-2.2.21.jar > kotlin-stdlib-2.2.21.jar.sha256
+          test "$(stat -c '%s' kotlin-stdlib-2.2.21.jar)" = '1761445'
+
+      - name: Upload verified runtime
+        uses: actions/upload-artifact@v4
+        with:
+          name: kotlin-stdlib-2.2.21-runtime
+          path: |
+            kotlin-stdlib-2.2.21.jar
+            kotlin-stdlib-2.2.21.jar.sha1
+            kotlin-stdlib-2.2.21.jar.sha256
+          if-no-files-found: error
+          retention-days: 1
