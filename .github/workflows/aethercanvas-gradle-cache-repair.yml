@@ -1,0 +1,170 @@
+name: AetherCanvas Gradle Cache Repair
+
+on:
+  push:
+    branches:
+      - ci/aethercanvas-android-toolchain-20260901
+    paths:
+      - .github/workflows/aethercanvas-gradle-cache-repair.yml
+
+permissions:
+  contents: read
+
+jobs:
+  repair-cache:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set isolated Gradle home
+        shell: bash
+        run: echo "GRADLE_USER_HOME=$RUNNER_TEMP/aethercanvas-gradle-repair" >> "$GITHUB_ENV"
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install exact Android SDK components
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          sdkmanager="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$sdkmanager" --licenses >/dev/null || true
+          "$sdkmanager" --install 'platforms;android-36' 'build-tools;36.1.0'
+
+      - name: Download verified Gradle 8.13
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          cd "$RUNNER_TEMP"
+          curl --fail --location --retry 5 --retry-all-errors --output gradle.zip https://services.gradle.org/distributions/gradle-8.13-bin.zip
+          echo '20f1b1176237254a6fc204d8434196fa11a4cfb387567519c61556e8710aed78  gradle.zip' | sha256sum --check --strict
+          unzip -q gradle.zip
+
+      - name: Create source-bearing dependency repair harness
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          harness="$RUNNER_TEMP/aethercanvas-cache-repair"
+          mkdir -p "$harness/repair/src/main/java/app/aethercanvas/cache" "$harness/repair/src/main"
+          cat > "$harness/settings.gradle.kts" <<'EOF'
+          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories { google(); mavenCentral() }
+          }
+          rootProject.name = "AetherCanvasCacheRepair"
+          include(":repair")
+          EOF
+          cat > "$harness/build.gradle.kts" <<'EOF'
+          plugins {
+              id("com.android.library") version "8.13.2" apply false
+              id("org.jetbrains.kotlin.android") version "2.2.21" apply false
+              id("org.jetbrains.kotlin.plugin.compose") version "2.2.21" apply false
+              id("org.jetbrains.kotlin.plugin.serialization") version "2.2.21" apply false
+          }
+          tasks.register("resolveEveryConfiguration") {
+              doLast {
+                  allprojects.forEach { project ->
+                      project.configurations.filter { it.isCanBeResolved }.forEach { configuration ->
+                          println("Resolving ${project.path}:${configuration.name}")
+                          configuration.resolve()
+                      }
+                  }
+              }
+          }
+          EOF
+          cat > "$harness/gradle.properties" <<'EOF'
+          org.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8
+          android.useAndroidX=true
+          kotlin.code.style=official
+          EOF
+          cat > "$harness/repair/build.gradle.kts" <<'EOF'
+          plugins {
+              id("com.android.library")
+              id("org.jetbrains.kotlin.android")
+              id("org.jetbrains.kotlin.plugin.compose")
+              id("org.jetbrains.kotlin.plugin.serialization")
+          }
+          android {
+              namespace = "app.aethercanvas.cache"
+              compileSdk = 36
+              buildToolsVersion = "36.1.0"
+              defaultConfig { minSdk = 26 }
+              buildFeatures { compose = true }
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
+              }
+          }
+          kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
+          dependencies {
+              implementation("org.jetbrains.kotlin:kotlin-stdlib:2.2.21")
+              implementation("org.jetbrains.kotlin:kotlin-build-tools-impl:2.2.21")
+              implementation("androidx.collection:collection-jvm:1.4.2")
+              implementation("androidx.lifecycle:lifecycle-common:2.9.0")
+              implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
+              implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+              implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
+              implementation("org.jetbrains.kotlinx:kotlinx-serialization-core-jvm:1.7.3")
+              implementation("androidx.compose.ui:ui:1.9.0")
+          }
+          EOF
+          cat > "$harness/repair/src/main/AndroidManifest.xml" <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?><manifest />
+          EOF
+          cat > "$harness/repair/src/main/java/app/aethercanvas/cache/CacheMarker.kt" <<'EOF'
+          package app.aethercanvas.cache
+          import androidx.compose.runtime.Composable
+          import androidx.compose.runtime.SideEffect
+          import kotlinx.coroutines.Dispatchers
+          import kotlinx.coroutines.withContext
+          import kotlinx.serialization.Serializable
+          @Serializable data class CacheMarker(val value: String)
+          @Composable fun CacheMarkerContent() { SideEffect { CacheMarker("compiled") } }
+          suspend fun compileCoroutines(): CacheMarker = withContext(Dispatchers.Default) { CacheMarker("resolved") }
+          EOF
+
+      - name: Resolve and compile repair graph
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          cd "$RUNNER_TEMP/aethercanvas-cache-repair"
+          "$RUNNER_TEMP/gradle-8.13/bin/gradle" --no-daemon --stacktrace resolveEveryConfiguration :repair:compileDebugKotlin :repair:compileReleaseKotlin
+
+      - name: Package verified incremental cache
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p cache-payload/caches
+          cp -a "$GRADLE_USER_HOME/caches/modules-2" cache-payload/caches/
+          (
+            cd cache-payload
+            find caches -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt
+            sha256sum -c SHA256SUMS.txt >/dev/null
+          )
+          cat > cache-payload/CACHE_MANIFEST.txt <<'EOF'
+          AetherCanvas module-isolated Gradle cache repair
+          Android SDK: 36
+          Android Build Tools: 36.1.0
+          Gradle: 8.13
+          Android Gradle Plugin: 8.13.2
+          Kotlin: 2.2.21
+          EOF
+          tar --zstd -cf aethercanvas-gradle-cache-repair.tar.zst -C cache-payload .
+          sha256sum aethercanvas-gradle-cache-repair.tar.zst > aethercanvas-gradle-cache-repair.tar.zst.sha256
+
+      - name: Upload repaired cache
+        uses: actions/upload-artifact@v4
+        with:
+          name: aethercanvas-gradle-cache-repair
+          path: |
+            aethercanvas-gradle-cache-repair.tar.zst
+            aethercanvas-gradle-cache-repair.tar.zst.sha256
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
